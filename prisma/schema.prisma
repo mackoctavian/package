@@ -1,0 +1,161 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+model Retreat {
+  id                 String   @id @default(uuid())
+  slug               String   @unique
+  title              String
+  subtitle           String?
+  speaker            String
+  conductor          String
+  description        String
+  dateRange          String   @map("date_range")
+  timeRange          String   @map("time_range")
+  location           String
+  availabilityTotal  Int      @map("availability_total")
+  availabilityMale   Int      @map("availability_male")
+  availabilityFemale Int      @map("availability_female")
+  status             String   @default("Registration Open")
+  imageSrc           String   @map("image_src")
+  category           String
+  detailHref         String   @map("detail_href")
+  ctaHref            String   @map("cta_href")
+  price              Float?   @map("price")
+  isPaid             Boolean  @default(true) @map("is_paid")
+  createdAt          DateTime @default(now()) @map("created_at")
+  updatedAt          DateTime @updatedAt @map("updated_at")
+
+  bookings RetreatBooking[]
+
+  @@map("retreats")
+}
+
+model RetreatBooking {
+  id                        String    @id @default(uuid())
+  retreatId                 String    @map("retreat_id")
+  retreatTitle              String    @map("retreat_title")
+  fullName                  String    @map("full_name")
+  email                     String
+  phone                     String
+  whatsapp                  String?
+  status                    String    @default("pending")
+  paymentStatus             String    @default("pending") @map("payment_status")
+  attended                  Boolean   @default(false)
+  checkedInAt               DateTime? @map("checked_in_at")
+  ticketCode                String?   @unique @map("ticket_code")
+  approvedAt                DateTime? @map("approved_at")
+  approvedBy                String?   @map("approved_by")
+  familyMembers             Json?     @map("family_members")
+  formPayload               Json      @map("form_payload")
+  notes                     String?
+  cancelledAt               DateTime? @map("cancelled_at")
+  rescheduledToRetreatId    String?   @map("rescheduled_to_retreat_id")
+  rescheduledToRetreatTitle String?   @map("rescheduled_to_retreat_title")
+  rescheduledAt             DateTime? @map("rescheduled_at")
+  createdAt                 DateTime  @default(now()) @map("created_at")
+  updatedAt                 DateTime  @updatedAt @map("updated_at")
+
+  retreat Retreat @relation(fields: [retreatId], references: [id], onDelete: Cascade)
+
+  @@index([ticketCode])
+  @@map("retreat_bookings")
+}
+
+model ContentItem {
+  id          String   @id @default(uuid())
+  type        String
+  title       String
+  slug        String
+  summary     String?
+  body        String?
+  category    String?
+  status      String   @default("draft")
+  mediaUrl    String?
+  publishDate DateTime?
+  metadata    Json?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([type, status])
+  @@map("content_items")
+}
+
+// Homepage CMS Models
+model HeroSlide {
+  id          String   @id @default(uuid())
+  title       String?
+  subtitle    String?
+  imageUrl    String
+  linkUrl     String?
+  linkText    String?
+  order       Int      @default(0)
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@map("hero_slides")
+}
+
+model QuickLink {
+  id          String   @id @default(uuid())
+  title       String
+  imageUrl    String
+  href        String?
+  parentId    String?
+  order       Int      @default(0)
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  parent      QuickLink?  @relation("QuickLinkChildren", fields: [parentId], references: [id], onDelete: Cascade)
+  children    QuickLink[] @relation("QuickLinkChildren")
+
+  @@map("quick_links")
+}
+
+model Patron {
+  id          String   @id @default(uuid())
+  name        String
+  title       String
+  role        String?
+  imageUrl    String
+  bio         String?
+  order       Int      @default(0)
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@map("patrons")
+}
+
+model Testimonial {
+  id          String   @id @default(uuid())
+  name        String
+  role        String
+  imageUrl    String
+  quote       String
+  rating      Int      @default(5)
+  order       Int      @default(0)
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@map("testimonials")
+}
+
+model SiteSettings {
+  id          String   @id @default(uuid())
+  key         String   @unique
+  value       Json
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@map("site_settings")
+}
