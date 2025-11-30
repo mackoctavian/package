@@ -9,7 +9,8 @@ import { Metadata } from 'next'
 import ContactForm from '@/app/components/Contact/Form'
 
 export const metadata: Metadata = {
-  title: 'Si Educational',
+  title: 'Divine Mercy Retreat Center | DMRC',
+  description: 'Divine Mercy Retreat Center (DMRC) Vikindu - A sanctuary of peace and prayer in Tanzania, East Africa.',
 }
 
 export default function Home() {

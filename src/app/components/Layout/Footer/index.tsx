@@ -27,7 +27,7 @@ const Footer = () => {
   return (
     <footer className='bg-slate-900 text-white'>
       {/* Main Footer Content */}
-      <div className='container mx-auto max-w-7xl px-4 pt-20 pb-12'>
+      <div className='container mx-auto pt-20 pb-12'>
         <div className='grid grid-cols-1 md:grid-cols-2 lg:grid-cols-12 gap-12 lg:gap-8'>
           
           {/* Brand Column */}
@@ -99,17 +99,26 @@ const Footer = () => {
                 Contact Us
               </h4>
               <div className='space-y-3'>
-                <a href='mailto:info@dmrc.org' className='flex items-center gap-3 text-slate-400 hover:text-white transition-colors text-sm'>
+                <a href='mailto:dmrc.vikindu@gmail.com' className='flex items-center gap-3 text-slate-400 hover:text-white transition-colors text-sm'>
                   <Mail className='w-4 h-4 text-blue-400' />
-                  info@dmrc.org
+                  dmrc.vikindu@gmail.com
                 </a>
-                <a href='tel:+12345678900' className='flex items-center gap-3 text-slate-400 hover:text-white transition-colors text-sm'>
+                <a href='tel:+255765572679' className='flex items-center gap-3 text-slate-400 hover:text-white transition-colors text-sm'>
                   <Phone className='w-4 h-4 text-blue-400' />
-                  +1 (234) 567-8900
+                  +255 765 572 679
+                </a>
+                <a href='tel:0713840018' className='flex items-center gap-3 text-slate-400 hover:text-white transition-colors text-sm'>
+                  <Phone className='w-4 h-4 text-blue-400' />
+                  0713 840 018
                 </a>
                 <div className='flex items-start gap-3 text-slate-400 text-sm'>
                   <MapPin className='w-4 h-4 text-blue-400 mt-0.5' />
-                  <span>123 Faith Avenue<br />Spiritual City, SC 45678</span>
+                  <span>
+                    Divine Mercy Retreat Center, Vikindu<br />
+                    Jesus Town, Vikindu<br />
+                    P.O. Box 14189, Dar es Salaam<br />
+                    Tanzania, East Africa
+                  </span>
                 </div>
               </div>
             </div>
@@ -142,7 +151,7 @@ const Footer = () => {
 
       {/* Bottom Bar */}
       <div className='border-t border-slate-800'>
-        <div className='container mx-auto max-w-7xl px-4 py-6'>
+        <div className='container mx-auto py-6'>
           <div className='flex flex-col md:flex-row items-center justify-between gap-4'>
             <p className='text-slate-500 text-sm'>
               © {new Date().getFullYear()} Divine Mercy Retreat Center. All rights reserved.

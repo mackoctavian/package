@@ -179,3 +179,5 @@ export default function TicketDisplay({ booking, retreat }: TicketDisplayProps) 
   )
 }
 
+
+

@@ -14,7 +14,7 @@ const MinistriesPage = () => {
   return (
     <main>
       <section className='pt-32 pb-16 bg-primary/10'>
-        <div className='container mx-auto max-w-4xl px-4 text-center space-y-4'>
+        <div className='container mx-auto text-center space-y-4'>
           <p className='text-sm font-semibold tracking-wide uppercase text-primary'>DMRC Ministries</p>
           <h1 className='text-4xl sm:text-5xl font-bold text-gray-900'>Serve, Encounter, and Go Forth</h1>
           <p className='text-base sm:text-lg text-gray-600'>
@@ -26,7 +26,7 @@ const MinistriesPage = () => {
       </section>
 
       <section className='py-16 sm:py-20 bg-gray-50'>
-        <div className='container mx-auto max-w-7xl px-4'>
+        <div className='container mx-auto'>
           <div className='grid gap-8 sm:grid-cols-2 xl:grid-cols-3'>
             {ministriesData.map((ministry) => (
               <article

@@ -15,6 +15,14 @@ export type MinistryContact = {
   phone?: string
 }
 
+export type MinistryActivity = {
+  id: string
+  title: string
+  description: string
+  image: string
+  date?: string
+}
+
 export type MinistryType = {
   id: string
   slug: string
@@ -23,8 +31,10 @@ export type MinistryType = {
   overview: string
   heroImage: string
   highlightScripture?: string
-  focusAreas: MinistryFocusArea[]
-  gatherings: MinistryGathering[]
-  contact: MinistryContact
+  focusAreas?: MinistryFocusArea[]
+  gatherings?: MinistryGathering[]
+  contact?: MinistryContact
+  activities?: MinistryActivity[]
+  order?: number
+  isActive?: boolean
 }
-

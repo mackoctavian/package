@@ -18,7 +18,7 @@ export const PackageStructure = () => {
       <div className="rounded-md p-6 pt-3 border border-dark_border border-opacity-60 mt-6">
         <div className="flex items-center gap-4">
           <h5 className="text-base font-medium text-muted mt-3 mb-1">
-            SiEducational Tailwind NextJs Template
+            DMRC Website
           </h5>
         </div>
         <ul className="ps-0 md:ps-5 list-unstyled">

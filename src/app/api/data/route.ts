@@ -10,18 +10,7 @@ import { retreatData } from '@/app/data/retreats'
 
 const HeaderData: HeaderItem[] = [
   { label: 'Home', href: '/' },
-  {
-    label: 'Retreats',
-    href: '/retreats',
-    submenu: [
-      { label: 'All Retreats', href: '/retreats' },
-      { label: 'Residential Retreat', href: '/retreats?category=residential' },
-      { label: 'Parish Retreats', href: '/retreats?category=parish' },
-      { label: 'Special Retreats', href: '/retreats?category=special' },
-      { label: 'Jesus Mission Retreats', href: '/retreats?category=jesus-mission' },
-      { label: 'Check Booking', href: '/retreats/check-booking' },
-    ],
-  },
+  { label: 'Retreats', href: '/retreats' },
   {
     label: 'Publications',
     href: '/publications',
@@ -36,16 +25,25 @@ const HeaderData: HeaderItem[] = [
   { label: 'Gallery', href: '/gallery' },
   { label: 'About', href: '/about' },
   { label: 'News', href: '/news' },
-  { label: 'Ministries', href: '/ministries' },
+  { label: 'Donation', href: '/donation' },
   {
-    label: 'Apostolate',
-    href: '/apostolate',
+    label: 'Ministries',
+    href: '/ministries',
     submenu: [
-      { label: 'Submit Mass Intention', href: '/mass-intentions' },
-      { label: 'Mass Intentions Info', href: '/apostolate#mass-intentions' },
-      { label: 'Mercy Ministries', href: '/apostolate#ministries' },
-      { label: 'Saturday Service', href: '/apostolate#saturday-service' },
-      { label: 'Counseling', href: '/apostolate#counseling' },
+      { label: 'All Ministries', href: '/ministries' },
+      { label: 'Residential Retreats', href: '/ministries/residential-retreats' },
+      { label: 'Saturday Service', href: '/ministries/saturday-service' },
+      { label: 'Special Retreats', href: '/ministries/special-retreats' },
+      { label: 'Bible Convention', href: '/ministries/bible-convention' },
+      { label: 'Bible Children', href: '/ministries/bible-children' },
+      { label: 'Spiritual Counselling', href: '/ministries/spiritual-counselling' },
+      { label: 'Parish Retreat', href: '/ministries/parish-retreat' },
+      { label: 'Jesus Mission Retreat', href: '/ministries/jesus-mission-retreat' },
+      { label: 'Team Members Ministries', href: '/ministries/team-members-ministries' },
+      { label: 'Spiritual Partners', href: '/ministries/spiritual-partners' },
+      { label: 'DMRC Benefactors', href: '/ministries/dmrc-benefactors' },
+      { label: 'Media Ministries', href: '/ministries/media-ministries' },
+      { label: 'Religious Article', href: '/ministries/religious-article' },
     ],
   },
 ]

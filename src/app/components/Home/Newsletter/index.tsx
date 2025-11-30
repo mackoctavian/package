@@ -20,7 +20,7 @@ const Newsletter = () => {
 
   return (
     <section className='py-24 bg-white'>
-      <div className='container mx-auto max-w-7xl px-4'>
+      <div className='container mx-auto'>
         <div className='relative overflow-hidden rounded-3xl bg-primary px-6 py-16 sm:px-12 sm:py-20 isolate'>
             {/* Abstract Background Shapes */}
             <div className="absolute -top-24 -left-24 w-64 h-64 bg-white/10 rounded-full blur-3xl" />

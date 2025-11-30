@@ -1,10 +1,4 @@
-import type { Metadata } from 'next'
-
 import { ContentManager } from '@/app/components/Admin/content-manager'
-
-export const metadata: Metadata = {
-  title: 'About DMRC',
-}
 
 export default function AboutAdminPage() {
   return (

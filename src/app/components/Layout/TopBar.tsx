@@ -14,13 +14,13 @@ const TopBar = () => {
             <div className="container mx-auto max-w-7xl px-4 flex justify-between items-center">
                 {/* Contact Info */}
                 <div className="flex items-center gap-6">
-                    <a href="mailto:info@sieducational.org" className="flex items-center gap-2 hover:text-primary transition-colors">
+                    <a href="mailto:dmrc.vikindu@gmail.com" className="flex items-center gap-2 hover:text-primary transition-colors">
                         <Mail size={16} />
-                        <span>info@sieducational.org</span>
+                        <span>dmrc.vikindu@gmail.com</span>
                     </a>
-                    <a href="tel:+255123456789" className="flex items-center gap-2 hover:text-primary transition-colors">
+                    <a href="tel:+255765572679" className="flex items-center gap-2 hover:text-primary transition-colors">
                         <Phone size={16} />
-                        <span>+255 123 456 789</span>
+                        <span>+255 765 572 679</span>
                     </a>
                 </div>
 

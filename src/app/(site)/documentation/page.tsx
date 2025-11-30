@@ -1,7 +1,7 @@
 import { Documentation } from '@/app/components/Documentation/Documentation'
 import { Metadata } from 'next'
 export const metadata: Metadata = {
-  title: 'Featurs | SiEducational',
+  title: 'Features | DMRC',
 }
 
 export default function Page() {

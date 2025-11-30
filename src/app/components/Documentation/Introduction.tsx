@@ -88,8 +88,7 @@ export const Introduction = () => {
         </div>
         <div className='mt-5'>
           <p className='text-base font-medium text-muted text-opacity-60'>
-            SiEducational Tailwind NextJs Template is built with Tailwindcss and
-            Nextjs.
+            DMRC Website is built with Tailwindcss and Nextjs.
           </p>
           <p className='text-base font-medium text-muted text-opacity-60'>
             These theme is ready to use and you can totally customize as per

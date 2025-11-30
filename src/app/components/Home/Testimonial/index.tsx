@@ -130,11 +130,11 @@ const Testimonial = () => {
   if (loading || testimonials.length === 0) {
     return (
       <section className='py-20 bg-gradient-to-b from-white to-slate-50'>
-        <div className='container mx-auto px-4 max-w-6xl'>
+        <div className='container mx-auto'>
           <div className='animate-pulse'>
             <div className='h-8 bg-slate-200 rounded w-48 mx-auto mb-4' />
             <div className='h-12 bg-slate-200 rounded w-96 mx-auto mb-4' />
-            <div className='h-64 bg-slate-200 rounded-3xl max-w-4xl mx-auto' />
+            <div className='h-64 bg-slate-200 rounded-3xl mx-auto' />
           </div>
         </div>
       </section>
@@ -167,7 +167,7 @@ const Testimonial = () => {
         </motion.div>
 
         {/* Testimonial Card */}
-        <div className='relative max-w-4xl mx-auto'>
+        <div className='relative mx-auto'>
           
           {/* Background Decorative Elements */}
           <div className='absolute -top-10 -left-10 w-40 h-40 bg-blue-100 rounded-full blur-3xl opacity-50' />

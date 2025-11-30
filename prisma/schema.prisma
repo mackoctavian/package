@@ -159,3 +159,22 @@ model SiteSettings {
 
   @@map("site_settings")
 }
+
+model Ministry {
+  id               String   @id @default(uuid())
+  slug             String   @unique
+  title            String
+  shortDescription String?  @map("short_description")
+  overview         String?  @db.Text
+  heroImage        String?  @map("hero_image")
+  highlightScripture String? @map("highlight_scripture")
+  focusAreas       Json?    @map("focus_areas")
+  gatherings       Json?
+  contact          Json?
+  order            Int      @default(0)
+  isActive         Boolean  @default(true)
+  createdAt        DateTime @default(now()) @map("created_at")
+  updatedAt        DateTime @updatedAt @map("updated_at")
+
+  @@map("ministries")
+}

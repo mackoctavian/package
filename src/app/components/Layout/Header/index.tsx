@@ -15,6 +15,7 @@ const Header: React.FC = () => {
   const [navbarOpen, setNavbarOpen] = useState(false)
   const [language, setLanguage] = useState<'EN' | 'SW'>('EN')
   const [langDropdownOpen, setLangDropdownOpen] = useState(false)
+  const [activeItem, setActiveItem] = useState<HeaderItem | null>(null)
 
   const mobileMenuRef = useRef<HTMLDivElement>(null)
   const langDropdownRef = useRef<HTMLDivElement>(null)
@@ -57,21 +58,32 @@ const Header: React.FC = () => {
     }
   }, [navbarOpen, langDropdownOpen])
 
+  const handleHover = (item: HeaderItem | null) => {
+    if (item?.submenu) {
+      setActiveItem(item)
+    } else {
+      setActiveItem(null)
+    }
+  }
+
   return (
-    <header className='fixed top-0 z-40 w-full'>
+    <header 
+      className='fixed top-0 z-40 w-full'
+      onMouseLeave={() => setActiveItem(null)}
+    >
       {/* Top Bar */}
       <div className='bg-slate-900 text-white'>
-        <div className='container mx-auto max-w-7xl px-4'>
+        <div className='container mx-auto'>
           <div className='flex items-center justify-between py-2'>
             {/* Left: Contact Info */}
             <div className='hidden md:flex items-center gap-6 text-sm'>
-              <a href='tel:+255712345678' className='flex items-center gap-2 text-slate-300 hover:text-white transition-colors'>
+              <a href='tel:+255765572679' className='flex items-center gap-2 text-slate-300 hover:text-white transition-colors'>
                 <Phone className='w-3.5 h-3.5' />
-                <span>+255 712 345 678</span>
+                <span>+255 765 572 679</span>
               </a>
-              <a href='mailto:info@dmrc.org' className='flex items-center gap-2 text-slate-300 hover:text-white transition-colors'>
+              <a href='mailto:dmrc.vikindu@gmail.com' className='flex items-center gap-2 text-slate-300 hover:text-white transition-colors'>
                 <Mail className='w-3.5 h-3.5' />
-                <span>info@dmrc.org</span>
+                <span>dmrc.vikindu@gmail.com</span>
               </a>
             </div>
 
@@ -151,7 +163,7 @@ const Header: React.FC = () => {
                         }}
                         className={`w-full px-4 py-2.5 text-left text-sm font-medium transition-colors ${
                           language === 'SW'
-                            ? 'bg-blue-50 text-blue-600'
+                            ? 'bg-blue-600 text-white'
                             : 'text-slate-700 hover:bg-slate-50'
                         }`}
                       >
@@ -167,12 +179,17 @@ const Header: React.FC = () => {
       </div>
 
       {/* Main Navigation */}
-      <div className='bg-white shadow-sm'>
-        <div className='container mx-auto max-w-7xl px-4 py-4 flex items-center justify-between'>
+      <div className='bg-white shadow-sm relative z-20'>
+        <div className='container mx-auto py-4 flex items-center justify-between'>
           <Logo />
-          <nav className='hidden lg:flex grow items-center gap-8 justify-start ml-14 text-slate-900'>
+          <nav className='hidden lg:flex grow items-center gap-8 justify-start ml-14 text-slate-900 h-full'>
             {headerData.map((item, index) => (
-              <HeaderLink key={index} item={item} isSticky />
+              <HeaderLink 
+                key={index} 
+                item={item} 
+                isSticky 
+                onHover={handleHover}
+              />
             ))}
           </nav>
           <div className='flex items-center gap-4'>
@@ -197,6 +214,50 @@ const Header: React.FC = () => {
           </div>
         </div>
       </div>
+
+      {/* Mega Menu Slider */}
+      <AnimatePresence>
+        {activeItem?.submenu && (
+          <motion.div
+            initial={{ opacity: 0, height: 0 }}
+            animate={{ opacity: 1, height: 'auto' }}
+            exit={{ opacity: 0, height: 0 }}
+            transition={{ duration: 0.3, ease: 'easeInOut' }}
+            className='absolute top-full left-0 w-full bg-white border-t border-slate-100 shadow-lg z-50 overflow-hidden'
+            onMouseEnter={() => setActiveItem(activeItem)}
+          >
+            <div className='container mx-auto py-8'>
+              <div className='grid grid-cols-12 gap-8'>
+                <div className='col-span-12 lg:col-span-3'>
+                  <h3 className='text-lg font-bold text-slate-900 mb-4'>{activeItem.label}</h3>
+                  <p className='text-sm text-slate-500 leading-relaxed'>
+                    Explore our {activeItem.label.toLowerCase()} and discover the spiritual journey that awaits you at Divine Mercy Retreat Center.
+                  </p>
+                </div>
+                <div className='col-span-12 lg:col-span-9'>
+                  <div className='grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4'>
+                    {activeItem.submenu.map((subItem, index) => (
+                      <Link
+                        key={index}
+                        href={subItem.href}
+                        onClick={() => setActiveItem(null)}
+                        className='group flex flex-col gap-1 p-4 rounded-lg hover:bg-primary/5 border border-transparent hover:border-primary/20 transition-all'
+                      >
+                        <span className='text-sm font-semibold text-slate-900 group-hover:text-primary transition-colors'>
+                          {subItem.label}
+                        </span>
+                        <span className='text-xs text-slate-500 group-hover:text-slate-600'>
+                          Learn more →
+                        </span>
+                      </Link>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       {/* Mobile Menu Overlay */}
       {navbarOpen && (
@@ -253,13 +314,13 @@ const Header: React.FC = () => {
 
           {/* Contact Info in Mobile */}
           <div className='mt-6 pt-6 border-t border-slate-100 space-y-3'>
-            <a href='tel:+255712345678' className='flex items-center gap-3 text-sm text-slate-600'>
+            <a href='tel:+255765572679' className='flex items-center gap-3 text-sm text-slate-600'>
               <Phone className='w-4 h-4 text-blue-600' />
-              +255 712 345 678
+              +255 765 572 679
             </a>
-            <a href='mailto:info@dmrc.org' className='flex items-center gap-3 text-sm text-slate-600'>
+            <a href='mailto:dmrc.vikindu@gmail.com' className='flex items-center gap-3 text-sm text-slate-600'>
               <Mail className='w-4 h-4 text-blue-600' />
-              info@dmrc.org
+              dmrc.vikindu@gmail.com
             </a>
           </div>
 

@@ -53,7 +53,7 @@ export default class MultipleItems extends Component {
 
         return (
       <div className='text-center'>
-        <div className='mx-auto max-w-4xl px-4 sm:px-6 lg:max-w-7xl lg:px-8'>
+        <div className='container mx-auto'>
           <h2 className='text-primary text-lg my-10 font-semibold uppercase tracking-wider opacity-70'>
             Trusted by over 500+ Companies Worldwide
           </h2>

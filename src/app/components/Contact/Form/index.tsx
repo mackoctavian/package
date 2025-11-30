@@ -41,20 +41,25 @@ const ContactForm = () => {
     {
       icon: MapPin,
       title: 'Visit Us',
-      lines: ['Divine Mercy Retreat Center', '123 Faith Avenue, Spiritual City'],
-      action: { label: 'Get Directions', href: '#' }
+      lines: [
+        'Divine Mercy Retreat Center, Vikindu',
+        'Jesus Town, Vikindu',
+        'P.O. Box 14189, Dar es Salaam',
+        'Tanzania, East Africa'
+      ],
+      action: { label: 'Get Directions', href: 'https://maps.google.com/?q=Divine+Mercy+Retreat+Center+Vikindu' }
     },
     {
       icon: Mail,
       title: 'Email Us',
-      lines: ['info@dmrc.org', 'support@dmrc.org'],
-      action: { label: 'Send Email', href: 'mailto:info@dmrc.org' }
+      lines: ['dmrc.vikindu@gmail.com'],
+      action: { label: 'Send Email', href: 'mailto:dmrc.vikindu@gmail.com' }
     },
     {
       icon: Phone,
       title: 'Call Us',
-      lines: ['+1 (234) 567-8900'],
-      action: { label: 'Call Now', href: 'tel:+12345678900' }
+      lines: ['+255 765 572 679', '0713 840 018'],
+      action: { label: 'Call Now', href: 'tel:+255765572679' }
     },
     {
       icon: Clock,
@@ -70,7 +75,7 @@ const ContactForm = () => {
       <div className='absolute top-0 right-0 w-1/2 h-1/2 bg-gradient-to-bl from-blue-50 to-transparent rounded-full blur-3xl opacity-60 -z-10' />
       <div className='absolute bottom-0 left-0 w-1/3 h-1/3 bg-gradient-to-tr from-indigo-50 to-transparent rounded-full blur-3xl opacity-60 -z-10' />
 
-      <div className='container mx-auto px-4 max-w-7xl'>
+      <div className='container mx-auto'>
         
         {/* Section Header */}
         <motion.div
