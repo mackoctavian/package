@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useState, Suspense } from 'react'
 import { useSearchParams, useRouter } from 'next/navigation'
 import Image from 'next/image'
 import Link from 'next/link'
@@ -52,7 +52,7 @@ const fetchRetreats = async (): Promise<RetreatType[]> => {
   return data.data ?? []
 }
 
-const RetreatsPage = () => {
+const RetreatsPageContent = () => {
   const searchParams = useSearchParams()
   const router = useRouter()
   
@@ -241,7 +241,7 @@ const RetreatsPage = () => {
       <section className='pt-32 pb-12 bg-gradient-to-br from-indigo-900 via-purple-900 to-slate-900 relative overflow-hidden'>
         <div className='absolute inset-0 bg-[url("/images/banner/Stars.svg")] opacity-20' />
         <div className='absolute top-0 right-0 w-1/2 h-full bg-gradient-to-l from-blue-500/10 to-transparent' />
-        <div className='container mx-auto max-w-7xl px-4 relative'>
+        <div className='container mx-auto relative'>
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
@@ -284,7 +284,7 @@ const RetreatsPage = () => {
 
       {/* Filter Bar */}
       <div className='sticky top-[88px] z-30 bg-white/95 backdrop-blur-md border-b border-slate-200 shadow-sm'>
-        <div className='container mx-auto max-w-7xl px-4'>
+        <div className='container mx-auto'>
           {/* Category Tabs */}
           <div className='flex items-center gap-2 py-3 overflow-x-auto scrollbar-hide'>
             <button
@@ -930,6 +930,33 @@ const RetreatListItem = ({
         </div>
       </div>
     </article>
+  )
+}
+
+const RetreatsPage = () => {
+  return (
+    <Suspense fallback={
+      <main className='min-h-screen bg-gradient-to-b from-slate-50 to-white'>
+        <div className='container mx-auto py-20 text-center'>
+          <div className='animate-pulse space-y-4'>
+            <div className='h-8 bg-slate-200 rounded w-1/4 mx-auto'></div>
+            <div className='h-4 bg-slate-200 rounded w-1/2 mx-auto'></div>
+            <div className='grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mt-8'>
+              {Array.from({ length: 6 }).map((_, i) => (
+                <div key={i} className='bg-white rounded-3xl p-6 animate-pulse border border-slate-100'>
+                  <div className='h-48 bg-slate-100 rounded-2xl mb-4' />
+                  <div className='h-4 bg-slate-100 rounded w-3/4 mb-2' />
+                  <div className='h-4 bg-slate-100 rounded w-1/2 mb-4' />
+                  <div className='h-10 bg-slate-100 rounded-xl' />
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      </main>
+    }>
+      <RetreatsPageContent />
+    </Suspense>
   )
 }
 

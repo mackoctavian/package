@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useState, Suspense } from 'react'
 import { useSearchParams, useRouter } from 'next/navigation'
 import Image from 'next/image'
 import Link from 'next/link'
@@ -37,7 +37,7 @@ type CartEntry = { product: PublicationType; quantity: number }
 type ViewMode = 'grid' | 'list'
 type SortOption = 'featured' | 'price-low' | 'price-high' | 'newest' | 'rating'
 
-const PublicationsPage = () => {
+const PublicationsPageContent = () => {
   const searchParams = useSearchParams()
   const router = useRouter()
   
@@ -175,7 +175,7 @@ const PublicationsPage = () => {
     <main className='min-h-screen bg-white'>
       {/* Top Filter Bar */}
       <div className='sticky top-[88px] z-30 bg-white border-b border-slate-200'>
-        <div className='container mx-auto max-w-7xl px-4'>
+        <div className='container mx-auto'>
           {/* Category Tabs */}
           <div className='flex items-center gap-2 py-3 overflow-x-auto'>
             <button
@@ -644,6 +644,23 @@ const ProductListItem = ({
         )}
       </div>
     </article>
+  )
+}
+
+const PublicationsPage = () => {
+  return (
+    <Suspense fallback={
+      <main className='min-h-screen bg-white'>
+        <div className='container mx-auto py-20 text-center'>
+          <div className='animate-pulse space-y-4'>
+            <div className='h-8 bg-slate-200 rounded w-1/4 mx-auto'></div>
+            <div className='h-4 bg-slate-200 rounded w-1/2 mx-auto'></div>
+          </div>
+        </div>
+      </main>
+    }>
+      <PublicationsPageContent />
+    </Suspense>
   )
 }
 
