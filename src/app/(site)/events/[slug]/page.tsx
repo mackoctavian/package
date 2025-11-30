@@ -7,7 +7,7 @@ import { mapPrismaRetreat } from '@/app/api/retreats/utils'
 import type { RetreatType } from '@/app/types/retreat'
 
 type PageProps = {
-  params: { slug: string }
+  params: Promise<{ slug: string }>
 }
 
 const loadRetreat = async (slug: string): Promise<RetreatType | undefined> => {
@@ -26,7 +26,8 @@ const loadRetreat = async (slug: string): Promise<RetreatType | undefined> => {
 }
 
 export const generateMetadata = async ({ params }: PageProps): Promise<Metadata> => {
-  const retreat = await loadRetreat(params.slug)
+  const { slug } = await params
+  const retreat = await loadRetreat(slug)
 
   if (!retreat) {
     return {
@@ -41,7 +42,8 @@ export const generateMetadata = async ({ params }: PageProps): Promise<Metadata>
 }
 
 const RetreatDetailPage = async ({ params }: PageProps) => {
-  const retreat = await loadRetreat(params.slug)
+  const { slug } = await params
+  const retreat = await loadRetreat(slug)
 
   if (!retreat) {
     notFound()
@@ -50,7 +52,7 @@ const RetreatDetailPage = async ({ params }: PageProps) => {
   return (
     <main className='bg-white'>
       <section className='relative overflow-hidden bg-gradient-to-br from-primary via-purple-600 to-indigo-500 pt-32 pb-20 text-white'>
-        <div className='container mx-auto max-w-5xl px-4'>
+        <div className='container mx-auto'>
           <div className='relative overflow-hidden rounded-3xl border border-white/30 bg-white/10 px-6 py-8 backdrop-blur-lg shadow-2xl sm:px-10 sm:py-12'>
             <div className='flex flex-col gap-6'>
               <div>
@@ -113,7 +115,7 @@ const RetreatDetailPage = async ({ params }: PageProps) => {
       </section>
 
       <section className='py-16 sm:py-20 bg-gray-50'>
-        <div className='container mx-auto max-w-5xl px-4'>
+        <div className='container mx-auto'>
           <RetreatBookingForm retreat={retreat} />
         </div>
       </section>
