@@ -50,7 +50,8 @@ const Gallery = () => {
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true }}
+            viewport={{ once: true, margin: '-100px' }}
+            transition={{ duration: 0.6 }}
             className='max-w-xl'
           >
             <span className='inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-amber-50 text-amber-700 text-xs font-semibold uppercase tracking-wider mb-4 border border-amber-100'>
@@ -71,8 +72,8 @@ const Gallery = () => {
           <motion.div
             initial={{ opacity: 0, x: 20 }}
             whileInView={{ opacity: 1, x: 0 }}
-            viewport={{ once: true }}
-            transition={{ delay: 0.2 }}
+            viewport={{ once: true, margin: '-100px' }}
+            transition={{ delay: 0.2, duration: 0.6 }}
           >
             <Link
               href='/gallery'
@@ -96,8 +97,8 @@ const Gallery = () => {
                 key={item.id}
                 initial={{ opacity: 0, scale: 0.95 }}
                 whileInView={{ opacity: 1, scale: 1 }}
-                viewport={{ once: true }}
-                transition={{ duration: 0.4, delay: index * 0.05 }}
+                viewport={{ once: true, margin: '-100px' }}
+                transition={{ duration: 0.5, delay: index * 0.03 }}
                 className={`relative overflow-hidden rounded-2xl cursor-pointer group ${
                   isLarge ? 'md:col-span-2 md:row-span-2' : ''
                 } ${isTall ? 'row-span-2' : ''}`}
@@ -108,7 +109,9 @@ const Gallery = () => {
                   src={item.src}
                   alt={item.title}
                   fill
+                  sizes='(max-width: 768px) 50vw, (max-width: 1024px) 33vw, 25vw'
                   className='object-cover transition-all duration-700 group-hover:scale-110'
+                  loading='lazy'
                 />
                 
                 {/* Subtle hover overlay - no text, just elegant darkening */}

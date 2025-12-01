@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
+import Image from 'next/image'
 
 const HERO_DATA = [
   {
@@ -65,9 +66,13 @@ const Hero = () => {
             opacity: { duration: 0.2 },
           }}
           className='absolute inset-0 h-full w-full'>
-          <div
-            className='absolute inset-0 bg-cover bg-center'
-            style={{ backgroundImage: `url(${HERO_DATA[currentIndex].image})` }}
+          <Image
+            src={HERO_DATA[currentIndex].image}
+            alt={`Hero slide ${currentIndex + 1}`}
+            fill
+            priority={currentIndex === 0}
+            className='object-cover'
+            sizes='100vw'
           />
         </motion.div>
       </AnimatePresence>

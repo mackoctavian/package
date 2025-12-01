@@ -90,7 +90,13 @@ const Mentor = () => {
       <div className='absolute top-0 right-0 w-96 h-96 bg-blue-50 rounded-full blur-3xl opacity-30 -translate-y-1/2 translate-x-1/3' />
       
       <div className='container relative'>
-        <div className='flex flex-col gap-4 text-center sm:text-left sm:flex-row sm:items-end sm:justify-between mb-16'>
+        <motion.div 
+          initial={{ opacity: 0, y: 20 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true, margin: '-100px' }}
+          transition={{ duration: 0.6 }}
+          className='flex flex-col gap-4 text-center sm:text-left sm:flex-row sm:items-end sm:justify-between mb-16'
+        >
           <div className='space-y-4 max-w-2xl'>
             <span className='inline-flex items-center gap-2 rounded-full bg-blue-50 px-4 py-1.5 text-xs font-bold uppercase tracking-wider text-primary'>
               Our Leadership
@@ -107,17 +113,17 @@ const Mentor = () => {
               Meet the full team <span className="group-hover:translate-x-1 transition-transform">→</span>
             </a>
           </div>
-        </div>
+        </motion.div>
 
         <div className='grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8 xl:gap-10'>
           {loading
             ? Array.from({ length: 3 }).map((_, i) => <MentorSkeleton key={i} />)
             : patrons.slice(0, 3).map((item, index) => (
                 <motion.div
-                  initial={{ opacity: 0, y: 20 }}
+                  initial={{ opacity: 0, y: 30 }}
                   whileInView={{ opacity: 1, y: 0 }}
-                  viewport={{ once: true }}
-                  transition={{ delay: index * 0.1, duration: 0.5 }}
+                  viewport={{ once: true, margin: '-100px' }}
+                  transition={{ delay: index * 0.1, duration: 0.6, ease: 'easeOut' }}
                   key={item.id}
                   className='group relative bg-white rounded-2xl overflow-hidden shadow-sm hover:shadow-xl transition-all duration-300 border border-slate-100'
                 >
@@ -126,7 +132,9 @@ const Mentor = () => {
                       src={item.imageUrl}
                       alt={item.name}
                       fill
+                      sizes='(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw'
                       className='object-cover transition-transform duration-700 group-hover:scale-105'
+                      loading='lazy'
                     />
                     <div className="absolute inset-0 bg-gradient-to-t from-slate-900/80 via-transparent to-transparent opacity-60 transition-opacity duration-300 group-hover:opacity-80" />
                     

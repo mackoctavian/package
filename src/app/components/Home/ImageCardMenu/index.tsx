@@ -100,7 +100,13 @@ const ImageCardMenu = () => {
   }
 
   return (
-    <section className='py-6'>
+    <motion.section 
+      className='py-6'
+      initial={{ opacity: 0, y: 30 }}
+      whileInView={{ opacity: 1, y: 0 }}
+      viewport={{ once: true, margin: '-100px' }}
+      transition={{ duration: 0.6 }}
+    >
       {/* Dynamic Header */}
       <div className='mb-8'>
         <AnimatePresence mode='wait'>
@@ -160,7 +166,8 @@ const ImageCardMenu = () => {
                 <motion.div
                   key={category.id}
                   initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
+                  whileInView={{ opacity: 1, y: 0 }}
+                  viewport={{ once: true, margin: '-50px' }}
                   transition={{ duration: 0.3, delay: index * 0.05 }}
                 >
                   <CategoryCard
@@ -193,7 +200,7 @@ const ImageCardMenu = () => {
           )}
         </AnimatePresence>
       </div>
-    </section>
+    </motion.section>
   )
 }
 
@@ -204,7 +211,9 @@ const CategoryCard = ({ item, onClick }: { item: MenuItem; onClick?: () => void 
         src={item.image}
         alt={item.title}
         fill
+        sizes='(max-width: 768px) 50vw, 25vw'
         className='object-cover transition-transform duration-700 ease-out group-hover:scale-110'
+        loading='lazy'
       />
       {/* Gradient Overlay */}
       <div className='absolute inset-0 bg-gradient-to-t from-black/70 via-black/30 to-transparent opacity-80 group-hover:opacity-90 transition-opacity duration-300' />

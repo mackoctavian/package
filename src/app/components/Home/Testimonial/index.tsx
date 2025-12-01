@@ -151,7 +151,8 @@ const Testimonial = () => {
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           whileInView={{ opacity: 1, y: 0 }}
-          viewport={{ once: true }}
+          viewport={{ once: true, margin: '-100px' }}
+          transition={{ duration: 0.6 }}
           className='text-center mb-16'
         >
           <span className='inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-blue-50 text-blue-600 text-xs font-bold uppercase tracking-wider mb-4'>
@@ -194,7 +195,9 @@ const Testimonial = () => {
                       src={currentTestimonial.imageUrl}
                       alt={currentTestimonial.name}
                       fill
+                      sizes='(max-width: 768px) 100vw, 40vw'
                       className='object-cover'
+                      loading='lazy'
                     />
                     <div className='absolute inset-0 bg-gradient-to-t from-blue-900/80 via-blue-900/40 to-transparent md:bg-gradient-to-r' />
                   </motion.div>
