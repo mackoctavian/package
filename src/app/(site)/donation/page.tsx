@@ -40,19 +40,24 @@ export default function DonationPage() {
 
   return (
     <section className='py-28'>
-      <div className='container mx-auto max-w-6xl px-4'>
-        <div className='grid gap-10 lg:grid-cols-[1.1fr_0.9fr]'>
-          <div className='space-y-6'>
+      <div className='w-full px-2 sm:px-4 lg:px-6'>
+        <div className='w-full max-w-7xl mx-auto'>
+          {/* Header Section */}
+          <div className='mb-10 space-y-6'>
             <p className='text-xs font-semibold uppercase tracking-[0.45em] text-primary'>Mission Partner</p>
             <h1 className='text-4xl font-semibold text-slate-900 sm:text-5xl'>
               Sustain Divine Mercy Retreat Center with a gift
             </h1>
-            <p className='text-base text-slate-600'>
+            <p className='text-base text-slate-600 max-w-4xl'>
               Every donation fuels evangelisation, retreat scholarships, pastoral counselling, and mercy missions across
-              Tanzania. Choose a preset amount or enter a custom gift and we’ll guide you through the payment method you
+              Tanzania. Choose a preset amount or enter a custom gift and we'll guide you through the payment method you
               prefer.
             </p>
-            <div className='rounded-3xl border border-slate-200 bg-white/80 p-6 shadow-[0_20px_55px_rgba(15,23,42,0.1)]'>
+          </div>
+
+          {/* Info Section */}
+          <div className='mb-10'>
+            <div className='rounded-3xl border border-slate-200 bg-white/80 p-6 shadow-[0_20px_55px_rgba(15,23,42,0.1)] max-w-4xl'>
               <h2 className='text-xl font-semibold text-slate-900'>Where your giving goes</h2>
               <ul className='mt-4 space-y-3 text-sm text-slate-600'>
                 <li className='flex items-start gap-3'>
@@ -69,12 +74,13 @@ export default function DonationPage() {
                 </li>
               </ul>
               <p className='mt-5 text-sm text-slate-500'>
-                DMRC is a registered apostolate. You’ll receive an emailed confirmation with your donation summary.
+                DMRC is a registered apostolate. You'll receive an emailed confirmation with your donation summary.
               </p>
             </div>
           </div>
 
-          <div className='rounded-3xl border border-slate-200 bg-white/95 p-6 shadow-[0_24px_65px_rgba(15,23,42,0.12)]'>
+          {/* Form Section */}
+          <div className='rounded-3xl border border-slate-200 bg-white/95 p-6 shadow-[0_24px_65px_rgba(15,23,42,0.12)] max-w-4xl'>
             <div className='flex items-center justify-between'>
               <div>
                 <p className='text-xs font-semibold uppercase tracking-[0.35em] text-primary/70'>Donation Form</p>
@@ -212,4 +218,3 @@ export default function DonationPage() {
     </section>
   )
 }
-
