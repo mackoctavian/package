@@ -6,9 +6,9 @@ import { notFound } from 'next/navigation'
 import { eventHighlights, newsItems } from '@/app/data/news'
 
 type NewsRouteProps = {
-  params: {
+  params: Promise<{
     slug: string
-  }
+  }>
 }
 
 const formatDate = (isoDate: string) =>
@@ -23,8 +23,9 @@ export const generateStaticParams = () =>
     slug: item.slug,
   }))
 
-export const generateMetadata = ({ params }: NewsRouteProps): Metadata => {
-  const article = newsItems.find((item) => item.slug === params.slug)
+export const generateMetadata = async ({ params }: NewsRouteProps): Promise<Metadata> => {
+  const { slug } = await params
+  const article = newsItems.find((item) => item.slug === slug)
 
   if (!article) {
     return {
@@ -38,8 +39,9 @@ export const generateMetadata = ({ params }: NewsRouteProps): Metadata => {
   }
 }
 
-const NewsDetailPage = ({ params }: NewsRouteProps) => {
-  const article = newsItems.find((item) => item.slug === params.slug)
+const NewsDetailPage = async ({ params }: NewsRouteProps) => {
+  const { slug } = await params
+  const article = newsItems.find((item) => item.slug === slug)
 
   if (!article) {
     notFound()

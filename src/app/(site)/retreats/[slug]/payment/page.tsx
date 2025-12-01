@@ -9,8 +9,8 @@ import RetreatPayment from '@/app/components/Retreats/RetreatPayment'
 import type { RetreatType } from '@/app/types/retreat'
 
 type PageProps = {
-  params: { slug: string }
-  searchParams: { booking?: string }
+  params: Promise<{ slug: string }>
+  searchParams: Promise<{ booking?: string }>
 }
 
 const loadRetreat = async (slug: string): Promise<RetreatType | undefined> => {
@@ -27,16 +27,18 @@ const loadRetreat = async (slug: string): Promise<RetreatType | undefined> => {
 }
 
 export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
-  const retreat = await loadRetreat(params.slug)
+  const { slug } = await params
+  const retreat = await loadRetreat(slug)
   return {
     title: retreat ? `Complete payment • ${retreat.title}` : 'Retreat payment',
   }
 }
 
 export default async function RetreatPaymentPage({ params, searchParams }: PageProps) {
-  const bookingId = searchParams.booking
+  const { slug } = await params
+  const { booking: bookingId } = await searchParams
   if (!bookingId) {
-    redirect(`/events/${params.slug}`)
+    redirect(`/events/${slug}`)
   }
 
   const [bookingRecord, retreat] = await Promise.all([
@@ -46,7 +48,7 @@ export default async function RetreatPaymentPage({ params, searchParams }: PageP
         console.error('[retreat-payment] failed to load booking', error)
         return null
       }),
-    loadRetreat(params.slug),
+    loadRetreat(slug),
   ])
 
   if (!bookingRecord || !retreat) {

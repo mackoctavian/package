@@ -5,9 +5,9 @@ import { notFound } from 'next/navigation'
 import { ministriesData } from '@/app/data/ministries'
 
 type MinistryRouteProps = {
-  params: {
+  params: Promise<{
     slug: string
-  }
+  }>
 }
 
 export const generateStaticParams = () => {
@@ -16,8 +16,9 @@ export const generateStaticParams = () => {
   }))
 }
 
-export const generateMetadata = ({ params }: MinistryRouteProps): Metadata => {
-  const ministry = ministriesData.find((item) => item.slug === params.slug)
+export const generateMetadata = async ({ params }: MinistryRouteProps): Promise<Metadata> => {
+  const { slug } = await params
+  const ministry = ministriesData.find((item) => item.slug === slug)
 
   if (!ministry) {
     return {
@@ -31,8 +32,9 @@ export const generateMetadata = ({ params }: MinistryRouteProps): Metadata => {
   }
 }
 
-const MinistryDetailPage = ({ params }: MinistryRouteProps) => {
-  const ministry = ministriesData.find((item) => item.slug === params.slug)
+const MinistryDetailPage = async ({ params }: MinistryRouteProps) => {
+  const { slug } = await params
+  const ministry = ministriesData.find((item) => item.slug === slug)
 
   if (!ministry) {
     notFound()

@@ -15,7 +15,7 @@ export const metadata: Metadata = {
 
 export default function Home() {
   return (
-    <main>
+    <>
       <Hero />
       <ImageCardMenu />
       <NamesList />
@@ -23,6 +23,6 @@ export default function Home() {
       <Gallery />
       <Testimonial />
       <ContactForm />
-    </main>
+    </>
   )
 }

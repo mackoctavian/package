@@ -11,8 +11,8 @@ import type { RetreatType } from '@/app/types/retreat'
 import TicketDisplay from './TicketDisplay'
 
 type PageProps = {
-  params: { slug: string }
-  searchParams: { booking?: string }
+  params: Promise<{ slug: string }>
+  searchParams: Promise<{ booking?: string }>
 }
 
 const loadRetreat = async (slug: string): Promise<RetreatType | undefined> => {
@@ -29,16 +29,18 @@ const loadRetreat = async (slug: string): Promise<RetreatType | undefined> => {
 }
 
 export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
-  const retreat = await loadRetreat(params.slug)
+  const { slug } = await params
+  const retreat = await loadRetreat(slug)
   return {
     title: retreat ? `Booking Confirmed • ${retreat.title}` : 'Booking Confirmed',
   }
 }
 
 export default async function RetreatPaymentSuccessPage({ params, searchParams }: PageProps) {
-  const bookingId = searchParams.booking
+  const { slug } = await params
+  const { booking: bookingId } = await searchParams
   if (!bookingId) {
-    redirect(`/events/${params.slug}`)
+    redirect(`/events/${slug}`)
   }
 
   const [bookingRecord, retreat] = await Promise.all([
@@ -48,7 +50,7 @@ export default async function RetreatPaymentSuccessPage({ params, searchParams }
         console.error('[retreat-payment-success] failed to load booking', error)
         return null
       }),
-    loadRetreat(params.slug),
+    loadRetreat(slug),
   ])
 
   if (!bookingRecord || !retreat) {
@@ -154,7 +156,7 @@ export default async function RetreatPaymentSuccessPage({ params, searchParams }
             Return Home
           </Link>
           <Link
-            href={`/events/${params.slug}`}
+            href={`/events/${slug}`}
             className='inline-flex items-center gap-2 rounded-xl bg-primary px-6 py-3 font-semibold text-white shadow-lg shadow-primary/30 transition hover:bg-primary/90'>
             View Retreat Details
           </Link>
