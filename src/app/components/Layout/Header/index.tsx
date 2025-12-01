@@ -73,7 +73,7 @@ const Header: React.FC = () => {
     >
       {/* Top Bar */}
       <div className='bg-slate-900 text-white'>
-        <div className='container mx-auto'>
+        <div className='w-full px-2 sm:px-4 lg:px-6'>
           <div className='flex items-center justify-between py-2'>
             {/* Left: Contact Info */}
             <div className='hidden md:flex items-center gap-6 text-sm'>
@@ -180,7 +180,7 @@ const Header: React.FC = () => {
 
       {/* Main Navigation */}
       <div className='bg-white shadow-sm relative z-20'>
-        <div className='container mx-auto py-4 flex items-center justify-between'>
+        <div className='w-full px-2 sm:px-4 lg:px-6 py-4 flex items-center justify-between'>
           <Logo />
           <nav className='hidden lg:flex grow items-center gap-8 justify-start ml-14 text-slate-900 h-full'>
             {headerData.map((item, index) => (
@@ -226,7 +226,7 @@ const Header: React.FC = () => {
             className='absolute top-full left-0 w-full bg-white border-t border-slate-100 shadow-lg z-50 overflow-hidden'
             onMouseEnter={() => setActiveItem(activeItem)}
           >
-            <div className='container mx-auto py-8'>
+            <div className='w-full px-2 sm:px-4 lg:px-6 py-8'>
               <div className='grid grid-cols-12 gap-8'>
                 <div className='col-span-12 lg:col-span-3'>
                   <h3 className='text-lg font-bold text-slate-900 mb-4'>{activeItem.label}</h3>
