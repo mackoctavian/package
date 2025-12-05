@@ -3,6 +3,7 @@ import Footer from '@/app/components/Layout/Footer'
 import ScrollToTop from '@/app/components/ScrollToTop'
 import Aoscompo from '@/utils/aos'
 import RightSidebar from '@/app/components/Layout/RightSidebar'
+import FloatingSocialButtons from '@/app/components/Common/FloatingSocialButtons'
 
 export default function SiteLayout({
   children,
@@ -21,6 +22,7 @@ export default function SiteLayout({
         </div>
         <Footer />
         <ScrollToTop />
+        <FloatingSocialButtons />
       </div>
     </Aoscompo>
   )

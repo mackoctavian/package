@@ -267,10 +267,10 @@ const Header: React.FC = () => {
       {/* Mobile Menu Drawer */}
       <div
         ref={mobileMenuRef}
-        className={`lg:hidden fixed top-0 right-0 h-full w-full bg-white shadow-lg transform transition-transform duration-300 max-w-xs ${
+        className={`lg:hidden fixed top-0 right-0 h-full w-full bg-white shadow-lg transform transition-transform duration-300 max-w-xs flex flex-col ${
           navbarOpen ? 'translate-x-0' : 'translate-x-full'
         } z-50`}>
-        <div className='flex items-center justify-between p-4 border-b border-slate-100'>
+        <div className='flex items-center justify-between p-4 border-b border-slate-100 flex-shrink-0'>
           <Logo />
           <button
             onClick={() => setNavbarOpen(false)}
@@ -280,7 +280,7 @@ const Header: React.FC = () => {
           </button>
         </div>
 
-        <nav className='flex flex-col p-4'>
+        <nav className='flex flex-col p-4 overflow-y-auto scrollbar-hide flex-1'>
           {headerData.map((item, index) => (
             <MobileHeaderLink key={index} item={item} />
           ))}
