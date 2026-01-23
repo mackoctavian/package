@@ -17,6 +17,13 @@ export default function DonationPage() {
   const [customAmount, setCustomAmount] = useState('')
   const [paymentMethod, setPaymentMethod] = useState(paymentOptions[0].id)
   const [status, setStatus] = useState<'idle' | 'submitting' | 'submitted'>('idle')
+  const [submitError, setSubmitError] = useState<string | null>(null)
+  const [form, setForm] = useState({
+    fullName: '',
+    email: '',
+    phone: '',
+    prayerIntention: '',
+  })
 
   const amount = useMemo(() => {
     if (customAmount) {
@@ -26,16 +33,44 @@ export default function DonationPage() {
     return selectedAmount
   }, [customAmount, selectedAmount])
 
-  const handleSubmit = (event: React.FormEvent<HTMLFormElement>) => {
+  const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault()
     if (!amount) {
       return
     }
 
     setStatus('submitting')
-    setTimeout(() => {
+    setSubmitError(null)
+
+    try {
+      const response = await fetch('/api/donations', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          fullName: form.fullName,
+          email: form.email,
+          phone: form.phone,
+          amount,
+          currency: 'TZS',
+          paymentMethod,
+          prayerIntention: form.prayerIntention,
+          metadata: { source: 'donation-page' },
+        }),
+      })
+
+      if (!response.ok) {
+        const payload = await response.json().catch(() => ({}))
+        throw new Error(payload.error ?? 'Unable to submit your donation right now.')
+      }
+
       setStatus('submitted')
-    }, 800)
+      setForm({ fullName: '', email: '', phone: '', prayerIntention: '' })
+      setCustomAmount('')
+      setSelectedAmount(presetAmounts[0])
+    } catch (error) {
+      setSubmitError(error instanceof Error ? error.message : 'Unable to submit donation. Please try again later.')
+      setStatus('idle')
+    }
   }
 
   return (
@@ -97,6 +132,8 @@ export default function DonationPage() {
                   type='text'
                   required
                   placeholder='Jane Doe'
+                  value={form.fullName}
+                  onChange={(event) => setForm((prev) => ({ ...prev, fullName: event.target.value }))}
                   className='mt-2 w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-base text-slate-900 placeholder:text-slate-400 focus:border-primary focus:ring-2 focus:ring-primary/30'
                 />
               </div>
@@ -107,6 +144,8 @@ export default function DonationPage() {
                     type='email'
                     required
                     placeholder='you@example.com'
+                    value={form.email}
+                    onChange={(event) => setForm((prev) => ({ ...prev, email: event.target.value }))}
                     className='mt-2 w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-base text-slate-900 placeholder:text-slate-400 focus:border-primary focus:ring-2 focus:ring-primary/30'
                   />
                 </div>
@@ -116,6 +155,8 @@ export default function DonationPage() {
                     type='tel'
                     required
                     placeholder='+255 700 000 000'
+                    value={form.phone}
+                    onChange={(event) => setForm((prev) => ({ ...prev, phone: event.target.value }))}
                     className='mt-2 w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-base text-slate-900 placeholder:text-slate-400 focus:border-primary focus:ring-2 focus:ring-primary/30'
                   />
                 </div>
@@ -192,6 +233,8 @@ export default function DonationPage() {
                 <textarea
                   rows={3}
                   placeholder='Share a family, parish, or personal intention we can pray for.'
+                  value={form.prayerIntention}
+                  onChange={(event) => setForm((prev) => ({ ...prev, prayerIntention: event.target.value }))}
                   className='mt-2 w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-base text-slate-900 placeholder:text-slate-400 focus:border-primary focus:ring-2 focus:ring-primary/30'
                 />
               </div>
@@ -209,6 +252,11 @@ export default function DonationPage() {
               {status === 'submitted' && (
                 <div className='rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-700'>
                   Thank you! Our team will email a confirmation with instructions to finish your {paymentMethod} donation.
+                </div>
+              )}
+              {submitError && (
+                <div className='rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700'>
+                  {submitError}
                 </div>
               )}
             </form>

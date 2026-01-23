@@ -11,6 +11,8 @@ export const ADMIN_MODULES = [
   { id: 'ministries', label: 'Ministries' },
   { id: 'about', label: 'About' },
   { id: 'feedback', label: 'Feedback Inbox' },
+  { id: 'mass-intentions', label: 'Mass Intentions' },
+  { id: 'donations', label: 'Donations' },
   { id: 'team', label: 'Admin Team' },
 ] as const
 

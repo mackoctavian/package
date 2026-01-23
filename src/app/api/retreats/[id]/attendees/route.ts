@@ -2,9 +2,19 @@ import { NextResponse } from 'next/server'
 import prisma from '@/lib/prisma'
 
 // Get all attendees/bookings for a specific retreat
+const getRetreatId = (request: Request, params?: { id?: string }) => {
+  if (params?.id) return params.id
+  const pathname = new URL(request.url).pathname
+  const segments = pathname.split('/').filter(Boolean)
+  return segments[segments.length - 2] ?? ''
+}
+
 export async function GET(request: Request, { params }: { params: { id: string } }) {
   try {
-    const retreatId = params.id
+    const retreatId = getRetreatId(request, params)
+    if (!retreatId) {
+      return NextResponse.json({ error: 'Retreat id is required' }, { status: 400 })
+    }
 
     // Get retreat details
     const retreat = await prisma.retreat.findUnique({

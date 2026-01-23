@@ -120,6 +120,47 @@ model FeedbackMessage {
   @@index([createdAt])
 }
 
+model MassIntention {
+  id               String   @id @default(uuid())
+  fullName         String   @map("full_name")
+  email            String
+  phone            String
+  intentionType    String   @map("intention_type")
+  intentionFor     String   @map("intention_for")
+  intentionDetails String   @db.Text @map("intention_details")
+  preferredDate    DateTime? @map("preferred_date")
+  numberOfMasses   Int      @default(1) @map("number_of_masses")
+  donationAmount   String?  @map("donation_amount")
+  status           String   @default("new")
+  metadata         Json?
+  createdAt        DateTime @default(now()) @map("created_at")
+  updatedAt        DateTime @updatedAt @map("updated_at")
+
+  @@map("mass_intentions")
+  @@index([status])
+  @@index([createdAt])
+}
+
+model Donation {
+  id             String   @id @default(uuid())
+  fullName       String   @map("full_name")
+  email          String
+  phone          String
+  amount         Int
+  currency       String   @default("TZS")
+  paymentMethod  String   @map("payment_method")
+  prayerIntention String? @db.Text @map("prayer_intention")
+  status         String   @default("new")
+  paymentStatus  String   @default("pending") @map("payment_status")
+  metadata       Json?
+  createdAt      DateTime @default(now()) @map("created_at")
+  updatedAt      DateTime @updatedAt @map("updated_at")
+
+  @@map("donations")
+  @@index([status])
+  @@index([createdAt])
+}
+
 model ContentItem {
   id          String   @id @default(uuid())
   type        String

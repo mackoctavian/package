@@ -1,12 +1,24 @@
 import { NextResponse } from 'next/server'
 import prisma from '@/lib/prisma'
 
+const getTestimonialId = (request: Request, params?: { id?: string }) => {
+  if (params?.id) return params.id
+  const pathname = new URL(request.url).pathname
+  const segments = pathname.split('/').filter(Boolean)
+  return segments[segments.length - 1] ?? ''
+}
+
 export async function PATCH(request: Request, { params }: { params: { id: string } }) {
   try {
+    const testimonialId = getTestimonialId(request, params)
+    if (!testimonialId) {
+      return NextResponse.json({ error: 'Testimonial id is required.' }, { status: 400 })
+    }
+
     const body = await request.json()
     
     const testimonial = await prisma.testimonial.update({
-      where: { id: params.id },
+      where: { id: testimonialId },
       data: {
         name: body.name,
         role: body.role,
@@ -26,8 +38,13 @@ export async function PATCH(request: Request, { params }: { params: { id: string
 
 export async function DELETE(request: Request, { params }: { params: { id: string } }) {
   try {
+    const testimonialId = getTestimonialId(request, params)
+    if (!testimonialId) {
+      return NextResponse.json({ error: 'Testimonial id is required.' }, { status: 400 })
+    }
+
     await prisma.testimonial.delete({
-      where: { id: params.id },
+      where: { id: testimonialId },
     })
     
     return NextResponse.json({ success: true })

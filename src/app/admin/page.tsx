@@ -1,6 +1,6 @@
 import type { ComponentType } from 'react'
 import Link from 'next/link'
-import { CalendarDays, Images, LayoutDashboard, Newspaper, Users, BookOpen, Globe2, Share2, Home, Sparkles, MessageSquare } from 'lucide-react'
+import { CalendarDays, Images, LayoutDashboard, Newspaper, Users, BookOpen, Globe2, Share2, Home, Sparkles, MessageSquare, HeartHandshake, HandCoins } from 'lucide-react'
 
 import prisma from '@/lib/prisma'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/app/components/ui/card'
@@ -53,6 +53,20 @@ const MODULES: Array<{
     icon: MessageSquare,
     description: 'Read and triage contact form submissions in one inbox.',
     moduleId: 'feedback',
+  },
+  {
+    name: 'Mass Intentions',
+    href: '/admin/mass-intentions',
+    icon: HeartHandshake,
+    description: 'Review Mass intention requests sent from the public form.',
+    moduleId: 'mass-intentions',
+  },
+  {
+    name: 'Donations',
+    href: '/admin/donations',
+    icon: HandCoins,
+    description: 'Track gifts, payment methods, and prayer intentions.',
+    moduleId: 'donations',
   },
   {
     name: 'Publications',
@@ -120,6 +134,8 @@ const MODULE_COUNT_RESOLVERS: Partial<Record<AdminModuleId, () => Promise<number
   ministries: () => prisma.ministry.count(),
   about: buildContentCounter('about'),
   feedback: () => prisma.feedbackMessage.count(),
+  'mass-intentions': () => prisma.massIntention.count(),
+  donations: () => prisma.donation.count(),
   team: () => prisma.adminUser.count(),
 }
 

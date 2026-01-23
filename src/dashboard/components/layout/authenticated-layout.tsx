@@ -1,6 +1,7 @@
 "use client"
 
-import { useMemo } from 'react'
+import { useMemo, useState } from 'react'
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { getCookie } from '@dashboard/lib/cookies'
 import { cn } from '@/lib/utils'
 import { LayoutProvider } from '@dashboard/context/layout-provider'
@@ -22,34 +23,37 @@ type DashboardLayoutClientProps = {
 
 export function DashboardLayoutClient({ children, currentUser }: DashboardLayoutClientProps) {
   const defaultOpen = useMemo(() => getCookie('sidebar_state') !== 'false', [])
+  const [queryClient] = useState(() => new QueryClient())
 
   return (
-    <DirectionProvider>
-      <ThemeProvider>
-        <FontProvider>
-          <SearchProvider>
-            <LayoutProvider>
-              <AdminUserProvider value={currentUser}>
-                <SidebarProvider defaultOpen={defaultOpen}>
-                  <NavigationProgress />
-                  <SkipToMain />
-                  <AppSidebar />
-                  <SidebarInset
-                    className={cn(
-                      '@container/content',
-                      'has-[[data-layout=fixed]]:h-svh',
-                      'peer-data-[variant=inset]:has-[[data-layout=fixed]]:h-[calc(100svh-(var(--spacing)*4))]'
-                    )}
-                  >
-                    {children}
-                  </SidebarInset>
-                </SidebarProvider>
-              </AdminUserProvider>
-            </LayoutProvider>
-          </SearchProvider>
-        </FontProvider>
-      </ThemeProvider>
-    </DirectionProvider>
+    <QueryClientProvider client={queryClient}>
+      <DirectionProvider>
+        <ThemeProvider>
+          <FontProvider>
+            <SearchProvider>
+              <LayoutProvider>
+                <AdminUserProvider value={currentUser}>
+                  <SidebarProvider defaultOpen={defaultOpen}>
+                    <NavigationProgress />
+                    <SkipToMain />
+                    <AppSidebar />
+                    <SidebarInset
+                      className={cn(
+                        '@container/content',
+                        'has-[[data-layout=fixed]]:h-svh',
+                        'peer-data-[variant=inset]:has-[[data-layout=fixed]]:h-[calc(100svh-(var(--spacing)*4))]'
+                      )}
+                    >
+                      {children}
+                    </SidebarInset>
+                  </SidebarProvider>
+                </AdminUserProvider>
+              </LayoutProvider>
+            </SearchProvider>
+          </FontProvider>
+        </ThemeProvider>
+      </DirectionProvider>
+    </QueryClientProvider>
   )
 }
 

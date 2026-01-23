@@ -8,10 +8,22 @@ type RouteContext = {
   params: { id: string }
 }
 
-export const GET = async (_request: Request, { params }: RouteContext) => {
+const getBookingId = (request: Request, params?: RouteContext['params']) => {
+  if (params?.id) return params.id
+  const pathname = new URL(request.url).pathname
+  const segments = pathname.split('/').filter(Boolean)
+  return segments[segments.length - 1] ?? ''
+}
+
+export const GET = async (request: Request, { params }: RouteContext) => {
   try {
+    const bookingId = getBookingId(request, params)
+    if (!bookingId) {
+      return NextResponse.json({ error: 'Booking id is required.' }, { status: 400 })
+    }
+
     const record = await prisma.retreatBooking.findUnique({
-      where: { id: params.id },
+      where: { id: bookingId },
     })
 
     if (!record) {
@@ -26,6 +38,11 @@ export const GET = async (_request: Request, { params }: RouteContext) => {
 }
 
 export const PATCH = async (request: Request, { params }: RouteContext) => {
+  const bookingId = getBookingId(request, params)
+  if (!bookingId) {
+    return NextResponse.json({ error: 'Booking id is required.' }, { status: 400 })
+  }
+
   const body = await request.json()
   const { status, paymentStatus, attended, notes, retreatId, retreatTitle } = body
   const updates: Record<string, unknown> = {}
@@ -67,7 +84,7 @@ export const PATCH = async (request: Request, { params }: RouteContext) => {
 
   try {
     const updated = await prisma.retreatBooking.update({
-      where: { id: params.id },
+      where: { id: bookingId },
       data: updates,
     })
 

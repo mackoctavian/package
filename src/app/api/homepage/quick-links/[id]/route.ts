@@ -1,12 +1,24 @@
 import { NextResponse } from 'next/server'
 import prisma from '@/lib/prisma'
 
+const getQuickLinkId = (request: Request, params?: { id?: string }) => {
+  if (params?.id) return params.id
+  const pathname = new URL(request.url).pathname
+  const segments = pathname.split('/').filter(Boolean)
+  return segments[segments.length - 1] ?? ''
+}
+
 export async function PATCH(request: Request, { params }: { params: { id: string } }) {
   try {
+    const quickLinkId = getQuickLinkId(request, params)
+    if (!quickLinkId) {
+      return NextResponse.json({ error: 'Quick link id is required.' }, { status: 400 })
+    }
+
     const body = await request.json()
     
     const quickLink = await prisma.quickLink.update({
-      where: { id: params.id },
+      where: { id: quickLinkId },
       data: {
         title: body.title,
         imageUrl: body.imageUrl,
@@ -25,8 +37,13 @@ export async function PATCH(request: Request, { params }: { params: { id: string
 
 export async function DELETE(request: Request, { params }: { params: { id: string } }) {
   try {
+    const quickLinkId = getQuickLinkId(request, params)
+    if (!quickLinkId) {
+      return NextResponse.json({ error: 'Quick link id is required.' }, { status: 400 })
+    }
+
     await prisma.quickLink.delete({
-      where: { id: params.id },
+      where: { id: quickLinkId },
     })
     
     return NextResponse.json({ success: true })

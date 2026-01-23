@@ -14,6 +14,8 @@ import {
   Newspaper,
   Share2,
   ShieldCheck,
+  HandCoins,
+  HeartHandshake,
   Users2,
 } from 'lucide-react'
 
@@ -49,6 +51,8 @@ const NAV_ITEMS: Array<{
   { title: 'Publications', href: '/admin/publications', icon: BookOpen, moduleId: 'publications' },
   { title: 'Articles', href: '/admin/articles', icon: ShieldCheck, moduleId: 'articles' },
   { title: 'Feedback', href: '/admin/feedback', icon: MessageSquare, moduleId: 'feedback' },
+  { title: 'Mass Intentions', href: '/admin/mass-intentions', icon: HeartHandshake, moduleId: 'mass-intentions' },
+  { title: 'Donations', href: '/admin/donations', icon: HandCoins, moduleId: 'donations' },
   { title: 'Patrons', href: '/admin/patrons', icon: Users2, moduleId: 'patrons' },
   { title: 'Ministries', href: '/admin/ministries', icon: Share2, moduleId: 'ministries' },
   { title: 'About', href: '/admin/about', icon: Globe2, moduleId: 'about' },

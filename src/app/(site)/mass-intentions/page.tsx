@@ -86,6 +86,7 @@ export default function MassIntentionsPage() {
   const [errors, setErrors] = useState<Partial<Record<keyof FormState, string>>>({})
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [isSuccess, setIsSuccess] = useState(false)
+  const [submitError, setSubmitError] = useState<string | null>(null)
 
   const updateField = <K extends keyof FormState>(field: K, value: FormState[K]) => {
     setForm((prev) => ({ ...prev, [field]: value }))
@@ -116,13 +117,30 @@ export default function MassIntentionsPage() {
     if (!validate()) return
 
     setIsSubmitting(true)
-    
-    // Simulate API call
-    await new Promise(resolve => setTimeout(resolve, 2000))
-    
-    setIsSubmitting(false)
-    setIsSuccess(true)
-    setForm(initialState)
+    setSubmitError(null)
+
+    try {
+      const response = await fetch('/api/mass-intentions', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          ...form,
+          metadata: { source: 'mass-intentions' },
+        }),
+      })
+
+      if (!response.ok) {
+        const payload = await response.json().catch(() => ({}))
+        throw new Error(payload.error ?? 'Unable to submit your intention right now.')
+      }
+
+      setIsSuccess(true)
+      setForm(initialState)
+    } catch (error) {
+      setSubmitError(error instanceof Error ? error.message : 'Unable to submit your intention. Please try again later.')
+    } finally {
+      setIsSubmitting(false)
+    }
   }
 
   if (isSuccess) {
@@ -450,6 +468,9 @@ export default function MassIntentionsPage() {
                     </>
                   )}
                 </button>
+                {submitError && (
+                  <p className='mt-3 text-sm text-red-600'>{submitError}</p>
+                )}
               </form>
             </div>
           </div>
