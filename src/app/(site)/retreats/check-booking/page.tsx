@@ -1,13 +1,13 @@
 'use client'
 
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import Link from 'next/link'
 import { useSearchParams } from 'next/navigation'
 import { motion, AnimatePresence } from 'framer-motion'
 import { 
   Search, Calendar, User, Phone, Hash, 
   CheckCircle2, XCircle, AlertCircle, RefreshCw,
-  ArrowRight, Sparkles, Clock, MapPin, CreditCard
+  ArrowRight, Sparkles, Clock, CreditCard
 } from 'lucide-react'
 
 import type { RetreatBooking } from '@/app/types/retreat-booking'
@@ -35,7 +35,7 @@ const paymentStatusConfig = {
   refunded: { color: 'text-slate-600', label: 'Refunded' },
 }
 
-export default function CheckBookingPage() {
+function CheckBookingContent() {
   const [form, setForm] = useState<FormState>(initialForm)
   const [booking, setBooking] = useState<RetreatBooking | null>(null)
   const [retreats, setRetreats] = useState<RetreatType[]>([])
@@ -560,5 +560,19 @@ export default function CheckBookingPage() {
         </div>
       </section>
     </main>
+  )
+}
+
+export default function CheckBookingPage() {
+  return (
+    <Suspense
+      fallback={
+        <div className='min-h-screen bg-gradient-to-b from-slate-50 to-white flex items-center justify-center'>
+          <div className='text-sm text-slate-500'>Loading booking tools…</div>
+        </div>
+      }
+    >
+      <CheckBookingContent />
+    </Suspense>
   )
 }

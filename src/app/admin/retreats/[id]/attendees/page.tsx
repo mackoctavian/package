@@ -486,6 +486,7 @@ export default function RetreatAttendeesPage() {
         </DialogContent>
       </Dialog>
     </div>
+    </ModuleGate>
   )
 }
 
