@@ -605,7 +605,7 @@ function AttendeeCard({
           </div>
         </div>
       </div>
-    </ModuleGate>
+    </div>
   )
 }
 
