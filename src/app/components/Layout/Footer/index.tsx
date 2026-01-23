@@ -157,6 +157,9 @@ const Footer = () => {
               <Link href='/terms' className='text-slate-500 hover:text-white text-sm transition-colors'>
                 Terms of Service
               </Link>
+              <Link href='/login' className='text-slate-500 hover:text-white text-sm transition-colors'>
+                Admin Login
+              </Link>
               <Link href='/about' className='text-slate-500 hover:text-white text-sm transition-colors'>
                 About Us
               </Link>
