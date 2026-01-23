@@ -1,41 +1,60 @@
-import { cookies } from 'next/headers'
 import { NextResponse } from 'next/server'
+import { AdminRole } from '@prisma/client'
 
-const DEFAULT_EMAIL = 'admin@admin.com'
-const DEFAULT_PASSWORD = 'Jesus2025!'
-const SESSION_COOKIE = 'admin_session'
+import prisma from '@/lib/prisma'
+import { sanitizeModules } from '@/lib/auth/admin-permissions'
+import { createAdminSession, destroyAdminSession, getCurrentAdminUser } from '@/lib/auth/admin-session'
+import { verifyPassword } from '@/lib/password'
 
-const isValidCredentials = (email: string, password: string) =>
-  email === (process.env.ADMIN_EMAIL ?? DEFAULT_EMAIL) &&
-  password === (process.env.ADMIN_PASSWORD ?? DEFAULT_PASSWORD)
+const serializeUser = (user: {
+  id: string
+  name: string
+  email: string
+  role: AdminRole
+  allowedModules: string[]
+}) => ({
+  id: user.id,
+  name: user.name,
+  email: user.email,
+  role: user.role,
+  allowedModules: sanitizeModules(user.allowedModules),
+})
 
 export const POST = async (request: Request) => {
   const { email, password } = await request.json()
+  const normalizedEmail = typeof email === 'string' ? email.trim().toLowerCase() : ''
+  const passwordValue = typeof password === 'string' ? password : ''
 
-  if (!isValidCredentials(email, password)) {
+  if (!normalizedEmail || !passwordValue) {
+    return NextResponse.json({ error: 'Email and password are required.' }, { status: 400 })
+  }
+
+  const user = await prisma.adminUser.findUnique({
+    where: { email: normalizedEmail },
+  })
+
+  if (!user || !user.isActive) {
     return NextResponse.json({ error: 'Invalid credentials.' }, { status: 401 })
   }
 
-  const response = NextResponse.json({ success: true })
-  response.cookies.set(SESSION_COOKIE, 'authenticated', {
-    httpOnly: true,
-    secure: process.env.NODE_ENV === 'production',
-    sameSite: 'lax',
-    path: '/',
-    maxAge: 60 * 60 * 8,
-  })
-  return response
+  const isValid = await verifyPassword(passwordValue, user.passwordHash)
+  if (!isValid) {
+    return NextResponse.json({ error: 'Invalid credentials.' }, { status: 401 })
+  }
+
+  await createAdminSession(user.id)
+
+  return NextResponse.json({ data: serializeUser(user) })
 }
 
 export const GET = async () => {
-  const cookieStore = await cookies()
-  const session = cookieStore.get(SESSION_COOKIE)
-  return NextResponse.json({ authenticated: Boolean(session) })
+  const user = await getCurrentAdminUser()
+  return NextResponse.json({ data: user ?? null })
 }
 
 export const DELETE = async () => {
-  const response = NextResponse.json({ success: true })
-  response.cookies.set(SESSION_COOKIE, '', { httpOnly: true, maxAge: 0, path: '/' })
-  return response
+  await destroyAdminSession()
+  return NextResponse.json({ success: true })
 }
+
 

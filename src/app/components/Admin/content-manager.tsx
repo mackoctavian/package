@@ -13,6 +13,8 @@ import { Label } from '@/app/components/ui/label'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/app/components/ui/table'
 import { Textarea } from '@/app/components/ui/textarea'
 import { cn } from '@/lib/utils'
+import { UploadField } from './UploadField'
+import { MultiImageUpload } from './MultiImageUpload'
 
 type ContentRecord = {
   id: string
@@ -52,7 +54,20 @@ type ContentForm = {
   mediaUrl: string
   publishDate: string
   body: string
-  metadata: Record<string, string>
+  metadata: Record<string, string | string[]>
+}
+
+type FieldConfig = {
+  titleLabel: string
+  summaryLabel: string
+  categoryLabel: string
+  mediaLabel: string
+  showSummary: boolean
+  showBody: boolean
+  showCategory: boolean
+  showPublishDate: boolean
+  showMedia: boolean
+  mediaRequired: boolean
 }
 
 const emptyForm: ContentForm = {
@@ -87,6 +102,116 @@ export function ContentManager({ type, title, description, emptyState, metadataF
   const [isDialogOpen, setIsDialogOpen] = useState(false)
   const [isDeleteOpen, setIsDeleteOpen] = useState(false)
   const [deleteId, setDeleteId] = useState<string | null>(null)
+
+  const presets: Record<string, FieldConfig> = {
+    patrons: {
+      titleLabel: 'Name *',
+      summaryLabel: 'Bio',
+      categoryLabel: 'Category',
+      mediaLabel: 'Photo',
+      showSummary: true,
+      showBody: false,
+      showCategory: false,
+      showPublishDate: false,
+      showMedia: true,
+      mediaRequired: true,
+    },
+    publications: {
+      titleLabel: 'Title *',
+      summaryLabel: 'Subtitle / blurb',
+      categoryLabel: 'Category',
+      mediaLabel: 'Cover image',
+      showSummary: true,
+      showBody: true,
+      showCategory: true,
+      showPublishDate: true,
+      showMedia: true,
+      mediaRequired: true,
+    },
+    news: {
+      titleLabel: 'Title *',
+      summaryLabel: 'Summary',
+      categoryLabel: 'Category / type',
+      mediaLabel: 'Hero image',
+      showSummary: true,
+      showBody: true,
+      showCategory: true,
+      showPublishDate: true,
+      showMedia: true,
+      mediaRequired: false,
+    },
+    events: {
+      titleLabel: 'Title *',
+      summaryLabel: 'Summary',
+      categoryLabel: 'Category / type',
+      mediaLabel: 'Hero image',
+      showSummary: true,
+      showBody: true,
+      showCategory: true,
+      showPublishDate: true,
+      showMedia: true,
+      mediaRequired: false,
+    },
+    articles: {
+      titleLabel: 'Title *',
+      summaryLabel: 'Summary',
+      categoryLabel: 'Category',
+      mediaLabel: 'Hero image',
+      showSummary: true,
+      showBody: true,
+      showCategory: true,
+      showPublishDate: true,
+      showMedia: true,
+      mediaRequired: false,
+    },
+    default: {
+      titleLabel: 'Title *',
+      summaryLabel: 'Summary',
+      categoryLabel: 'Category',
+      mediaLabel: 'Media',
+      showSummary: true,
+      showBody: true,
+      showCategory: true,
+      showPublishDate: true,
+      showMedia: true,
+      mediaRequired: false,
+    },
+  }
+
+  const mediaGuidance: Record<
+    string,
+    {
+      placeholder: string
+      hint: string
+    }
+  > = {
+    patrons: {
+      placeholder: 'Portrait headshot · 800×1000px',
+      hint: 'Square or portrait 800×1000 px keeps clergy headshots sharp.',
+    },
+    publications: {
+      placeholder: 'Cover illustration · 1200×1600px',
+      hint: 'Upload a tall cover (≈1200×1600 px) for magazines or PDFs.',
+    },
+    news: {
+      placeholder: 'Hero image · 1500×1000px',
+      hint: 'Use a 3:2 hero (≈1500×1000 px) so homepage cards stay crisp.',
+    },
+    events: {
+      placeholder: 'Event banner · 1400×900px',
+      hint: 'Landscape 1400×900 px keeps schedule highlights consistent.',
+    },
+    articles: {
+      placeholder: 'Feature image · 1600×900px',
+      hint: 'Wide 16:9 image that works across blog layouts.',
+    },
+    default: {
+      placeholder: 'Upload or paste an image URL (min width 1200px)',
+      hint: 'High-resolution images (≥1200 px wide) look best on retina screens.',
+    },
+  }
+
+  const fieldConfig = presets[type] ?? presets.default
 
   const listQuery = useQuery({
     queryKey: ['content', type],
@@ -183,7 +308,18 @@ export function ContentManager({ type, title, description, emptyState, metadataF
         publishDate: record.publishDate ? record.publishDate.slice(0, 10) : '',
         body: record.body ?? '',
         metadata: Object.fromEntries(
-          Object.entries(record.metadata ?? {}).map(([key, value]) => [key, String(value ?? '')]),
+          Object.entries(record.metadata ?? {}).map(([key, value]) => {
+            if (Array.isArray(value)) {
+              return [
+                key,
+                value.filter((item): item is string => typeof item === 'string'),
+              ]
+            }
+            if (typeof value === 'string') {
+              return [key, value]
+            }
+            return [key, value != null ? String(value) : '']
+          }),
         ),
       })
     }
@@ -209,6 +345,26 @@ export function ContentManager({ type, title, description, emptyState, metadataF
   }
 
   const isSaving = createMutation.isLoading || updateMutation.isLoading
+
+  const renderForm = () => {
+    if (type === 'news') {
+      return <NewsForm form={form} updateForm={updateForm} updateMetadata={updateMetadata} type={type} />
+    }
+    if (type === 'events') {
+      return <EventsForm form={form} updateForm={updateForm} updateMetadata={updateMetadata} type={type} />
+    }
+    return (
+      <DefaultForm
+        type={type}
+        form={form}
+        fieldConfig={fieldConfig}
+        metadataFields={metadataFields}
+        mediaGuidance={mediaGuidance[type] ?? mediaGuidance.default}
+        updateForm={updateForm}
+        updateMetadata={updateMetadata}
+      />
+    )
+  }
 
   return (
     <div className='space-y-6'>
@@ -310,61 +466,7 @@ export function ContentManager({ type, title, description, emptyState, metadataF
             <DialogTitle>{form.id ? 'Edit content' : 'Create content'}</DialogTitle>
             <DialogDescription>Manage the metadata, imagery, and editorial details for this entry.</DialogDescription>
           </DialogHeader>
-          <div className='space-y-4'>
-            <div className='grid gap-4 sm:grid-cols-2'>
-              <Field label='Title *'>
-                <Input value={form.title} onChange={(event) => updateForm('title', event.target.value)} />
-              </Field>
-              <Field label='Slug'>
-                <Input value={form.slug} onChange={(event) => updateForm('slug', slugify(event.target.value))} />
-              </Field>
-            </div>
-            <Field label='Summary'>
-              <Textarea rows={3} value={form.summary} onChange={(event) => updateForm('summary', event.target.value)} />
-            </Field>
-            <Field label='Detailed body'>
-              <Textarea rows={5} value={form.body} onChange={(event) => updateForm('body', event.target.value)} />
-            </Field>
-            <div className='grid gap-4 sm:grid-cols-3'>
-              <Field label='Category'>
-                <Input value={form.category} onChange={(event) => updateForm('category', event.target.value)} />
-              </Field>
-              <Field label='Status'>
-                <select
-                  className='h-10 rounded-lg border border-slate-200 px-3 text-sm'
-                  value={form.status}
-                  onChange={(event) => updateForm('status', event.target.value as ContentForm['status'])}>
-                  <option value='draft'>Draft</option>
-                  <option value='published'>Published</option>
-                  <option value='scheduled'>Scheduled</option>
-                </select>
-              </Field>
-              <Field label='Publish date'>
-                <Input type='date' value={form.publishDate} onChange={(event) => updateForm('publishDate', event.target.value)} />
-              </Field>
-            </div>
-            <div className='grid gap-4 sm:grid-cols-2'>
-              <Field label='Media URL'>
-                <Input value={form.mediaUrl} onChange={(event) => updateForm('mediaUrl', event.target.value)} />
-              </Field>
-            </div>
-            {metadataFields.length > 0 && (
-              <div className='space-y-3 rounded-xl border border-dashed border-slate-200 p-4'>
-                <p className='text-sm font-semibold text-slate-800'>Additional metadata</p>
-                <div className='grid gap-4 sm:grid-cols-2'>
-                  {metadataFields.map((field) => (
-                    <Field key={field.key} label={field.label}>
-                      <Input
-                        value={form.metadata[field.key] ?? ''}
-                        placeholder={field.placeholder}
-                        onChange={(event) => updateMetadata(field.key, event.target.value)}
-                      />
-                    </Field>
-                  ))}
-                </div>
-              </div>
-            )}
-          </div>
+          {renderForm()}
           <DialogFooter>
             <Button variant='ghost' onClick={closeEditor} disabled={isSaving}>
               Cancel
@@ -405,7 +507,7 @@ export function ContentManager({ type, title, description, emptyState, metadataF
     setForm((prev) => ({ ...prev, [key]: value }))
   }
 
-  function updateMetadata(key: string, value: string) {
+  function updateMetadata(key: string, value: string | string[]) {
     setForm((prev) => ({ ...prev, metadata: { ...prev.metadata, [key]: value } }))
   }
 
@@ -423,6 +525,369 @@ export function ContentManager({ type, title, description, emptyState, metadataF
     }
   }
 }
+
+type BaseFormProps = {
+  form: ContentForm
+  type: string
+  updateForm: <K extends keyof ContentForm>(key: K, value: ContentForm[K]) => void
+  updateMetadata: (key: string, value: string | string[]) => void
+}
+
+type DefaultFormProps = BaseFormProps & {
+  fieldConfig: FieldConfig
+  metadataFields: MetadataField[]
+  mediaGuidance: {
+    placeholder: string
+    hint: string
+  }
+}
+
+const DefaultForm = ({ form, fieldConfig, metadataFields, updateForm, updateMetadata, type, mediaGuidance }: DefaultFormProps) => (
+  <div className='space-y-4'>
+    <div className='grid gap-4 sm:grid-cols-2'>
+      <Field label={fieldConfig.titleLabel}>
+        <Input value={form.title} onChange={(event) => updateForm('title', event.target.value)} required />
+      </Field>
+      <Field label='Slug'>
+        <Input value={form.slug} onChange={(event) => updateForm('slug', slugify(event.target.value))} />
+      </Field>
+    </div>
+    {fieldConfig.showSummary && (
+      <Field label={fieldConfig.summaryLabel}>
+        <Textarea rows={3} value={form.summary} onChange={(event) => updateForm('summary', event.target.value)} />
+      </Field>
+    )}
+    {fieldConfig.showBody && (
+      <Field label='Detailed body'>
+        <Textarea rows={5} value={form.body} onChange={(event) => updateForm('body', event.target.value)} />
+      </Field>
+    )}
+    <div className='grid gap-4 sm:grid-cols-3'>
+      {fieldConfig.showCategory && (
+        <Field label={fieldConfig.categoryLabel}>
+          <Input value={form.category} onChange={(event) => updateForm('category', event.target.value)} />
+        </Field>
+      )}
+      <Field label='Status'>
+        <select
+          className='h-10 rounded-lg border border-slate-200 px-3 text-sm'
+          value={form.status}
+          onChange={(event) => updateForm('status', event.target.value as ContentForm['status'])}>
+          <option value='draft'>Draft</option>
+          <option value='published'>Published</option>
+          <option value='scheduled'>Scheduled</option>
+        </select>
+      </Field>
+      {fieldConfig.showPublishDate && (
+        <Field label='Publish date'>
+          <Input type='date' value={form.publishDate} onChange={(event) => updateForm('publishDate', event.target.value)} />
+        </Field>
+      )}
+    </div>
+    {fieldConfig.showMedia && (
+      <div className='grid gap-4 sm:grid-cols-2'>
+        <UploadField
+          label={fieldConfig.mediaLabel}
+          value={form.mediaUrl}
+          onChange={(url) => updateForm('mediaUrl', url)}
+          folder={`content/${type}`}
+          accept='image/*,.pdf'
+          placeholder={mediaGuidance.placeholder}
+          hint={mediaGuidance.hint}
+        />
+      </div>
+    )}
+    {metadataFields.length > 0 && (
+      <div className='space-y-3 rounded-xl border border-dashed border-slate-200 p-4'>
+        <p className='text-sm font-semibold text-slate-800'>Additional metadata</p>
+        <div className='grid gap-4 sm:grid-cols-2'>
+          {metadataFields.map((field) => {
+            const value = form.metadata[field.key]
+            return (
+              <Field key={field.key} label={field.label}>
+                <Input
+                  value={typeof value === 'string' ? value : ''}
+                  placeholder={field.placeholder}
+                  onChange={(event) => updateMetadata(field.key, event.target.value)}
+                />
+              </Field>
+            )
+          })}
+        </div>
+      </div>
+    )}
+  </div>
+)
+
+const NewsForm = ({ form, type, updateForm, updateMetadata }: BaseFormProps) => {
+  const author = typeof form.metadata.author === 'string' ? form.metadata.author : ''
+  const readingTime = typeof form.metadata.readingTime === 'string' ? form.metadata.readingTime : ''
+  const ctaLabel = typeof form.metadata.ctaLabel === 'string' ? form.metadata.ctaLabel : ''
+  const ctaHref = typeof form.metadata.ctaHref === 'string' ? form.metadata.ctaHref : ''
+  const gallery = Array.isArray(form.metadata.gallery)
+    ? form.metadata.gallery.filter((item): item is string => typeof item === 'string')
+    : []
+
+  const categoryOptions = ['', 'Announcement', 'Event', 'Testimony', 'Press']
+
+  return (
+    <div className='space-y-5'>
+      <SectionCard
+        title='Story basics'
+        description='Define the essentials that appear on the homepage cards and newsletters.'>
+        <div className='grid gap-4 sm:grid-cols-2'>
+          <Field label='Title *'>
+            <Input value={form.title} onChange={(event) => updateForm('title', event.target.value)} required />
+          </Field>
+          <Field label='Slug'>
+            <Input value={form.slug} onChange={(event) => updateForm('slug', slugify(event.target.value))} />
+          </Field>
+        </div>
+        <div className='grid gap-4 sm:grid-cols-3'>
+          <Field label='Status'>
+            <select
+              className='h-10 w-full rounded-lg border border-slate-200 px-3 text-sm'
+              value={form.status}
+              onChange={(event) => updateForm('status', event.target.value as ContentForm['status'])}>
+              <option value='draft'>Draft</option>
+              <option value='published'>Published</option>
+              <option value='scheduled'>Scheduled</option>
+            </select>
+          </Field>
+          <Field label='Publish date'>
+            <Input type='date' value={form.publishDate} onChange={(event) => updateForm('publishDate', event.target.value)} />
+          </Field>
+          <Field label='Tag / category'>
+            <select
+              className='h-10 w-full rounded-lg border border-slate-200 px-3 text-sm capitalize'
+              value={form.category}
+              onChange={(event) => updateForm('category', event.target.value)}>
+              {categoryOptions.map((option) => (
+                <option key={option || 'default'} value={option}>
+                  {option ? option : 'Select tag'}
+                </option>
+              ))}
+            </select>
+          </Field>
+        </div>
+      </SectionCard>
+
+      <SectionCard title='Editorial copy' description='Craft the short deck and detailed narrative for this update.'>
+        <Field label='Short summary'>
+          <Textarea
+            rows={3}
+            value={form.summary}
+            maxLength={300}
+            placeholder='One or two sentences that explain the highlight.'
+            onChange={(event) => updateForm('summary', event.target.value)}
+          />
+        </Field>
+        <Field label='Full story'>
+          <Textarea
+            rows={6}
+            value={form.body}
+            placeholder='Add the main article content, testimonies, or bullet points.'
+            onChange={(event) => updateForm('body', event.target.value)}
+          />
+        </Field>
+      </SectionCard>
+
+      <SectionCard title='Attribution & actions' description='Credit the author and drive readers to next steps.'>
+        <div className='grid gap-4 sm:grid-cols-2'>
+          <Field label='Author / source'>
+            <Input value={author} placeholder='DMRC Communications Team' onChange={(event) => updateMetadata('author', event.target.value)} />
+          </Field>
+          <Field label='Reading time'>
+            <Input value={readingTime} placeholder='4 min read' onChange={(event) => updateMetadata('readingTime', event.target.value)} />
+          </Field>
+        </div>
+        <div className='grid gap-4 sm:grid-cols-2'>
+          <Field label='CTA label'>
+            <Input
+              value={ctaLabel}
+              placeholder='Read full story'
+              onChange={(event) => updateMetadata('ctaLabel', event.target.value)}
+            />
+          </Field>
+          <Field label='CTA link'>
+            <Input
+              type='url'
+              value={ctaHref}
+              placeholder='https://example.org/news/...'
+              onChange={(event) => updateMetadata('ctaHref', event.target.value)}
+            />
+          </Field>
+        </div>
+      </SectionCard>
+
+      <SectionCard title='Media & gallery' description='Highlight a hero image and optional supporting gallery.'>
+        <UploadField
+          label='Hero image'
+          value={form.mediaUrl}
+          onChange={(url) => updateForm('mediaUrl', url)}
+          folder={`content/${type}`}
+          accept='image/*'
+          placeholder='Hero image · 1500×1000px'
+          hint='Use a 3:2 hero (≈1500×1000 px) for homepage cards and article headers.'
+        />
+        <MultiImageUpload
+          label='Supporting gallery'
+          values={gallery}
+          onChange={(urls) => updateMetadata('gallery', urls)}
+          folder={`content/${type}/gallery`}
+          hint='Optional. Upload up to six images that can be used across the site.'
+        />
+      </SectionCard>
+    </div>
+  )
+}
+
+const EventsForm = ({ form, type, updateForm, updateMetadata }: BaseFormProps) => {
+  const startDate = typeof form.metadata.startDate === 'string' ? form.metadata.startDate : ''
+  const startTime = typeof form.metadata.startTime === 'string' ? form.metadata.startTime : ''
+  const endDate = typeof form.metadata.endDate === 'string' ? form.metadata.endDate : ''
+  const endTime = typeof form.metadata.endTime === 'string' ? form.metadata.endTime : ''
+  const location = typeof form.metadata.location === 'string' ? form.metadata.location : ''
+  const timezone = typeof form.metadata.timezone === 'string' ? form.metadata.timezone : ''
+  const ctaLabel = typeof form.metadata.ctaLabel === 'string' ? form.metadata.ctaLabel : ''
+  const ctaHref = typeof form.metadata.ctaHref === 'string' ? form.metadata.ctaHref : ''
+  const contactEmail = typeof form.metadata.contactEmail === 'string' ? form.metadata.contactEmail : ''
+  const contactPhone = typeof form.metadata.contactPhone === 'string' ? form.metadata.contactPhone : ''
+
+  return (
+    <div className='space-y-5'>
+      <SectionCard title='Event overview' description='Give the event a clear identity and publishing status.'>
+        <div className='grid gap-4 sm:grid-cols-2'>
+          <Field label='Title *'>
+            <Input value={form.title} onChange={(event) => updateForm('title', event.target.value)} required />
+          </Field>
+          <Field label='Slug'>
+            <Input value={form.slug} onChange={(event) => updateForm('slug', slugify(event.target.value))} />
+          </Field>
+        </div>
+        <div className='grid gap-4 sm:grid-cols-3'>
+          <Field label='Status'>
+            <select
+              className='h-10 w-full rounded-lg border border-slate-200 px-3 text-sm'
+              value={form.status}
+              onChange={(event) => updateForm('status', event.target.value as ContentForm['status'])}>
+              <option value='draft'>Draft</option>
+              <option value='published'>Published</option>
+              <option value='scheduled'>Scheduled</option>
+            </select>
+          </Field>
+          <Field label='Category / type'>
+            <Input
+              value={form.category}
+              placeholder='Prayer vigil, leadership summit…'
+              onChange={(event) => updateForm('category', event.target.value)}
+            />
+          </Field>
+          <Field label='Publish date'>
+            <Input type='date' value={form.publishDate} onChange={(event) => updateForm('publishDate', event.target.value)} />
+          </Field>
+        </div>
+      </SectionCard>
+
+      <SectionCard title='Schedule' description='Capture the exact dates and times that guests should remember.'>
+        <div className='grid gap-4 lg:grid-cols-4'>
+          <Field label='Start date'>
+            <Input type='date' value={startDate} onChange={(event) => updateMetadata('startDate', event.target.value)} />
+          </Field>
+          <Field label='Start time'>
+            <Input type='time' value={startTime} onChange={(event) => updateMetadata('startTime', event.target.value)} />
+          </Field>
+          <Field label='End date'>
+            <Input type='date' value={endDate} onChange={(event) => updateMetadata('endDate', event.target.value)} />
+          </Field>
+          <Field label='End time'>
+            <Input type='time' value={endTime} onChange={(event) => updateMetadata('endTime', event.target.value)} />
+          </Field>
+        </div>
+      </SectionCard>
+
+      <SectionCard title='Logistics' description='Help guests know where to be and whom to contact.'>
+        <div className='grid gap-4 sm:grid-cols-2'>
+          <Field label='Location'>
+            <Input
+              value={location}
+              placeholder='DMRC Main Sanctuary / City, Country'
+              onChange={(event) => updateMetadata('location', event.target.value)}
+            />
+          </Field>
+          <Field label='Timezone / city'>
+            <Input value={timezone} placeholder='GMT+3 · Dar es Salaam' onChange={(event) => updateMetadata('timezone', event.target.value)} />
+          </Field>
+        </div>
+        <div className='grid gap-4 sm:grid-cols-2'>
+          <Field label='Contact email'>
+            <Input type='email' value={contactEmail} placeholder='events@dmrc.org' onChange={(event) => updateMetadata('contactEmail', event.target.value)} />
+          </Field>
+          <Field label='Contact phone'>
+            <Input value={contactPhone} placeholder='+255 700 000 000' onChange={(event) => updateMetadata('contactPhone', event.target.value)} />
+          </Field>
+        </div>
+      </SectionCard>
+
+      <SectionCard title='Description' description='Share the invitation copy that appears online.'>
+        <Field label='Short summary'>
+          <Textarea
+            rows={3}
+            value={form.summary}
+            placeholder='One paragraph overview for cards and previews.'
+            onChange={(event) => updateForm('summary', event.target.value)}
+          />
+        </Field>
+        <Field label='Detailed description'>
+          <Textarea
+            rows={5}
+            value={form.body}
+            placeholder='Agenda, ministry schedule, or speaker highlights.'
+            onChange={(event) => updateForm('body', event.target.value)}
+          />
+        </Field>
+      </SectionCard>
+
+      <SectionCard title='Call to action' description='Guide visitors to register or learn more.'>
+        <div className='grid gap-4 sm:grid-cols-2'>
+          <Field label='CTA label'>
+            <Input value={ctaLabel} placeholder='Reserve seat' onChange={(event) => updateMetadata('ctaLabel', event.target.value)} />
+          </Field>
+          <Field label='CTA link'>
+            <Input
+              type='url'
+              value={ctaHref}
+              placeholder='https://dmrc.org/events/registration'
+              onChange={(event) => updateMetadata('ctaHref', event.target.value)}
+            />
+          </Field>
+        </div>
+      </SectionCard>
+
+      <SectionCard title='Hero media' description='Upload the banner that will appear on cards and highlights.'>
+        <UploadField
+          label='Hero image'
+          value={form.mediaUrl}
+          onChange={(url) => updateForm('mediaUrl', url)}
+          folder={`content/${type}`}
+          accept='image/*'
+          placeholder='Event banner · 1400×900px'
+          hint='Landscape (≈1400×900 px) keeps event promos sharp on the homepage.'
+        />
+      </SectionCard>
+    </div>
+  )
+}
+
+const SectionCard = ({ title, description, children }: { title: string; description?: string; children: React.ReactNode }) => (
+  <div className='rounded-2xl border border-slate-200 bg-white/80 p-5 shadow-sm'>
+    <div className='mb-4 space-y-1'>
+      <p className='text-sm font-semibold text-slate-900'>{title}</p>
+      {description ? <p className='text-xs text-slate-500'>{description}</p> : null}
+    </div>
+    <div className='space-y-4'>{children}</div>
+  </div>
+)
 
 const Field = ({ label, children }: { label: string; children: React.ReactNode }) => (
   <div className='space-y-1.5'>

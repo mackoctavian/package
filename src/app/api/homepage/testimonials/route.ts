@@ -1,5 +1,39 @@
 import { NextResponse } from 'next/server'
 import prisma from '@/lib/prisma'
+import { type TestimonialType } from '@/app/types/testimonial'
+
+const FALLBACK_TESTIMONIALS: Array<{ name: string; role: string; imageUrl: string; quote: string; rating: number; order: number; isActive: boolean }> = [
+  {
+    name: 'Andrew Williams',
+    role: 'UX/UI Designer',
+    imageUrl: '/images/testimonial/user-1.jpg',
+    quote:
+      "I have been a Junior Graphic Designer for more then 10 years. Some things are problem that I had and teach how to solve them. That's why this course is so great!",
+    rating: 5,
+    order: 0,
+    isActive: true,
+  },
+  {
+    name: 'Cristian Doru Barin',
+    role: 'UX/UI Designer',
+    imageUrl: '/images/testimonial/user-2.jpg',
+    quote:
+      "I have been a Junior Graphic Designer for more then 10 years. Some things are problem that I had and teach how to solve them. That's why this course is so great!",
+    rating: 5,
+    order: 1,
+    isActive: true,
+  },
+  {
+    name: 'Tanzeel Ur Rehman',
+    role: 'UX/UI Designer',
+    imageUrl: '/images/testimonial/user-3.jpg',
+    quote:
+      "I have been a Junior Graphic Designer for more then 10 years. Some things are problem that I had and teach how to solve them. That's why this course is so great!",
+    rating: 5,
+    order: 2,
+    isActive: true,
+  },
+]
 
 export async function GET() {
   try {
@@ -8,7 +42,8 @@ export async function GET() {
     })
     return NextResponse.json({ data: testimonials })
   } catch (error) {
-    return NextResponse.json({ error: 'Failed to fetch testimonials' }, { status: 500 })
+    console.error('[homepage][testimonials][GET] Prisma error:', error)
+    return NextResponse.json({ data: FALLBACK_TESTIMONIALS, source: 'static', error: 'Database unavailable' })
   }
 }
 

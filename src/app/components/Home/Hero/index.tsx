@@ -4,35 +4,51 @@ import { useState, useEffect } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import Image from 'next/image'
 
-const HERO_DATA = [
-  {
-    id: 1,
-    image: 'https://images.unsplash.com/photo-1743951509643-745d7a4f582f?auto=format&fit=crop&w=1920&q=80',
-  },
-  {
-    id: 2,
-    image: 'https://images.unsplash.com/photo-1744741604701-6ac1f9129c8d?auto=format&fit=crop&w=1920&q=80',
-  },
-  {
-    id: 3,
-    image: 'https://images.unsplash.com/photo-1742802390589-fcb668109b51?auto=format&fit=crop&w=1920&q=80',
-  },
-]
+type Slide = { id: string | number; image: string }
+
+const FALLBACK_HERO_IMAGE = '/images/404.svg'
+const FALLBACK_SLIDES: Slide[] = [{ id: 'placeholder', image: FALLBACK_HERO_IMAGE }]
 
 const ROTATION_INTERVAL = 6000
 
 const Hero = () => {
   const [currentIndex, setCurrentIndex] = useState(0)
   const [direction, setDirection] = useState(0)
+  const [slides, setSlides] = useState<Slide[]>([])
 
   useEffect(() => {
+    const fetchSlides = async () => {
+      try {
+        const res = await fetch('/api/homepage/hero', { cache: 'no-store' })
+        if (!res.ok) return
+        const json = await res.json()
+        const apiSlides =
+          (json.data as any[])
+            ?.filter((item) => item?.isActive !== false)
+            ?.map((item) => ({
+              id: item.id,
+              image: item.imageUrl || FALLBACK_HERO_IMAGE,
+            })) || []
+        setSlides(apiSlides)
+        setCurrentIndex(0)
+      } catch (error) {
+        console.error('[hero] failed to load slides', error)
+        setSlides([])
+        setCurrentIndex(0)
+      }
+    }
+    fetchSlides()
+  }, [])
+
+  useEffect(() => {
+    if (!slides.length) return
     const timer = setInterval(() => {
       setDirection(1)
-      setCurrentIndex((prev) => (prev + 1) % HERO_DATA.length)
+      setCurrentIndex((prev) => (prev + 1) % slides.length)
     }, ROTATION_INTERVAL)
 
     return () => clearInterval(timer)
-  }, [])
+  }, [slides.length])
 
   const slideVariants = {
     enter: (direction: number) => ({
@@ -51,6 +67,8 @@ const Hero = () => {
     }),
   }
 
+  const displaySlides = slides.length ? slides : FALLBACK_SLIDES
+
   return (
     <section className='relative h-[420px] w-full overflow-hidden shadow-lg shadow-slate-200/50 rounded-2xl'>
       <AnimatePresence initial={false} custom={direction}>
@@ -67,7 +85,7 @@ const Hero = () => {
           }}
           className='absolute inset-0 h-full w-full'>
           <Image
-            src={HERO_DATA[currentIndex].image}
+            src={displaySlides[currentIndex % displaySlides.length].image}
             alt={`Hero slide ${currentIndex + 1}`}
             fill
             priority={currentIndex === 0}
@@ -79,7 +97,7 @@ const Hero = () => {
 
       {/* Indicators */}
       <div className='absolute bottom-8 right-8 flex gap-3 z-10'>
-        {HERO_DATA.map((_, index) => (
+        {displaySlides.map((_, index) => (
           <button
               key={index}
             onClick={() => {

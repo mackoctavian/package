@@ -1,6 +1,9 @@
 import { ContentManager } from '@/app/components/Admin/content-manager'
+import { requireAdminPageAccess } from '@/lib/auth/admin-session'
 
-export default function AboutAdminPage() {
+export default async function AboutAdminPage() {
+  await requireAdminPageAccess('about')
+
   return (
     <div className='px-6 py-8'>
       <ContentManager

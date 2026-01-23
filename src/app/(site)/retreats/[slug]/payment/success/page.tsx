@@ -10,6 +10,19 @@ import { mapPrismaBooking } from '@/app/api/retreats/bookings/utils'
 import type { RetreatType } from '@/app/types/retreat'
 import TicketDisplay from './TicketDisplay'
 
+const buildTicketUrl = (code: string) => {
+  const base =
+    process.env.NEXT_PUBLIC_APP_URL ||
+    process.env.NEXT_PUBLIC_SITE_URL ||
+    (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : '')
+
+  if (!base) {
+    return `/retreats/check-booking?code=${encodeURIComponent(code)}`
+  }
+
+  return `${base.replace(/\/$/, '')}/retreats/check-booking?code=${encodeURIComponent(code)}`
+}
+
 type PageProps = {
   params: Promise<{ slug: string }>
   searchParams: Promise<{ booking?: string }>
@@ -58,6 +71,8 @@ export default async function RetreatPaymentSuccessPage({ params, searchParams }
   }
 
   const booking = mapPrismaBooking(bookingRecord)
+  const ticketCode = (bookingRecord as any).ticketCode || `DMRC-${booking.id.slice(0, 8).toUpperCase()}`
+  const ticketUrl = buildTicketUrl(ticketCode)
 
   return (
     <main className='bg-gradient-to-b from-emerald-50 to-white py-16 sm:py-20 min-h-screen'>
@@ -81,7 +96,7 @@ export default async function RetreatPaymentSuccessPage({ params, searchParams }
               fullName: booking.fullName,
               email: booking.email,
               phone: booking.phone,
-              ticketCode: (bookingRecord as any).ticketCode || `DMRC-${booking.id.slice(0, 8).toUpperCase()}`,
+              ticketCode,
               status: booking.status,
             }}
             retreat={{
@@ -90,6 +105,7 @@ export default async function RetreatPaymentSuccessPage({ params, searchParams }
               timeRange: retreat.timeRange,
               location: retreat.location,
             }}
+            ticketUrl={ticketUrl}
           />
         </div>
 

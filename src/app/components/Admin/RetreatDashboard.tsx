@@ -50,11 +50,15 @@ import {
   DropdownMenuTrigger,
 } from '@/app/components/ui/dropdown-menu'
 import { formatCurrencyValue, getCurrencyConfig } from '@dashboard/lib/currency'
+import { UploadField } from './UploadField'
 
 const statusOptions: RetreatType['status'][] = ['Registration Open', 'Waitlist', 'Closed']
-const categoryOptions: RetreatType['category'][] = ['youth', 'clergy', 'family', 'mission']
-
-const defaultImage = '/images/dmrc/gallery/IMG_0299.JPG'
+const defaultCategoryOptions = [
+  { value: 'parish-retreat', label: 'Parish Retreats' },
+  { value: 'residential-retreat', label: 'Residential Retreats' },
+  { value: 'jesus-mission-retreat', label: 'Jesus Mission Retreats' },
+  { value: 'special-retreat', label: 'Special Retreat' },
+]
 
 const slugify = (value: string) =>
   value
@@ -65,91 +69,98 @@ const slugify = (value: string) =>
 
 export interface RetreatFormValues {
   title: string
-  slug: string
   subtitle: string
   speaker: string
   conductor: string
   description: string
-  dateRange: string
-  timeRange: string
+  startDate: string
+  endDate: string
   location: string
-  category: RetreatType['category']
+  category: string
+  customCategory: string
   status: RetreatType['status']
   total: string
   male: string
   female: string
+  splitByGender: boolean
   price: string
   isPaid: boolean
   imageSrc: string
-  detailHref: string
-  ctaHref: string
 }
 
 export const emptyForm: RetreatFormValues = {
   title: '',
-  slug: '',
   subtitle: '',
   speaker: '',
   conductor: '',
   description: '',
-  dateRange: '',
-  timeRange: '',
+  startDate: '',
+  endDate: '',
+  startTime: '',
+  endTime: '',
   location: '',
-  category: 'family',
+  category: defaultCategoryOptions[0]?.value ?? 'parish-retreat',
+  customCategory: '',
   status: 'Registration Open',
   total: '120',
   male: '60',
   female: '60',
+  splitByGender: true,
   price: '2500',
   isPaid: true,
-  imageSrc: defaultImage,
-  detailHref: '',
-  ctaHref: '',
+  imageSrc: '',
 }
 
-export const mapRetreatToForm = (retreat: RetreatType): RetreatFormValues => ({
-  title: retreat.title ?? '',
-  slug: retreat.slug ?? '',
-  subtitle: retreat.subtitle ?? '',
-  speaker: retreat.speaker ?? '',
-  conductor: retreat.conductor ?? '',
-  description: retreat.description ?? '',
-  dateRange: retreat.dateRange ?? '',
-  timeRange: retreat.timeRange ?? '',
-  location: retreat.location ?? '',
-  category: retreat.category ?? 'family',
-  status: retreat.status ?? 'Registration Open',
-  total: String(retreat.availability.total ?? 0),
-  male: String(retreat.availability.male ?? 0),
-  female: String(retreat.availability.female ?? 0),
-  price: retreat.price != null ? String(retreat.price) : '0',
-  isPaid: retreat.isPaid ?? true,
-  imageSrc: retreat.imageSrc ?? defaultImage,
-  detailHref: retreat.detailHref ?? '',
-  ctaHref: retreat.ctaHref ?? '',
-})
+export const mapRetreatToForm = (retreat: RetreatType): RetreatFormValues => {
+  const [startDate, endDate] = (retreat.dateRange || '').split('–').map((s) => s.trim())
+  const [startTime, endTime] = (retreat.timeRange || '').split('–').map((s) => s.trim())
+  const preset = defaultCategoryOptions.find((opt) => opt.value === retreat.category)
+
+  return {
+    title: retreat.title ?? '',
+    subtitle: retreat.subtitle ?? '',
+    speaker: retreat.speaker ?? '',
+    conductor: retreat.conductor ?? '',
+    description: retreat.description ?? '',
+    startDate: startDate || '',
+    endDate: endDate || '',
+    startTime: startTime || '',
+    endTime: endTime || '',
+    location: retreat.location ?? '',
+    category: preset ? preset.value : 'custom',
+    customCategory: preset ? '' : (retreat.category ?? ''),
+    status: retreat.status ?? 'Registration Open',
+    total: String(retreat.availability.total ?? 0),
+    male: String(retreat.availability.male ?? 0),
+    female: String(retreat.availability.female ?? 0),
+    splitByGender: true,
+    price: retreat.price != null ? String(retreat.price) : '0',
+    isPaid: retreat.isPaid ?? true,
+    imageSrc: retreat.imageSrc ?? '',
+  }
+}
 
 export const buildPayload = (form: RetreatFormValues) => ({
-  slug: form.slug || slugify(form.title),
+  slug: slugify(form.title),
   title: form.title,
   subtitle: form.subtitle || null,
   speaker: form.speaker,
   conductor: form.conductor,
   description: form.description,
-  dateRange: form.dateRange,
-  timeRange: form.timeRange,
+  dateRange: `${form.startDate} – ${form.endDate}`,
+  timeRange: form.startTime && form.endTime ? `${form.startTime} – ${form.endTime}` : form.startTime || form.endTime || '',
   location: form.location,
-  category: form.category,
+  category: form.category === 'custom' ? form.customCategory || 'custom' : form.category,
   status: form.status,
-  imageSrc: form.imageSrc || defaultImage,
-  detailHref: form.detailHref || `/events/${form.slug || slugify(form.title)}`,
-  ctaHref: form.ctaHref || `/events/${form.slug || slugify(form.title)}#booking`,
+  imageSrc: form.imageSrc,
+  detailHref: `/events/${slugify(form.title)}`,
+  ctaHref: `/events/${slugify(form.title)}#booking`,
   price: form.price ? Number(form.price) : null,
   isPaid: form.isPaid,
   availability: {
     total: Number(form.total) || 0,
-    male: Number(form.male) || 0,
-    female: Number(form.female) || 0,
+    male: form.splitByGender ? Number(form.male) || 0 : Number(form.total) || 0,
+    female: form.splitByGender ? Number(form.female) || 0 : 0,
   },
 })
 
@@ -185,6 +196,8 @@ interface RetreatFormFieldsProps {
 }
 
 export const RetreatFormFields = ({ form, onChange }: RetreatFormFieldsProps) => {
+  const isCustomCategory = form.category === 'custom'
+
   return (
     <div className='grid gap-6 pb-4'>
       <div className='grid gap-4 sm:grid-cols-2'>
@@ -198,12 +211,12 @@ export const RetreatFormFields = ({ form, onChange }: RetreatFormFieldsProps) =>
           />
         </div>
         <div className='space-y-2'>
-          <Label htmlFor='retreat-slug'>Slug</Label>
+          <Label htmlFor='retreat-subtitle'>Subtitle</Label>
           <Input
-            id='retreat-slug'
-            placeholder='divine-mercy-encounter'
-            value={form.slug}
-            onChange={(event) => onChange('slug', slugify(event.target.value))}
+            id='retreat-subtitle'
+            placeholder='Optional subtitle'
+            value={form.subtitle}
+            onChange={(event) => onChange('subtitle', event.target.value)}
           />
         </div>
       </div>
@@ -239,21 +252,41 @@ export const RetreatFormFields = ({ form, onChange }: RetreatFormFieldsProps) =>
       </div>
       <div className='grid gap-4 sm:grid-cols-2'>
         <div className='space-y-2'>
-          <Label htmlFor='retreat-date'>Date range</Label>
+          <Label htmlFor='retreat-start-date'>Start date</Label>
           <Input
-            id='retreat-date'
-            placeholder='Apr 10 – Apr 13, 2026'
-            value={form.dateRange}
-            onChange={(event) => onChange('dateRange', event.target.value)}
+            id='retreat-start-date'
+            type='date'
+            value={form.startDate}
+            onChange={(event) => onChange('startDate', event.target.value)}
           />
         </div>
         <div className='space-y-2'>
-          <Label htmlFor='retreat-time'>Time range</Label>
+          <Label htmlFor='retreat-end-date'>End date</Label>
           <Input
-            id='retreat-time'
-            placeholder='Thursday 9:00 AM – Sunday 6:00 PM'
-            value={form.timeRange}
-            onChange={(event) => onChange('timeRange', event.target.value)}
+            id='retreat-end-date'
+            type='date'
+            value={form.endDate}
+            onChange={(event) => onChange('endDate', event.target.value)}
+          />
+        </div>
+      </div>
+      <div className='grid gap-4 sm:grid-cols-2'>
+        <div className='space-y-2'>
+          <Label htmlFor='retreat-start-time'>Start time</Label>
+          <Input
+            id='retreat-start-time'
+            type='time'
+            value={form.startTime}
+            onChange={(event) => onChange('startTime', event.target.value)}
+          />
+        </div>
+        <div className='space-y-2'>
+          <Label htmlFor='retreat-end-time'>End time</Label>
+          <Input
+            id='retreat-end-time'
+            type='time'
+            value={form.endTime}
+            onChange={(event) => onChange('endTime', event.target.value)}
           />
         </div>
       </div>
@@ -272,15 +305,27 @@ export const RetreatFormFields = ({ form, onChange }: RetreatFormFieldsProps) =>
           <select
             id='retreat-category'
             value={form.category}
-            onChange={(event) => onChange('category', event.target.value as RetreatType['category'])}
+            onChange={(event) => onChange('category', event.target.value)}
             className='h-10 rounded-lg border border-slate-200 px-3 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30'>
-            {categoryOptions.map((option) => (
-              <option key={option} value={option} className='capitalize'>
-                {option}
+            {defaultCategoryOptions.map((option) => (
+              <option key={option.value} value={option.value} className='capitalize'>
+                {option.label}
               </option>
             ))}
+            <option value='custom'>Custom category</option>
           </select>
         </div>
+        {isCustomCategory && (
+          <div className='space-y-2'>
+            <Label htmlFor='retreat-custom-category'>Custom category</Label>
+            <Input
+              id='retreat-custom-category'
+              placeholder='e.g., Youth Formation'
+              value={form.customCategory}
+              onChange={(event) => onChange('customCategory', event.target.value)}
+            />
+          </div>
+        )}
         <div className='space-y-2'>
           <Label htmlFor='retreat-status'>Status</Label>
           <select
@@ -315,6 +360,7 @@ export const RetreatFormFields = ({ form, onChange }: RetreatFormFieldsProps) =>
             min={0}
             value={form.male}
             onChange={(event) => onChange('male', event.target.value)}
+            disabled={!form.splitByGender}
           />
         </div>
         <div className='space-y-2'>
@@ -325,6 +371,7 @@ export const RetreatFormFields = ({ form, onChange }: RetreatFormFieldsProps) =>
             min={0}
             value={form.female}
             onChange={(event) => onChange('female', event.target.value)}
+            disabled={!form.splitByGender}
           />
         </div>
       </div>
@@ -339,35 +386,21 @@ export const RetreatFormFields = ({ form, onChange }: RetreatFormFieldsProps) =>
             onChange={(event) => onChange('price', event.target.value)}
           />
         </div>
-        <div className='space-y-2'>
-          <Label htmlFor='retreat-image'>Hero image</Label>
-          <Input
-            id='retreat-image'
-            placeholder='/images/dmrc/gallery/IMG_0299.JPG'
-            value={form.imageSrc}
-            onChange={(event) => onChange('imageSrc', event.target.value)}
-          />
-        </div>
+        <UploadField
+          label='Retreat image'
+          value={form.imageSrc}
+          onChange={(url) => onChange('imageSrc', url)}
+          folder='retreats'
+          placeholder='Landscape banner · 1600×900px'
+          hint='Use a 1600×900 px (16:9) landscape photo so retreat cards look consistent on the homepage.'
+        />
       </div>
-      <div className='grid gap-4 sm:grid-cols-2'>
-        <div className='space-y-2'>
-          <Label htmlFor='retreat-detail'>Detail link</Label>
-          <Input
-            id='retreat-detail'
-            placeholder='/events/divine-mercy-retreat'
-            value={form.detailHref}
-            onChange={(event) => onChange('detailHref', event.target.value)}
-          />
+      <div className='flex items-center justify-between rounded-xl border border-slate-200 px-4 py-3'>
+        <div>
+          <p className='text-sm font-semibold text-slate-800'>Track gender capacity</p>
+          <p className='text-xs text-slate-500'>Toggle off for retreats without gender-specific counts.</p>
         </div>
-        <div className='space-y-2'>
-          <Label htmlFor='retreat-cta'>CTA link</Label>
-          <Input
-            id='retreat-cta'
-            placeholder='/events/divine-mercy-retreat#booking'
-            value={form.ctaHref}
-            onChange={(event) => onChange('ctaHref', event.target.value)}
-          />
-        </div>
+        <Switch checked={form.splitByGender} onCheckedChange={(value) => onChange('splitByGender', value)} />
       </div>
       <div className='flex items-center justify-between rounded-xl border border-slate-200 px-4 py-3'>
         <div>
@@ -411,6 +444,36 @@ const RetreatDashboard = () => {
     toast.error('Sample retreats are read-only until the database connection is restored.')
     return false
   }
+
+const validateFormValues = (form: RetreatFormValues) => {
+  const errors: string[] = []
+  if (!form.title.trim()) errors.push('Title is required')
+  if (!form.speaker.trim()) errors.push('Speaker is required')
+  if (!form.conductor.trim()) errors.push('Conductor is required')
+  if (!form.description.trim()) errors.push('Description is required')
+  if (!form.startDate) errors.push('Start date is required')
+  if (!form.endDate) errors.push('End date is required')
+  if (form.startDate && form.endDate && new Date(form.startDate) > new Date(form.endDate)) {
+    errors.push('Start date must be before end date')
+  }
+  if (!form.startTime) errors.push('Start time is required')
+  if (!form.endTime) errors.push('End time is required')
+  if (!form.location.trim()) errors.push('Location is required')
+  if (form.category === 'custom' && !form.customCategory.trim()) {
+    errors.push('Custom category is required')
+  }
+  if (!form.total || Number.isNaN(Number(form.total))) errors.push('Total capacity is required')
+  if (form.splitByGender) {
+    if (!form.male || Number.isNaN(Number(form.male))) errors.push('Male capacity is required')
+    if (!form.female || Number.isNaN(Number(form.female))) errors.push('Female capacity is required')
+  }
+  if (!form.imageSrc) {
+    errors.push('Retreat image is required')
+  } else if (!/^https?:\/\//i.test(form.imageSrc)) {
+    errors.push('Please upload a retreat image (it will be stored in the Supabase Storage bucket).')
+  }
+  return errors
+}
 
   const createMutation = useMutation({
     mutationFn: async (payload: RetreatFormValues) => {
@@ -508,7 +571,12 @@ const RetreatDashboard = () => {
 
   const handleSaveNew = () => {
     if (createMutation.isLoading || !guardReadOnlyAction()) return
-    createMutation.mutate(createForm)
+  const errors = validateFormValues(createForm)
+  if (errors.length) {
+    toast.error(errors[0])
+    return
+  }
+  createMutation.mutate(createForm)
   }
 
   const handleOpenEdit = (retreat: RetreatType) => {
@@ -520,13 +588,17 @@ const RetreatDashboard = () => {
 
   const handleSaveEdit = () => {
     if (!editId || updateMutation.isLoading || !guardReadOnlyAction()) return
-    updateMutation.mutate({ id: editId, payload: editForm })
+  const errors = validateFormValues(editForm)
+  if (errors.length) {
+    toast.error(errors[0])
+    return
+  }
+  updateMutation.mutate({ id: editId, payload: editForm })
   }
 
   const handleDuplicate = (retreat: RetreatType) => {
     if (!guardReadOnlyAction()) return
     const next = mapRetreatToForm(retreat)
-    next.slug = ''
     next.title = `${retreat.title} (Copy)`
     setCreateForm(next)
     setIsCreateOpen(true)

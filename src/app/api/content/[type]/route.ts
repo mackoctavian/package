@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server'
 
 import prisma from '@/lib/prisma'
 
-const SUPPORTED_TYPES = new Set(['gallery', 'news', 'events', 'publications', 'patrons', 'about', 'ministries'])
+const SUPPORTED_TYPES = new Set(['gallery', 'news', 'events', 'publications', 'patrons', 'about', 'ministries', 'articles'])
 
 const sanitizeSlug = (value: string) =>
   value
@@ -40,8 +40,9 @@ const buildPayload = (body: any) => {
   }
 }
 
-export const GET = async (_: Request, { params }: { params: { type: string } }) => {
+export const GET = async (_: Request, context: { params: { type: string } }) => {
   try {
+    const params = await context.params
     const type = resolveType(params.type)
     const items = await prisma.contentItem.findMany({
       where: { type },
@@ -53,8 +54,9 @@ export const GET = async (_: Request, { params }: { params: { type: string } }) 
   }
 }
 
-export const POST = async (request: Request, { params }: { params: { type: string } }) => {
+export const POST = async (request: Request, context: { params: { type: string } }) => {
   try {
+    const params = await context.params
     const type = resolveType(params.type)
     const raw = await request.json()
     const payload = buildPayload(raw)

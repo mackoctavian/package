@@ -6,6 +6,8 @@ import { useEffect, useMemo, useState } from 'react'
 import { motion } from 'framer-motion'
 import { Calendar, ArrowUpRight, Sparkles } from 'lucide-react'
 
+import type { RetreatType } from '@/app/types/retreat'
+
 type NewsItem = {
   title: string
   description: string
@@ -17,6 +19,19 @@ type NewsItem = {
   category?: string
 }
 
+type ContentApiItem = {
+  id: string
+  title: string
+  slug: string
+  summary?: string | null
+  body?: string | null
+  mediaUrl?: string | null
+  publishDate?: string | null
+  status: string
+  category?: string | null
+  metadata?: Record<string, unknown> | null
+}
+
 type EventItem = {
   title: string
   date: string
@@ -24,6 +39,57 @@ type EventItem = {
   ctaHref: string
   image?: string
 }
+
+const FALLBACK_EVENT_LIMIT = 3
+
+const YEAR_PATTERN = /\b(19|20)\d{2}\b/
+
+const splitDateRangeTokens = (value?: string | null): [string, string] => {
+  if (!value) return ['', '']
+  const trimmed = value.trim()
+  if (!trimmed) return ['', '']
+
+  const separators = ['–', '—', ' to ', ' - ']
+  for (const separator of separators) {
+    if (trimmed.includes(separator)) {
+      const [start, end] = trimmed.split(separator)
+      return [start?.trim() ?? '', end?.trim() ?? '']
+    }
+  }
+
+  return [trimmed, '']
+}
+
+const extractYear = (value?: string | null) => {
+  if (!value) return null
+  const match = value.match(YEAR_PATTERN)
+  return match ? Number(match[0]) : null
+}
+
+const addYearIfMissing = (value: string, fallbackYear?: number | null) => {
+  if (!value) return value
+  if (YEAR_PATTERN.test(value)) return value
+  return fallbackYear ? `${value.replace(/,\s*$/, '')}, ${fallbackYear}` : value
+}
+
+const parseDateToken = (value?: string | null) => {
+  if (!value) return null
+  const parsed = new Date(value)
+  return Number.isNaN(parsed.getTime()) ? null : parsed
+}
+
+const parseDateRange = (value?: string | null) => {
+  const [startToken, endToken] = splitDateRangeTokens(value)
+  const fallbackYear = extractYear(endToken) ?? extractYear(value)
+  const normalizedStart = addYearIfMissing(startToken, fallbackYear)
+  const normalizedEnd = addYearIfMissing(endToken || startToken, fallbackYear)
+  const parsedStart = parseDateToken(normalizedStart)
+  const parsedEnd = parseDateToken(normalizedEnd || normalizedStart)
+  return { parsedStart, parsedEnd }
+}
+
+const getComparableTime = (value: { parsedStart: Date | null; parsedEnd: Date | null }) =>
+  value.parsedStart?.getTime() ?? value.parsedEnd?.getTime() ?? Number.POSITIVE_INFINITY
 
 const containerVariants = {
   hidden: { opacity: 0 },
@@ -44,6 +110,47 @@ const itemVariants = {
   },
 }
 
+const fallbackNewsImage = '/images/dmrc/gallery/IMG_0227.JPG'
+
+const formatDateLabel = (value?: string | null) => {
+  if (!value) return ''
+  const date = new Date(value)
+  if (Number.isNaN(date.getTime())) return ''
+  return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
+}
+
+const mapNewsFromCms = (items: ContentApiItem[]): NewsItem[] =>
+  items
+    .filter((item) => item.status === 'published')
+    .sort((a, b) => {
+      const left = new Date(a.publishDate ?? 0).getTime()
+      const right = new Date(b.publishDate ?? 0).getTime()
+      return right - left
+    })
+    .map((item) => ({
+      title: item.title,
+      description: item.summary ?? item.body?.slice(0, 140) ?? 'Read the latest update from DMRC.',
+      ctaLabel: 'Read story',
+      ctaHref: item.slug ? `/news/${item.slug}` : '/news',
+      image: item.mediaUrl || fallbackNewsImage,
+      author: typeof item.metadata?.author === 'string' ? (item.metadata.author as string) : 'DMRC Communications',
+      date: formatDateLabel(item.publishDate),
+      category: item.category ?? 'News',
+    }))
+
+const buildNewsFallback = (): NewsItem[] => [
+  {
+    title: 'Divine Mercy media update',
+    description: 'Stay tuned for fresh mission stories from the DMRC newsroom.',
+    ctaLabel: 'Visit newsroom',
+    ctaHref: '/news',
+    image: fallbackNewsImage,
+    author: 'DMRC Communications',
+    date: formatDateLabel(new Date().toISOString()),
+    category: 'News',
+  },
+]
+
 // Helper to get a random image for demo purposes if one isn't provided
 const getRandomImage = (index: number, type: 'news' | 'event') => {
     const newsImages = [
@@ -61,68 +168,110 @@ const getRandomImage = (index: number, type: 'news' | 'event') => {
     return images[index % images.length]
 }
 
+const mapRetreatsToEvents = (retreats: RetreatType[]): EventItem[] => {
+  const today = new Date()
+  today.setHours(0, 0, 0, 0)
+
+  return retreats
+    .filter((retreat) => retreat.status !== 'Closed')
+    .map((retreat) => ({ retreat, ...parseDateRange(retreat.dateRange) }))
+    .filter(({ parsedStart, parsedEnd }) => {
+      const comparisonDate = parsedStart ?? parsedEnd
+      if (!comparisonDate) return true
+      return comparisonDate >= today
+    })
+    .sort((a, b) => getComparableTime(a) - getComparableTime(b))
+    .slice(0, FALLBACK_EVENT_LIMIT)
+    .map(({ retreat }, index) => ({
+      title: retreat.title,
+      description: retreat.description,
+      date: retreat.dateRange,
+      ctaHref: retreat.detailHref || `/events/${retreat.slug}`,
+      image: retreat.imageSrc || getRandomImage(index, 'event'),
+    }))
+}
+
+const mapStaticRetreats = (records: any[]): EventItem[] => {
+  const today = new Date()
+  today.setHours(0, 0, 0, 0)
+
+  return (records ?? [])
+    .map((item: any) => ({ item, ...parseDateRange(item.dateRange) }))
+    .filter(({ parsedStart, parsedEnd }) => {
+      const comparisonDate = parsedStart ?? parsedEnd
+      if (!comparisonDate) return true
+      return comparisonDate >= today
+    })
+    .sort((a, b) => getComparableTime(a) - getComparableTime(b))
+    .slice(0, FALLBACK_EVENT_LIMIT)
+    .map(({ item }, index: number) => ({
+      title: item.title,
+      description: item.description,
+      date: item.dateRange,
+      ctaHref: item.detailHref ?? `/events/${item.slug}`,
+      image: item.imageSrc || getRandomImage(index, 'event'),
+    }))
+}
+
+const fetchFallbackEvents = async (): Promise<EventItem[]> => {
+  try {
+    const res = await fetch('/api/data')
+    if (!res.ok) return []
+    const payload = await res.json()
+    return mapStaticRetreats(payload.RetreatData ?? [])
+  } catch (error) {
+    console.error('[RightSidebar] fallback retreat fetch failed:', error)
+    return []
+  }
+}
+
 const RightSidebar = () => {
   const [newsItems, setNewsItems] = useState<NewsItem[]>([])
   const [eventItems, setEventItems] = useState<EventItem[]>([])
 
   useEffect(() => {
+    let isMounted = true
+
     const fetchData = async () => {
       try {
-        const res = await fetch('/api/data')
-        if (!res.ok) throw new Error('Failed to fetch sidebar data')
-        const data = await res.json()
+        const [retreatRes, newsRes] = await Promise.all([
+          fetch('/api/retreats', { cache: 'no-store' }),
+          fetch('/api/content/news', { cache: 'no-store' }),
+        ])
 
-        // Mock stories for DMRC
-        const mockStories: NewsItem[] = [
-            {
-                title: "Youth Retreat Breaks Attendance Record",
-                description: "Over 200 young people gathered for our annual youth spiritual retreat.",
-                ctaLabel: "Read More",
-                ctaHref: "/news/youth-retreat-record",
-                image: "https://images.unsplash.com/photo-1529156069898-49953e39b3ac?auto=format&fit=crop&w=400&q=80",
-                author: "DMRC Media",
-                date: "Nov 22",
-                category: "Community"
-            },
-            {
-                title: "New Chapel Renovation Complete",
-                description: "The renovated chapel now features beautiful stained glass and improved acoustics.",
-                ctaLabel: "Read More",
-                ctaHref: "/news/chapel-renovation",
-                image: "https://images.unsplash.com/photo-1548625149-fc4a29cf7092?auto=format&fit=crop&w=400&q=80",
-                author: "Fr. Michael",
-                date: "Nov 20",
-                category: "Facilities"
-            },
-            {
-                title: "Volunteer Appreciation Day",
-                description: "Celebrating the dedicated volunteers who make our mission possible.",
-                ctaLabel: "Read More",
-                ctaHref: "/news/volunteer-appreciation",
-                image: "https://images.unsplash.com/photo-1559027615-cd4628902d4a?auto=format&fit=crop&w=400&q=80",
-                author: "Admin",
-                date: "Nov 18",
-                category: "Events"
-            }
-        ]
+        if (!retreatRes.ok) {
+          throw new Error('Failed to fetch retreat feed')
+        }
+        if (!newsRes.ok) {
+          throw new Error('Failed to fetch news feed')
+        }
 
-        setNewsItems(mockStories)
+        const [retreatJson, newsJson] = await Promise.all([retreatRes.json(), newsRes.json()])
+        if (!isMounted) return
 
-        setEventItems(
-          (data.RetreatData ?? []).slice(0, 3).map((item: any, index: number) => ({
-            title: item.title,
-            description: item.description,
-            date: item.dateRange,
-            ctaHref: item.detailHref ?? `/events/${item.slug}`,
-            image: item.imageSrc || getRandomImage(index, 'event')
-          })),
-        )
+        const mappedNews = mapNewsFromCms(newsJson.data ?? [])
+        setNewsItems(mappedNews.length ? mappedNews : buildNewsFallback())
+
+        const liveEvents = mapRetreatsToEvents(retreatJson.data ?? [])
+        if (liveEvents.length) {
+          setEventItems(liveEvents)
+        } else {
+          const fallbackEvents = await fetchFallbackEvents()
+          if (isMounted) setEventItems(fallbackEvents)
+        }
       } catch (error) {
         console.error('[RightSidebar] failed to load news/events:', error)
+        if (!isMounted) return
+        setNewsItems(buildNewsFallback())
+        const fallbackEvents = await fetchFallbackEvents()
+        setEventItems(fallbackEvents)
       }
     }
 
     fetchData()
+    return () => {
+      isMounted = false
+    }
   }, [])
 
   const upcomingEvents = useMemo(() => eventItems, [eventItems])

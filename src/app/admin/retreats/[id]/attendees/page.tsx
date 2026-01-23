@@ -35,6 +35,31 @@ import { Badge } from '@/app/components/ui/badge'
 import { Input } from '@/app/components/ui/input'
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/app/components/ui/dialog'
 import { cn } from '@/lib/utils'
+import { ModuleGate } from '@/app/components/Admin/ModuleGate'
+
+const extractTicketCode = (input: string) => {
+  if (!input) return ''
+  const trimmed = input.trim()
+  try {
+    const url = new URL(trimmed)
+    const param = url.searchParams.get('code')
+    if (param) {
+      return param.trim().toUpperCase()
+    }
+    const segments = url.pathname.split('/').filter(Boolean)
+    const last = segments[segments.length - 1]
+    if (last && last.length >= 4) {
+      return last.trim().toUpperCase()
+    }
+  } catch {
+    // not a valid URL, fall through to regex
+  }
+  const queryMatch = trimmed.match(/code=([^&]+)/i)
+  if (queryMatch?.[1]) {
+    return decodeURIComponent(queryMatch[1]).trim().toUpperCase()
+  }
+  return trimmed.toUpperCase()
+}
 
 type Booking = {
   id: string
@@ -150,7 +175,11 @@ export default function RetreatAttendeesPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ ticketCode }),
       })
-      return res.json()
+      const data = await res.json()
+      if (!res.ok) {
+        throw new Error(data.error || 'Scan failed')
+      }
+      return data
     },
     onSuccess: (data) => {
       setScanResult(data)
@@ -163,7 +192,7 @@ export default function RetreatAttendeesPage() {
       }
       queryClient.invalidateQueries({ queryKey: ['retreat-attendees', retreatId] })
     },
-    onError: () => toast.error('Scan failed'),
+    onError: (error: Error) => toast.error(error.message || 'Scan failed'),
   })
 
   // Filter bookings
@@ -185,32 +214,40 @@ export default function RetreatAttendeesPage() {
   })
 
   const handleManualScan = () => {
-    if (manualCode.trim()) {
-      scanMutation.mutate(manualCode.trim())
-      setManualCode('')
+    const extracted = extractTicketCode(manualCode)
+    if (!extracted) {
+      toast.error('Enter a valid ticket code or link.')
+      return
     }
+    scanMutation.mutate(extracted)
+    setManualCode('')
   }
 
   if (isLoading) {
     return (
-      <div className='flex h-96 items-center justify-center'>
-        <Loader2 className='h-8 w-8 animate-spin text-slate-400' />
-      </div>
+      <ModuleGate moduleId='retreats'>
+        <div className='flex h-96 items-center justify-center'>
+          <Loader2 className='h-8 w-8 animate-spin text-slate-400' />
+        </div>
+      </ModuleGate>
     )
   }
 
   if (error) {
     return (
-      <div className='flex h-96 flex-col items-center justify-center gap-4'>
-        <XCircle className='h-12 w-12 text-red-400' />
-        <p className='text-slate-600'>Failed to load attendees</p>
-        <Button onClick={() => router.back()}>Go Back</Button>
-      </div>
+      <ModuleGate moduleId='retreats'>
+        <div className='flex h-96 flex-col items-center justify-center gap-4'>
+          <XCircle className='h-12 w-12 text-red-400' />
+          <p className='text-slate-600'>Failed to load attendees</p>
+          <Button onClick={() => router.back()}>Go Back</Button>
+        </div>
+      </ModuleGate>
     )
   }
 
   return (
-    <div className='space-y-6 pb-10'>
+    <ModuleGate moduleId='retreats'>
+      <div className='space-y-6 pb-10'>
       {/* Header */}
       <div className='flex flex-wrap items-start justify-between gap-4'>
         <div>
@@ -346,9 +383,9 @@ export default function RetreatAttendeesPage() {
               <p className='text-sm font-medium text-slate-700'>Manual Entry</p>
               <div className='flex gap-2'>
                 <Input
-                  placeholder='Enter ticket code (e.g., DMRC-XXXXXXXX)'
+                  placeholder='Paste ticket link or code (e.g., https://…?code=DMRC-XXXX)'
                   value={manualCode}
-                  onChange={(e) => setManualCode(e.target.value.toUpperCase())}
+                  onChange={(e) => setManualCode(e.target.value)}
                   onKeyDown={(e) => e.key === 'Enter' && handleManualScan()}
                 />
                 <Button onClick={handleManualScan} disabled={scanMutation.isPending}>
@@ -568,7 +605,7 @@ function AttendeeCard({
           </div>
         </div>
       </div>
-    </div>
+    </ModuleGate>
   )
 }
 

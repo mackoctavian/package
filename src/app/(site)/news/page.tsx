@@ -1,7 +1,9 @@
 import Image from 'next/image'
 import Link from 'next/link'
 import { Metadata } from 'next'
+import type { ContentItem } from '@prisma/client'
 
+import prisma from '@/lib/prisma'
 import { newsItems, pressMentions } from '@/app/data/news'
 
 export const metadata: Metadata = {
@@ -10,7 +12,22 @@ export const metadata: Metadata = {
     'Stay up to date with announcements, testimonies, and upcoming events at Divine Mercy Retreat Center.',
 }
 
-const formatDate = (isoDate: string) => {
+type ArticleCard = {
+  id: string
+  slug: string
+  title: string
+  summary: string
+  heroImage: string
+  tag?: string
+  publishedOn?: string
+  readingTime?: string
+  author?: string
+}
+
+const fallbackImage = '/images/dmrc/gallery/IMG_0299.JPG'
+
+const formatDate = (isoDate?: string) => {
+  if (!isoDate) return ''
   return new Intl.DateTimeFormat('en-US', {
     month: 'long',
     day: 'numeric',
@@ -18,14 +35,54 @@ const formatDate = (isoDate: string) => {
   }).format(new Date(isoDate))
 }
 
-const NewsPage = () => {
-  const sortedArticles = [...newsItems].sort(
-    (a, b) => new Date(b.publishedOn).getTime() - new Date(a.publishedOn).getTime()
-  )
+const loadArticles = async (): Promise<ArticleCard[]> => {
+  try {
+    const items = await prisma.contentItem.findMany({
+      where: { type: 'news', status: 'published' },
+      orderBy: [{ publishDate: 'desc' }, { updatedAt: 'desc' }],
+    })
+    if (items.length) {
+      return items.map(mapContentItemToArticle)
+    }
+  } catch (error) {
+    console.error('[news-page] failed to load dynamic content:', error)
+  }
 
-  // Featured article (first one)
-  const featuredArticle = sortedArticles[0]
-  const remainingArticles = sortedArticles.slice(1)
+  return newsItems.map(mapStaticArticle)
+}
+
+const mapContentItemToArticle = (item: ContentItem): ArticleCard => {
+  const metadata = (item.metadata ?? {}) as Record<string, unknown>
+  return {
+    id: item.id,
+    slug: item.slug,
+    title: item.title,
+    summary: item.summary ?? item.body ?? '',
+    heroImage: item.mediaUrl || fallbackImage,
+    tag: item.category ?? undefined,
+    publishedOn: (item.publishDate ?? item.createdAt).toISOString(),
+    readingTime: typeof metadata.readingTime === 'string' ? metadata.readingTime : undefined,
+    author: typeof metadata.author === 'string' ? metadata.author : undefined,
+  }
+}
+
+const mapStaticArticle = (item: (typeof newsItems)[number]): ArticleCard => ({
+  id: item.id,
+  slug: item.slug,
+  title: item.title,
+  summary: item.summary,
+  heroImage: item.heroImage,
+  tag: item.tag,
+  publishedOn: item.publishedOn,
+  readingTime: item.readingTime,
+  author: item.author,
+})
+
+const NewsPage = async () => {
+  const articles = await loadArticles()
+  const featuredArticle = articles[0]
+  const remainingArticles = articles.slice(1)
+  const articleCount = Math.max(articles.length - 1, 0)
 
   return (
     <main>
@@ -46,9 +103,7 @@ const NewsPage = () => {
           <span className='inline-flex items-center justify-center rounded-full bg-white/10 backdrop-blur-sm border border-white/20 px-6 py-2.5 text-xs font-semibold uppercase tracking-[0.3em] text-white/90'>
             ✦ News & Updates
           </span>
-          <h1 className='text-4xl font-bold sm:text-5xl lg:text-6xl leading-tight'>
-            Stories of Mercy & Mission
-          </h1>
+          <h1 className='text-4xl font-bold sm:text-5xl lg:text-6xl leading-tight'>Stories of Mercy & Mission</h1>
           <p className='text-lg text-white/70 max-w-2xl mx-auto leading-relaxed'>
             Discover how the Lord is moving through our ministries—read the latest announcements, testimonies, and
             stories from the heart of DMRC.
@@ -57,9 +112,9 @@ const NewsPage = () => {
       </section>
 
       {/* Featured Article */}
-      {featuredArticle && (
-        <section className='bg-white py-16 sm:py-20'>
-          <div className='container mx-auto max-w-6xl px-4'>
+      <section className='bg-white py-16 sm:py-20'>
+        <div className='container mx-auto max-w-6xl px-4'>
+          {featuredArticle ? (
             <article className='group relative overflow-hidden rounded-3xl bg-slate-900'>
               <div className='grid lg:grid-cols-2'>
                 <div className='relative h-80 lg:h-auto overflow-hidden'>
@@ -78,22 +133,23 @@ const NewsPage = () => {
                     Featured
                   </span>
                   <span className='text-xs font-semibold uppercase tracking-[0.2em] text-indigo-400 mb-3'>
-                    {formatDate(featuredArticle.publishedOn)} · {featuredArticle.readingTime}
+                    {[formatDate(featuredArticle.publishedOn), featuredArticle.readingTime]
+                      .filter(Boolean)
+                      .join(' · ')}
                   </span>
                   <h2 className='text-3xl lg:text-4xl font-bold text-white mb-4 leading-tight'>
                     <Link href={`/news/${featuredArticle.slug}`} className='hover:text-indigo-300 transition-colors'>
                       {featuredArticle.title}
                     </Link>
                   </h2>
-                  <p className='text-white/70 text-lg leading-relaxed mb-6'>
-                    {featuredArticle.summary}
-                  </p>
+                  <p className='text-white/70 text-lg leading-relaxed mb-6'>{featuredArticle.summary}</p>
                   <div className='flex items-center justify-between'>
-                    <span className='text-sm font-medium text-indigo-400'>By {featuredArticle.author}</span>
+                    <span className='text-sm font-medium text-indigo-400'>
+                      {featuredArticle.author ? `By ${featuredArticle.author}` : 'DMRC Communications'}
+                    </span>
                     <Link
                       href={`/news/${featuredArticle.slug}`}
-                      className='inline-flex items-center gap-2 px-5 py-2.5 bg-white text-slate-900 rounded-full font-semibold text-sm hover:bg-indigo-100 transition-colors'
-                    >
+                      className='inline-flex items-center gap-2 px-5 py-2.5 bg-white text-slate-900 rounded-full font-semibold text-sm hover:bg-indigo-100 transition-colors'>
                       Read Full Story
                       <span aria-hidden>→</span>
                     </Link>
@@ -101,9 +157,13 @@ const NewsPage = () => {
                 </div>
               </div>
             </article>
-          </div>
-        </section>
-      )}
+          ) : (
+            <div className='rounded-3xl border border-dashed border-slate-200 bg-slate-50 p-12 text-center text-sm text-slate-500'>
+              Published stories will appear here once added in the admin.
+            </div>
+          )}
+        </div>
+      </section>
 
       {/* All Articles Grid */}
       <section className='bg-slate-50 py-16 sm:py-20'>
@@ -113,54 +173,66 @@ const NewsPage = () => {
               <h2 className='text-3xl font-bold text-slate-900'>Latest News</h2>
               <p className='text-slate-600 mt-1'>Stories from the Divine Mercy community</p>
             </div>
-            <span className='text-sm font-medium text-slate-500'>{remainingArticles.length} articles</span>
+            <span className='text-sm font-medium text-slate-500'>
+              {articleCount} {articleCount === 1 ? 'article' : 'articles'}
+            </span>
           </div>
 
-          <div className='grid md:grid-cols-2 lg:grid-cols-3 gap-8'>
-            {remainingArticles.map((article) => (
-              <article
-                key={article.id}
-                className='group bg-white rounded-3xl overflow-hidden border border-slate-100 shadow-sm hover:shadow-xl hover:border-slate-200 transition-all duration-300'
-              >
-                <div className='relative h-56 overflow-hidden'>
-                  <Image
-                    src={article.heroImage}
-                    alt={article.title}
-                    fill
-                    className='object-cover transition duration-500 group-hover:scale-110'
-                  />
-                  <div className='absolute inset-0 bg-gradient-to-t from-slate-900/60 via-transparent to-transparent' />
-                  <div className='absolute top-4 left-4'>
-                    <span className='rounded-full bg-indigo-600 px-3 py-1 text-[10px] font-bold uppercase tracking-wider text-white'>
-                      {article.tag}
-                    </span>
+          {articleCount === 0 ? (
+            <div className='rounded-2xl border border-dashed border-slate-200 bg-white px-6 py-14 text-center text-sm text-slate-500'>
+              More stories will appear here after you publish additional news entries.
+            </div>
+          ) : (
+            <div className='grid md:grid-cols-2 lg:grid-cols-3 gap-8'>
+              {remainingArticles.map((article) => (
+                <article
+                  key={article.id}
+                  className='group bg-white rounded-3xl overflow-hidden border border-slate-100 shadow-sm hover:shadow-xl hover:border-slate-200 transition-all duration-300'>
+                  <div className='relative h-56 overflow-hidden'>
+                    <Image
+                      src={article.heroImage}
+                      alt={article.title}
+                      fill
+                      className='object-cover transition duration-500 group-hover:scale-110'
+                    />
+                    <div className='absolute inset-0 bg-gradient-to-t from-slate-900/60 via-transparent to-transparent' />
+                    {article.tag ? (
+                      <div className='absolute top-4 left-4'>
+                        <span className='rounded-full bg-indigo-600 px-3 py-1 text-[10px] font-bold uppercase tracking-wider text-white'>
+                          {article.tag}
+                        </span>
+                      </div>
+                    ) : null}
                   </div>
-                </div>
-                <div className='p-6 space-y-4'>
-                  <div className='flex items-center gap-3 text-xs font-medium text-slate-500'>
-                    <span>{formatDate(article.publishedOn)}</span>
-                    <span className='w-1 h-1 rounded-full bg-slate-300' />
-                    <span>{article.readingTime}</span>
+                  <div className='p-6 space-y-4'>
+                    <div className='flex items-center gap-3 text-xs font-medium text-slate-500'>
+                      {article.publishedOn ? <span>{formatDate(article.publishedOn)}</span> : null}
+                      {article.readingTime ? (
+                        <>
+                          <span className='w-1 h-1 rounded-full bg-slate-300' />
+                          <span>{article.readingTime}</span>
+                        </>
+                      ) : null}
+                    </div>
+                    <h3 className='text-xl font-bold text-slate-900 leading-tight group-hover:text-indigo-600 transition-colors'>
+                      <Link href={`/news/${article.slug}`}>{article.title}</Link>
+                    </h3>
+                    <p className='text-slate-600 text-sm line-clamp-2'>{article.summary}</p>
+                    <div className='flex items-center justify-between pt-2'>
+                      <span className='text-xs font-semibold text-indigo-600'>
+                        {article.author || 'DMRC Communications'}
+                      </span>
+                      <Link
+                        href={`/news/${article.slug}`}
+                        className='text-sm font-semibold text-slate-900 hover:text-indigo-600 transition-colors flex items-center gap-1'>
+                        Read →
+                      </Link>
+                    </div>
                   </div>
-                  <h3 className='text-xl font-bold text-slate-900 leading-tight group-hover:text-indigo-600 transition-colors'>
-                    <Link href={`/news/${article.slug}`}>
-                      {article.title}
-                    </Link>
-                  </h3>
-                  <p className='text-slate-600 text-sm line-clamp-2'>{article.summary}</p>
-                  <div className='flex items-center justify-between pt-2'>
-                    <span className='text-xs font-semibold text-indigo-600'>By {article.author}</span>
-                    <Link
-                      href={`/news/${article.slug}`}
-                      className='text-sm font-semibold text-slate-900 hover:text-indigo-600 transition-colors flex items-center gap-1'
-                    >
-                      Read →
-                    </Link>
-                  </div>
-                </div>
-              </article>
-            ))}
-          </div>
+                </article>
+              ))}
+            </div>
+          )}
         </div>
       </section>
 
@@ -183,11 +255,8 @@ const NewsPage = () => {
                   href={mention.url}
                   target='_blank'
                   rel='noreferrer'
-                  className='group block p-6 bg-gradient-to-br from-slate-50 to-slate-100/50 rounded-2xl border border-slate-200 hover:border-indigo-200 hover:shadow-lg hover:shadow-indigo-100/50 transition-all duration-300'
-                >
-                  <p className='text-xs font-bold uppercase tracking-[0.2em] text-indigo-600 mb-3'>
-                    {mention.outlet}
-                  </p>
+                  className='group block p-6 bg-gradient-to-br from-slate-50 to-slate-100/50 rounded-2xl border border-slate-200 hover:border-indigo-200 hover:shadow-lg hover:shadow-indigo-100/50 transition-all duration-300'>
+                  <p className='text-xs font-bold uppercase tracking-[0.2em] text-indigo-600 mb-3'>{mention.outlet}</p>
                   <h3 className='font-semibold text-slate-900 group-hover:text-indigo-600 transition-colors leading-snug mb-3'>
                     {mention.title}
                   </h3>
@@ -209,8 +278,7 @@ const NewsPage = () => {
           </p>
           <a
             href='mailto:communications@dmrc.org'
-            className='inline-flex items-center gap-2 rounded-full bg-white px-8 py-4 text-sm font-bold uppercase tracking-wider text-indigo-600 transition hover:bg-indigo-50 hover:shadow-xl'
-          >
+            className='inline-flex items-center gap-2 rounded-full bg-white px-8 py-4 text-sm font-bold uppercase tracking-wider text-indigo-600 transition hover:bg-indigo-50 hover:shadow-xl'>
             Email Communications
             <span aria-hidden>→</span>
           </a>

@@ -9,7 +9,7 @@ export const retreatAvailabilitySchema = z.object({
 export const retreatInputSchema = z.object({
   slug: z.string().min(1),
   title: z.string().min(1),
-  subtitle: z.string().optional(),
+  subtitle: z.string().optional().nullable(),
   speaker: z.string().min(1),
   conductor: z.string().min(1),
   description: z.string().min(1),
@@ -18,11 +18,11 @@ export const retreatInputSchema = z.object({
   location: z.string().min(1),
   category: z.string().min(1),
   status: z.enum(['Registration Open', 'Waitlist', 'Closed']).optional(),
-  imageSrc: z.string().url().optional(),
+  imageSrc: z.string().url(),
   detailHref: z.string().optional(),
   ctaHref: z.string().optional(),
   availability: retreatAvailabilitySchema.optional(),
-  price: z.number().nonnegative().optional(),
+  price: z.number().nonnegative().optional().nullable(),
   isPaid: z.boolean().optional(),
 })
 

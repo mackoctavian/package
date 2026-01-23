@@ -19,12 +19,15 @@ export interface RetreatBooking {
   status: RetreatBookingStatus
   paymentStatus: RetreatPaymentStatus
   attended: boolean
+  checkedInAt?: string
   familyMembers: RetreatBookingFamilyMember[]
   notes?: string | null
   cancelledAt?: string | null
   rescheduledToRetreatId?: string | null
   rescheduledToRetreatTitle?: string | null
   rescheduledAt?: string | null
+  ticketCode?: string
+  formPayload?: Record<string, unknown>
   createdAt: string
   updatedAt?: string
 }

@@ -16,6 +16,8 @@ import { Input } from '@/app/components/ui/input'
 import { Label } from '@/app/components/ui/label'
 import { Textarea } from '@/app/components/ui/textarea'
 import { cn } from '@/lib/utils'
+import { UploadField } from '@/app/components/Admin/UploadField'
+import { ModuleGate } from '@/app/components/Admin/ModuleGate'
 
 type MediaType = 'image' | 'video' | 'audio' | 'cd'
 
@@ -37,6 +39,7 @@ type GalleryRecord = {
     album?: string
     coverArt?: string
     poster?: string
+    youtubeId?: string
   } | null
   createdAt?: string
 }
@@ -59,6 +62,7 @@ type GalleryForm = {
     album: string
     coverArt: string
     poster: string
+    youtubeId: string
   }
 }
 
@@ -79,6 +83,7 @@ const emptyForm: GalleryForm = {
     album: '',
     coverArt: '',
     poster: '',
+    youtubeId: '',
   },
 }
 
@@ -108,6 +113,12 @@ const slugify = (value: string) =>
     .trim()
     .replace(/[^a-z0-9]+/g, '-')
     .replace(/^-+|-+$/g, '')
+
+const extractYoutubeId = (value: string) => {
+  if (!value) return ''
+  const match = value.match(/(?:youtube\.com\/(?:watch\?v=|embed\/|shorts\/)|youtu\.be\/)([A-Za-z0-9_-]{6,})/)
+  return match ? match[1] : ''
+}
 
 export default function GalleryAdminPage() {
   const queryClient = useQueryClient()
@@ -232,6 +243,7 @@ export default function GalleryAdminPage() {
           album: record.metadata?.album ?? '',
           coverArt: record.metadata?.coverArt ?? '',
           poster: record.metadata?.poster ?? '',
+          youtubeId: record.metadata?.youtubeId ?? '',
         },
       })
     }
@@ -254,6 +266,17 @@ export default function GalleryAdminPage() {
   const handleDelete = (record: GalleryRecord) => {
     setDeleteId(record.id)
     setIsDeleteOpen(true)
+  }
+
+  const handleYoutubeUrlChange = (value: string) => {
+    updateForm('mediaUrl', value)
+    const videoId = extractYoutubeId(value)
+    updateMetadata('youtubeId', videoId)
+    if (videoId) {
+      updateMetadata('poster', `https://img.youtube.com/vi/${videoId}/hqdefault.jpg`)
+    } else {
+      updateMetadata('poster', '')
+    }
   }
 
   const updateForm = <K extends keyof GalleryForm>(key: K, value: GalleryForm[K]) => {
@@ -287,7 +310,8 @@ export default function GalleryAdminPage() {
   ]
 
   return (
-    <div className='px-6 py-8 space-y-6'>
+    <ModuleGate moduleId='gallery'>
+      <div className='px-6 py-8 space-y-6'>
       {/* Header */}
       <div className='flex flex-wrap items-start justify-between gap-4'>
         <div className='space-y-1'>
@@ -526,19 +550,28 @@ export default function GalleryAdminPage() {
               />
             </Field>
 
-            {/* Media URL */}
-            <Field label='Media URL *'>
-              <Input 
-                value={form.mediaUrl} 
-                onChange={(e) => updateForm('mediaUrl', e.target.value)}
-                placeholder={
-                  form.metadata.mediaType === 'image' ? 'https://example.com/image.jpg' :
-                  form.metadata.mediaType === 'video' ? 'https://example.com/video.mp4' :
-                  form.metadata.mediaType === 'audio' ? '/audio/recording.mp3' :
-                  '/store/cd-album'
-                }
+            {/* Media Source */}
+            {form.metadata.mediaType === 'video' ? (
+              <Field label='YouTube URL *'>
+                <Input
+                  value={form.mediaUrl}
+                  onChange={(e) => handleYoutubeUrlChange(e.target.value)}
+                  placeholder='https://www.youtube.com/watch?v=...'
+                />
+                <p className='text-xs text-slate-500'>
+                  Paste the YouTube link. We’ll pull the thumbnail and embed the player automatically.
+                </p>
+              </Field>
+            ) : (
+              <UploadField
+                label='Media Upload *'
+                value={form.mediaUrl}
+                onChange={(url) => updateForm('mediaUrl', url)}
+                folder={`gallery/${form.metadata.mediaType}`}
+                accept={form.metadata.mediaType === 'image' ? 'image/*' : 'audio/*'}
+                hint='Upload directly to Supabase; a public URL is stored automatically.'
               />
-            </Field>
+            )}
 
             {/* Type-specific fields */}
             {form.metadata.mediaType === 'image' && (
@@ -562,6 +595,11 @@ export default function GalleryAdminPage() {
                   onChange={(e) => updateMetadata('poster', e.target.value)}
                   placeholder='https://example.com/thumbnail.jpg'
                 />
+                {form.metadata.youtubeId && (
+                  <p className='text-xs text-slate-500'>
+                    Default thumbnail pulled from YouTube ID {form.metadata.youtubeId}.
+                  </p>
+                )}
               </Field>
             )}
 
@@ -594,13 +632,14 @@ export default function GalleryAdminPage() {
                     </Field>
                   )}
                 </div>
-                <Field label='Cover Art URL'>
-                  <Input 
-                    value={form.metadata.coverArt} 
-                    onChange={(e) => updateMetadata('coverArt', e.target.value)}
-                    placeholder='https://example.com/cover.jpg'
-                  />
-                </Field>
+                <UploadField
+                  label='Cover Art'
+                  value={form.metadata.coverArt}
+                  onChange={(url) => updateMetadata('coverArt', url)}
+                  folder='gallery/cover-art'
+                  accept='image/*'
+                  hint='Upload the album artwork or speaker photo.'
+                />
               </>
             )}
 
@@ -671,7 +710,8 @@ export default function GalleryAdminPage() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
-    </div>
+      </div>
+    </ModuleGate>
   )
 }
 

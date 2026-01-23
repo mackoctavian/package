@@ -1,11 +1,11 @@
 'use client'
 
 import Link from 'next/link'
-import Image from 'next/image'
 import { Icon } from '@iconify/react/dist/iconify.js'
 import { useEffect, useState } from 'react'
 import { FooterLinkType } from '@/app/types/footerlinks'
 import { Mail, MapPin, Phone, ArrowUpRight } from 'lucide-react'
+import Logo from '@/app/components/Layout/Header/Logo'
 
 const Footer = () => {
   const [footerlink, SetFooterlink] = useState<FooterLinkType[]>([])
@@ -32,14 +32,8 @@ const Footer = () => {
           
           {/* Brand Column */}
           <div className='lg:col-span-4 space-y-6'>
-            <Link href='/' className='inline-block'>
-              <Image
-                src='/images/logo/dmrc.svg'
-                alt='DMRC logo'
-                width={56}
-                height={72}
-                className='brightness-0 invert'
-              />
+            <Link href='/' className='inline-block' aria-label='Return home'>
+              <Logo variant='inverse' width={120} height={48} withLink={false} />
             </Link>
             <p className='text-slate-400 leading-relaxed max-w-sm'>
               Journey with Divine Mercy Retreat Center as we accompany families, clergy, and ministries in prayer, formation, and mission.

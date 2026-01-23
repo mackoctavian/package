@@ -12,12 +12,15 @@ import { SidebarInset, SidebarProvider } from '@/components/ui/sidebar'
 import { AppSidebar } from '@dashboard/components/layout/app-sidebar'
 import { SkipToMain } from '@dashboard/components/skip-to-main'
 import { NavigationProgress } from '@dashboard/components/navigation-progress'
+import { AdminUserProvider } from '@dashboard/context/admin-user'
+import type { AdminUserPayload } from '@/lib/auth/admin-shared'
 
 type DashboardLayoutClientProps = {
   children: React.ReactNode
+  currentUser: AdminUserPayload
 }
 
-export function DashboardLayoutClient({ children }: DashboardLayoutClientProps) {
+export function DashboardLayoutClient({ children, currentUser }: DashboardLayoutClientProps) {
   const defaultOpen = useMemo(() => getCookie('sidebar_state') !== 'false', [])
 
   return (
@@ -26,20 +29,22 @@ export function DashboardLayoutClient({ children }: DashboardLayoutClientProps) 
         <FontProvider>
           <SearchProvider>
             <LayoutProvider>
-              <SidebarProvider defaultOpen={defaultOpen}>
-                <NavigationProgress />
-                <SkipToMain />
-                <AppSidebar />
-                <SidebarInset
-                  className={cn(
-                    '@container/content',
-                    'has-[[data-layout=fixed]]:h-svh',
-                    'peer-data-[variant=inset]:has-[[data-layout=fixed]]:h-[calc(100svh-(var(--spacing)*4))]'
-                  )}
-                >
-                  {children}
-                </SidebarInset>
-              </SidebarProvider>
+              <AdminUserProvider value={currentUser}>
+                <SidebarProvider defaultOpen={defaultOpen}>
+                  <NavigationProgress />
+                  <SkipToMain />
+                  <AppSidebar />
+                  <SidebarInset
+                    className={cn(
+                      '@container/content',
+                      'has-[[data-layout=fixed]]:h-svh',
+                      'peer-data-[variant=inset]:has-[[data-layout=fixed]]:h-[calc(100svh-(var(--spacing)*4))]'
+                    )}
+                  >
+                    {children}
+                  </SidebarInset>
+                </SidebarProvider>
+              </AdminUserProvider>
             </LayoutProvider>
           </SearchProvider>
         </FontProvider>

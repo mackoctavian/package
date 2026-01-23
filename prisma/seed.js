@@ -1,7 +1,24 @@
 /* eslint-disable no-console */
 const { PrismaClient } = require('@prisma/client')
+const bcrypt = require('bcryptjs')
 
 const prisma = new PrismaClient()
+
+const ADMIN_MODULES = [
+  'overview',
+  'homepage',
+  'retreats',
+  'gallery',
+  'news',
+  'events',
+  'publications',
+  'articles',
+  'patrons',
+  'ministries',
+  'about',
+  'feedback',
+  'team',
+]
 
 const retreats = [
   {
@@ -94,6 +111,29 @@ const retreats = [
   },
 ]
 
+async function ensureSuperAdmin() {
+  const email = (process.env.ADMIN_EMAIL || 'admin@admin.com').toLowerCase()
+  const existing = await prisma.adminUser.findUnique({ where: { email } })
+  if (existing) {
+    return
+  }
+
+  const password = process.env.ADMIN_PASSWORD || 'ChangeMeNow!123'
+  const passwordHash = await bcrypt.hash(password, 10)
+
+  await prisma.adminUser.create({
+    data: {
+      name: process.env.ADMIN_NAME || 'Super Admin',
+      email,
+      passwordHash,
+      role: 'SUPERADMIN',
+      allowedModules: ADMIN_MODULES,
+    },
+  })
+
+  console.log(`Created default admin account (${email}). Please update the password after first login.`)
+}
+
 async function main() {
   for (const retreat of retreats) {
     await prisma.retreat.upsert({
@@ -107,6 +147,7 @@ async function main() {
   }
 
   console.log(`Seeded ${retreats.length} retreats ✅`)
+  await ensureSuperAdmin()
 }
 
 main()

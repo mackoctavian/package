@@ -1,4 +1,4 @@
-export type RetreatCategory = 'all' | 'residential' | 'parish' | 'special' | 'jesus-mission'
+export type RetreatCategory = string
 
 export type RetreatStatus = 'Registration Open' | 'Waitlist' | 'Closed'
 

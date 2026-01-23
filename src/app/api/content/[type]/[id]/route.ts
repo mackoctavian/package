@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server'
 
 import prisma from '@/lib/prisma'
 
-const SUPPORTED_TYPES = new Set(['gallery', 'news', 'events', 'publications', 'patrons', 'about', 'ministries'])
+const SUPPORTED_TYPES = new Set(['gallery', 'news', 'events', 'publications', 'patrons', 'about', 'ministries', 'articles'])
 
 const resolveType = (type: string) => {
   const normalized = type.toLowerCase()

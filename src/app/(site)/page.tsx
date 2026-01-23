@@ -1,7 +1,7 @@
 import React from 'react'
 import Hero from '@/app/components/Home/Hero'
+import UpcomingRetreats from '@/app/components/Home/UpcomingRetreats'
 import ImageCardMenu from '@/app/components/Home/ImageCardMenu'
-import NamesList from '@/app/components/Home/Courses'
 import Mentor from '@/app/components/Home/Mentor'
 import Gallery from '@/app/components/Home/Gallery'
 import Testimonial from '@/app/components/Home/Testimonial'
@@ -18,7 +18,7 @@ export default function Home() {
     <>
       <Hero />
       <ImageCardMenu />
-      <NamesList />
+      <UpcomingRetreats />
       <Mentor />
       <Gallery />
       <Testimonial />

@@ -5,44 +5,30 @@ import { mapPrismaBooking } from '../utils'
 
 type LookupRequest = {
   bookingId?: string
-  fullName?: string
-  phone?: string
 }
-
-const normalizePhone = (value?: string | null) => value?.replace(/\s+/g, '') ?? ''
 
 export const POST = async (request: Request) => {
   const body = (await request.json()) as LookupRequest
   const bookingId = body.bookingId?.trim()
-  const fullName = body.fullName?.trim()
-  const rawPhone = body.phone?.trim()
-  const phone = normalizePhone(body.phone)
-  const phoneFilters = Array.from(new Set([rawPhone, phone].filter(Boolean))).map((value) => ({
-    phone: { equals: value! },
-  }))
-  const whereClauses = [{ fullName: { equals: fullName!, mode: 'insensitive' } }] as Record<string, unknown>[]
-  if (phoneFilters.length) {
-    whereClauses.push({ OR: phoneFilters })
-  }
 
-  if (!bookingId && !(fullName && phone)) {
-    return NextResponse.json(
-      { error: 'Provide a booking ID or both full name and phone number.' },
-      { status: 400 },
-    )
+  if (!bookingId) {
+    return NextResponse.json({ error: 'Please provide your booking ID.' }, { status: 400 })
   }
 
   try {
-    const record = bookingId
-      ? await prisma.retreatBooking.findUnique({ where: { id: bookingId } })
-      : await prisma.retreatBooking.findFirst({
+    const normalizedCode = bookingId.toUpperCase()
+    const record = await prisma.retreatBooking.findFirst({
           where: {
-            AND: whereClauses,
+        OR: [
+          { id: bookingId },
+          { ticketCode: bookingId },
+          { ticketCode: normalizedCode },
+        ],
           },
         })
 
     if (!record) {
-      return NextResponse.json({ error: 'No booking matched those details.' }, { status: 404 })
+      return NextResponse.json({ error: 'No booking matched that ID.' }, { status: 404 })
     }
 
     return NextResponse.json({ data: mapPrismaBooking(record) })

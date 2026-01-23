@@ -4,6 +4,23 @@ import { useEffect, useRef } from 'react'
 import { QRCodeSVG } from 'qrcode.react'
 import { CalendarDays, MapPin, User, Mail, Phone, Download, Ticket, CheckCircle2 } from 'lucide-react'
 import { Button } from '@/app/components/ui/button'
+import { useBranding } from '@/app/hooks/useBranding'
+
+const palette = {
+  slate50: '#f8fafc',
+  slate100: '#f1f5f9',
+  slate200: '#e2e8f0',
+  slate400: '#94a3b8',
+  slate500: '#64748b',
+  slate600: '#475569',
+  slate900: '#0f172a',
+  blue500: '#3b82f6',
+  blue600: '#2563eb',
+  indigo600: '#4f46e5',
+  purple600: '#7c3aed',
+  emerald50: '#ecfdf5',
+  emerald600: '#059669',
+}
 
 interface RetreatTicketProps {
   booking: {
@@ -20,10 +37,12 @@ interface RetreatTicketProps {
     timeRange?: string
     location: string
   }
+  ticketUrl?: string
 }
 
-export default function RetreatTicket({ booking, retreat }: RetreatTicketProps) {
+export default function RetreatTicket({ booking, retreat, ticketUrl }: RetreatTicketProps) {
   const ticketRef = useRef<HTMLDivElement>(null)
+  const { logoUrl } = useBranding()
 
   const handleDownload = async () => {
     if (!ticketRef.current) return
@@ -38,7 +57,9 @@ export default function RetreatTicket({ booking, retreat }: RetreatTicketProps) 
       const link = document.createElement('a')
       link.download = `retreat-ticket-${booking.ticketCode}.png`
       link.href = canvas.toDataURL('image/png')
+      document.body.appendChild(link)
       link.click()
+      document.body.removeChild(link)
     } catch (error) {
       console.error('Failed to download ticket:', error)
     }
@@ -47,103 +68,119 @@ export default function RetreatTicket({ booking, retreat }: RetreatTicketProps) 
   return (
     <div className='space-y-4'>
       {/* Ticket */}
-      <div 
+      <div
         ref={ticketRef}
-        className='bg-white rounded-2xl overflow-hidden shadow-xl border border-slate-200 max-w-md mx-auto'
-      >
+        className='rounded-2xl overflow-hidden shadow-xl border max-w-md mx-auto'
+        style={{ backgroundColor: '#fff', borderColor: palette.slate200, color: palette.slate600 }}>
         {/* Header */}
-        <div className='bg-gradient-to-r from-blue-600 to-indigo-600 p-6 text-white'>
-          <div className='flex items-center gap-2 mb-2'>
+        <div
+          className='p-6 text-white relative overflow-hidden'
+          style={{ background: `linear-gradient(135deg, ${palette.blue600}, ${palette.indigo600}, ${palette.purple600})` }}>
+          <div
+            className='absolute inset-0 pointer-events-none'
+            style={{ background: 'radial-gradient(circle at top right, rgba(255,255,255,0.5), transparent 55%)', opacity: 0.4 }}
+          />
+          <div className='relative flex items-center gap-2 mb-2'>
             <Ticket className='h-5 w-5' />
             <span className='text-sm font-medium opacity-90'>Retreat Ticket</span>
           </div>
-          <h2 className='text-2xl font-bold'>{retreat.title}</h2>
+          <div className='relative'>
+            <h2 className='text-2xl font-bold'>{retreat.title}</h2>
+          </div>
         </div>
 
         {/* QR Code Section */}
-        <div className='p-6 bg-slate-50 flex flex-col items-center'>
-          <div className='bg-white p-4 rounded-xl shadow-sm border border-slate-100'>
+        <div className='p-6 flex flex-col items-center' style={{ backgroundColor: palette.slate50 }}>
+          <div className='bg-white p-4 rounded-xl shadow-sm' style={{ border: `1px solid ${palette.slate200}` }}>
             <QRCodeSVG
-              value={booking.ticketCode}
+              value={ticketUrl ?? booking.ticketCode}
               size={180}
               level='H'
               includeMargin
               imageSettings={{
-                src: '/images/dmrc/logo.png',
+                src: logoUrl,
                 height: 30,
                 width: 30,
                 excavate: true,
               }}
             />
           </div>
-          <p className='mt-4 text-2xl font-mono font-bold text-slate-900 tracking-wider'>
+          <p className='mt-4 text-2xl font-mono font-bold tracking-wider' style={{ color: palette.slate900 }}>
             {booking.ticketCode}
           </p>
-          <p className='text-sm text-slate-500 mt-1'>Scan to check in</p>
+          <p className='text-sm mt-1' style={{ color: palette.slate500 }}>
+            Scan to check in
+          </p>
         </div>
 
         {/* Details */}
         <div className='p-6 space-y-4'>
           {/* Attendee Info */}
           <div className='space-y-2'>
-            <div className='flex items-center gap-3 text-slate-600'>
-              <User className='h-4 w-4 text-slate-400' />
-              <span className='font-medium text-slate-900'>{booking.fullName}</span>
+            <div className='flex items-center gap-3' style={{ color: palette.slate600 }}>
+              <User className='h-4 w-4' style={{ color: palette.slate400 }} />
+              <span className='font-medium' style={{ color: palette.slate900 }}>
+                {booking.fullName}
+              </span>
             </div>
-            <div className='flex items-center gap-3 text-slate-600'>
-              <Mail className='h-4 w-4 text-slate-400' />
+            <div className='flex items-center gap-3' style={{ color: palette.slate600 }}>
+              <Mail className='h-4 w-4' style={{ color: palette.slate400 }} />
               <span className='text-sm'>{booking.email}</span>
             </div>
-            <div className='flex items-center gap-3 text-slate-600'>
-              <Phone className='h-4 w-4 text-slate-400' />
+            <div className='flex items-center gap-3' style={{ color: palette.slate600 }}>
+              <Phone className='h-4 w-4' style={{ color: palette.slate400 }} />
               <span className='text-sm'>{booking.phone}</span>
             </div>
           </div>
 
           {/* Divider */}
-          <div className='border-t border-dashed border-slate-200 relative'>
-            <div className='absolute -left-6 -top-3 w-6 h-6 bg-slate-100 rounded-full' />
-            <div className='absolute -right-6 -top-3 w-6 h-6 bg-slate-100 rounded-full' />
+          <div className='border-t border-dashed relative' style={{ borderColor: palette.slate200 }}>
+            <div className='absolute -left-6 -top-3 w-6 h-6 rounded-full' style={{ backgroundColor: palette.slate100 }} />
+            <div className='absolute -right-6 -top-3 w-6 h-6 rounded-full' style={{ backgroundColor: palette.slate100 }} />
           </div>
 
           {/* Retreat Info */}
           <div className='space-y-2'>
-            <div className='flex items-center gap-3 text-slate-600'>
-              <CalendarDays className='h-4 w-4 text-blue-500' />
+            <div className='flex items-center gap-3' style={{ color: palette.slate600 }}>
+              <CalendarDays className='h-4 w-4' style={{ color: palette.blue500 }} />
               <div>
-                <span className='font-medium text-slate-900'>{retreat.dateRange}</span>
+                <span className='font-medium' style={{ color: palette.slate900 }}>
+                  {retreat.dateRange}
+                </span>
                 {retreat.timeRange && (
-                  <p className='text-xs text-slate-500'>{retreat.timeRange}</p>
+                  <p className='text-xs' style={{ color: palette.slate500 }}>
+                    {retreat.timeRange}
+                  </p>
                 )}
               </div>
             </div>
-            <div className='flex items-center gap-3 text-slate-600'>
-              <MapPin className='h-4 w-4 text-blue-500' />
+            <div className='flex items-center gap-3' style={{ color: palette.slate600 }}>
+              <MapPin className='h-4 w-4' style={{ color: palette.blue500 }} />
               <span>{retreat.location}</span>
             </div>
           </div>
 
           {/* Status Badge */}
-          <div className='flex items-center justify-center gap-2 py-3 bg-green-50 rounded-xl text-green-700'>
+          <div
+            className='flex items-center justify-center gap-2 py-3 rounded-xl'
+            style={{ backgroundColor: palette.emerald50, color: palette.emerald600 }}>
             <CheckCircle2 className='h-5 w-5' />
             <span className='font-semibold'>Booking Confirmed</span>
           </div>
         </div>
 
         {/* Footer */}
-        <div className='bg-slate-50 px-6 py-4 text-center border-t border-slate-100'>
-          <p className='text-xs text-slate-500'>
-            Divine Mercy Retreat Center
-          </p>
-          <p className='text-xs text-slate-400 mt-1'>
-            Please present this ticket at check-in
-          </p>
+        <div
+          className='px-6 py-4 text-center border-t'
+          style={{ backgroundColor: palette.slate50, borderColor: palette.slate100, color: palette.slate500 }}>
+          <p className='text-xs font-semibold'>Divine Mercy Retreat Center</p>
+          <p className='text-xs mt-1'>Please present this ticket at check-in</p>
         </div>
       </div>
 
       {/* Download Button */}
       <div className='flex justify-center'>
-        <Button onClick={handleDownload} className='gap-2'>
+        <Button onClick={handleDownload} className='gap-2' style={{ backgroundColor: palette.slate900, color: '#ffffff' }}>
           <Download className='h-4 w-4' />
           Download Ticket
         </Button>

@@ -5,19 +5,7 @@ import Link from 'next/link'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useRouter } from 'next/navigation'
 import { toast } from 'react-hot-toast'
-import {
-  ArrowLeft,
-  CalendarDays,
-  CircleDollarSign,
-  ExternalLink,
-  Loader2,
-  MapPin,
-  PencilLine,
-  Users2,
-  ScanLine,
-  UserCheck,
-  QrCode,
-} from 'lucide-react'
+import { ArrowLeft, CalendarDays, CircleDollarSign, ExternalLink, Loader2, MapPin, PencilLine, Users2, ScanLine, UserCheck, QrCode, ArrowUpRight } from 'lucide-react'
 
 import type { RetreatType } from '@/app/types/retreat'
 import type { RetreatBooking } from '@/app/types/retreat-booking'
@@ -270,8 +258,16 @@ const RetreatDetail = ({ retreatId }: RetreatDetailProps) => {
                 </TableHeader>
                 <TableBody>
                   {bookings.map((booking) => (
-                    <TableRow key={booking.id}>
-                      <TableCell className='font-medium'>{booking.fullName}</TableCell>
+                    <TableRow key={booking.id} className='hover:bg-slate-50/70'>
+                      <TableCell className='font-medium'>
+                        <Link
+                          href={`/admin/retreats/${retreat.id}/bookings/${booking.id}`}
+                          className='inline-flex items-center gap-1 text-primary hover:underline'
+                        >
+                          {booking.fullName}
+                          <ArrowUpRight className='h-3.5 w-3.5' />
+                        </Link>
+                      </TableCell>
                       <TableCell>{booking.email}</TableCell>
                       <TableCell>{formatPhone(booking.phone)}</TableCell>
                       <TableCell>

@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import toast from "react-hot-toast";
 import Loader from "@/app/components/Common/Loader";
 import Link from "next/link";
-import Image from "next/image";
+import Logo from "@/app/components/Layout/Header/Logo";
 
 const ResetPassword = ({ token }: { token: string }) => {
   const [data, setData] = useState({
@@ -87,21 +87,9 @@ const ResetPassword = ({ token }: { token: string }) => {
               data-wow-delay=".15s"
             >
               <div className="mb-10 text-center">
-                <Link href="/" className="mx-auto inline-block max-w-[160px]">
-                  <Image
-                    src="/images/logo/dmrc.svg"
-                    alt="DMRC logo"
-                    width={140}
-                    height={30}
-                    className="dark:hidden"
-                  />
-                  <Image
-                    src="/images/logo/logo-white.svg"
-                    alt="logo"
-                    width={140}
-                    height={30}
-                    className="hidden dark:block"
-                  />
+                <Link href="/" className="mx-auto inline-block max-w-[200px]" aria-label="Return home">
+                  <Logo withLink={false} width={150} height={42} className="mx-auto dark:hidden" />
+                  <Logo variant="inverse" withLink={false} width={150} height={42} className="mx-auto hidden dark:block" />
                 </Link>
               </div>
 

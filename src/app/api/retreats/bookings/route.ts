@@ -3,6 +3,7 @@ import { nanoid } from 'nanoid'
 
 import prisma from '@/lib/prisma'
 import { retreatBookingPayloadSchema } from '@/lib/validators/retreat'
+import { sendRetreatBookingEmail } from '@/lib/email/retreat-booking'
 import { mapPrismaBooking } from './utils'
 
 const normalizePhone = (value?: string | null) => value?.replace(/\s+/g, '') ?? undefined
@@ -51,6 +52,11 @@ export const POST = async (request: Request) => {
         formPayload: form,
         notes: note,
       },
+    })
+
+    // Best-effort: send confirmation email (do not fail booking if email fails)
+    sendRetreatBookingEmail({ bookingId: created.id, kind: 'created' }).catch((error) => {
+      console.error('[retreat-bookings][POST] email failed:', error)
     })
 
     return NextResponse.json({ data: mapPrismaBooking(created), ticketCode }, { status: 201 })

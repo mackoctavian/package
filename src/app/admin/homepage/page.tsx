@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { 
   Loader2, Plus, PencilLine, Trash2, Image as ImageIcon, 
@@ -18,6 +18,8 @@ import { Label } from '@/app/components/ui/label'
 import { Textarea } from '@/app/components/ui/textarea'
 import { Switch } from '@/app/components/ui/switch'
 import { cn } from '@/lib/utils'
+import { UploadField } from '@/app/components/Admin/UploadField'
+import { ModuleGate } from '@/app/components/Admin/ModuleGate'
 
 type HeroSlide = {
   id: string
@@ -63,7 +65,65 @@ type QuickLink = {
   children?: QuickLink[]
 }
 
-type SectionType = 'hero' | 'patrons' | 'testimonials' | 'quickLinks'
+type FlattenedQuickLink = QuickLink & {
+  parentTitle?: string
+  depth: number
+}
+
+type BrandingSettings = {
+  primaryLogoUrl: string
+  inverseLogoUrl?: string | null
+  logoAlt?: string | null
+}
+
+const DEFAULT_BRANDING: BrandingSettings = {
+  primaryLogoUrl: '/images/logo/dmrc.svg',
+  inverseLogoUrl: '',
+  logoAlt: 'DMRC logo',
+}
+
+const flattenQuickLinks = (nodes: QuickLink[] = [], trail: string[] = [], depth = 0): FlattenedQuickLink[] => {
+  return [...nodes]
+    .sort((a, b) => a.order - b.order)
+    .flatMap((node) => {
+      const current: FlattenedQuickLink = {
+        ...node,
+        parentTitle: trail[trail.length - 1],
+        depth,
+      }
+      const children = flattenQuickLinks(node.children ?? [], [...trail, node.title], depth + 1)
+      return [current, ...children]
+    })
+}
+
+const findQuickLinkById = (nodes: QuickLink[] = [], id: string): QuickLink | undefined => {
+  for (const node of nodes) {
+    if (node.id === id) return node
+    const found = findQuickLinkById(node.children ?? [], id)
+    if (found) return found
+  }
+  return undefined
+}
+
+const collectDescendantIds = (nodes: QuickLink[] = [], id: string): Set<string> => {
+  const result = new Set<string>()
+  const target = findQuickLinkById(nodes, id)
+  if (!target) return result
+
+  const stack = [...(target.children ?? [])]
+  while (stack.length) {
+    const current = stack.pop()
+    if (!current) continue
+    result.add(current.id)
+    if (current.children?.length) {
+      stack.push(...current.children)
+    }
+  }
+
+  return result
+}
+
+type SectionType = 'hero' | 'patrons' | 'testimonials' | 'quickLinks' | 'branding'
 
 export default function HomepageCMSPage() {
   const queryClient = useQueryClient()
@@ -109,6 +169,19 @@ export default function HomepageCMSPage() {
       return data.data as QuickLink[]
     },
   })
+
+  const brandingQuery = useQuery({
+    queryKey: ['site', 'branding'],
+    queryFn: async () => {
+      const res = await fetch('/api/site-settings/branding')
+      if (!res.ok) throw new Error('Failed to fetch branding settings')
+      const data = await res.json()
+      return { ...DEFAULT_BRANDING, ...(data.data ?? {}) } as BrandingSettings
+    },
+  })
+
+  const quickLinksData = quickLinksQuery.data ?? []
+  const quickLinksFlat = useMemo(() => flattenQuickLinks(quickLinksData), [quickLinksData])
 
   // Mutations
   const createMutation = useMutation({
@@ -182,6 +255,26 @@ export default function HomepageCMSPage() {
     onError: () => toastError('Failed to delete item'),
   })
 
+  const brandingMutation = useMutation({
+    mutationFn: async (payload: BrandingSettings) => {
+      const res = await fetch('/api/site-settings/branding', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      })
+      if (!res.ok) throw new Error('Failed to update branding')
+      return res.json()
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['site', 'branding'] })
+      if (typeof window !== 'undefined') {
+        window.dispatchEvent(new Event('branding-updated'))
+      }
+      toastSuccess('Brand assets updated')
+    },
+    onError: () => toastError('Failed to update branding assets'),
+  })
+
   const handleCreate = () => {
     setEditingItem(null)
     setIsDialogOpen(true)
@@ -215,7 +308,8 @@ export default function HomepageCMSPage() {
     { id: 'hero' as SectionType, label: 'Hero Carousel', icon: ImageIcon, count: heroQuery.data?.length ?? 0 },
     { id: 'patrons' as SectionType, label: 'Leadership/Patrons', icon: Users, count: patronsQuery.data?.length ?? 0 },
     { id: 'testimonials' as SectionType, label: 'Testimonials', icon: Quote, count: testimonialsQuery.data?.length ?? 0 },
-    { id: 'quickLinks' as SectionType, label: 'Quick Links', icon: Link2, count: quickLinksQuery.data?.length ?? 0 },
+    { id: 'quickLinks' as SectionType, label: 'Quick Links', icon: Link2, count: quickLinksFlat.length },
+    { id: 'branding' as SectionType, label: 'Site Branding', icon: LayoutDashboard, count: brandingQuery.data?.primaryLogoUrl ? 1 : 0 },
   ]
 
   const getItems = () => {
@@ -223,28 +317,33 @@ export default function HomepageCMSPage() {
       case 'hero': return heroQuery.data ?? []
       case 'patrons': return patronsQuery.data ?? []
       case 'testimonials': return testimonialsQuery.data ?? []
-      case 'quickLinks': return (quickLinksQuery.data ?? []).filter(l => !l.parentId)
+      case 'quickLinks': return quickLinksFlat
+      case 'branding': return []
       default: return []
     }
   }
 
-  const isLoading = heroQuery.isLoading || patronsQuery.isLoading || testimonialsQuery.isLoading || quickLinksQuery.isLoading
+  const listIsLoading = heroQuery.isLoading || patronsQuery.isLoading || testimonialsQuery.isLoading || quickLinksQuery.isLoading
   const isSaving = createMutation.isPending || updateMutation.isPending
 
   return (
-    <div className='px-6 py-8 space-y-6'>
+    <ModuleGate moduleId='homepage'>
+      <div className='px-6 py-8 space-y-6'>
       {/* Header */}
       <div className='flex flex-wrap items-start justify-between gap-4 border-b border-slate-200 pb-6'>
         <div className='space-y-1'>
           <p className='text-xs font-semibold uppercase tracking-[0.3em] text-blue-600'>Content Management</p>
           <h1 className='text-3xl font-semibold text-slate-900'>Homepage CMS</h1>
           <p className='text-sm text-slate-500 max-w-2xl'>
-            Manage the content displayed on the homepage including hero carousel, leadership section, testimonials, and quick navigation links.
+            Manage the content displayed on the homepage including hero carousel, leadership section, testimonials, quick navigation links,
+            and global branding assets.
           </p>
         </div>
-        <Button className='gap-2 bg-blue-600 hover:bg-blue-700' onClick={handleCreate}>
-          <Plus className='h-4 w-4' /> Add New
-        </Button>
+        {activeSection !== 'branding' && (
+          <Button className='gap-2 bg-blue-600 hover:bg-blue-700' onClick={handleCreate}>
+            <Plus className='h-4 w-4' /> Add New
+          </Button>
+        )}
       </div>
 
       {/* Section Tabs */}
@@ -286,10 +385,18 @@ export default function HomepageCMSPage() {
             {activeSection === 'patrons' && 'Update the leadership and patrons displayed in the "Faithful Shepherds" section.'}
             {activeSection === 'testimonials' && 'Curate testimonials that appear in the "Stories of Transformation" section.'}
             {activeSection === 'quickLinks' && 'Configure the quick navigation cards in the "Explore" section.'}
+            {activeSection === 'branding' && 'Upload and preview the site logos used for the header, footer, and transactional surfaces.'}
           </CardDescription>
         </CardHeader>
         <CardContent>
-          {isLoading ? (
+          {activeSection === 'branding' ? (
+            <BrandingSettingsCard
+              data={brandingQuery.data ?? DEFAULT_BRANDING}
+              isSaving={brandingMutation.isPending}
+              onSave={(payload) => brandingMutation.mutate(payload)}
+              showLoader={!brandingQuery.data && brandingQuery.isLoading}
+            />
+          ) : listIsLoading ? (
             <div className='flex h-48 items-center justify-center'>
               <Loader2 className='h-6 w-6 animate-spin text-slate-400' />
             </div>
@@ -341,6 +448,7 @@ export default function HomepageCMSPage() {
             onSave={handleSave}
             onCancel={() => setIsDialogOpen(false)}
             isSaving={isSaving}
+            quickLinks={quickLinksData}
           />
         </DialogContent>
       </Dialog>
@@ -363,7 +471,8 @@ export default function HomepageCMSPage() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
-    </div>
+      </div>
+    </ModuleGate>
   )
 }
 
@@ -453,9 +562,10 @@ function ItemCard({ item, section, onEdit, onDelete }: { item: any; section: Sec
                 <Link2 className='w-3 h-3' /> {item.href}
               </a>
             )}
-            {item.children?.length > 0 && (
-              <p className='text-xs text-slate-500 mt-1'>{item.children.length} sub-items</p>
-            )}
+            <div className='text-xs text-slate-500 mt-2 space-y-1'>
+              <p>{item.parentTitle ? `Sublink of ${item.parentTitle}` : 'Top-level card'}</p>
+              {item.children?.length > 0 && <p>{item.children.length} sublink(s)</p>}
+            </div>
           </>
         )}
       </div>
@@ -464,14 +574,24 @@ function ItemCard({ item, section, onEdit, onDelete }: { item: any; section: Sec
 }
 
 // Item Form Component
-function ItemForm({ section, initialData, onSave, onCancel, isSaving }: {
+function ItemForm({ section, initialData, onSave, onCancel, isSaving, quickLinks = [] }: {
   section: SectionType
   initialData: any
   onSave: (data: any) => void
   onCancel: () => void
   isSaving: boolean
+  quickLinks?: QuickLink[]
 }) {
   const [formData, setFormData] = useState(initialData || getDefaultData(section))
+  const parentOptions = useMemo(() => flattenQuickLinks(quickLinks), [quickLinks])
+  const descendantIds = useMemo(() => {
+    if (!formData?.id) return new Set<string>()
+    return collectDescendantIds(quickLinks, formData.id)
+  }, [formData?.id, quickLinks])
+
+  useEffect(() => {
+    setFormData(initialData || getDefaultData(section))
+  }, [initialData, section])
 
   const update = (field: string, value: any) => {
     setFormData((prev: any) => ({ ...prev, [field]: value }))
@@ -486,9 +606,14 @@ function ItemForm({ section, initialData, onSave, onCancel, isSaving }: {
     <form onSubmit={handleSubmit} className='space-y-6'>
       {section === 'hero' && (
         <>
-          <Field label='Image URL *'>
-            <Input value={formData.imageUrl || ''} onChange={(e) => update('imageUrl', e.target.value)} placeholder='https://example.com/image.jpg' required />
-          </Field>
+          <UploadField
+            label='Image *'
+            value={formData.imageUrl || ''}
+            onChange={(url) => update('imageUrl', url)}
+            folder='homepage/hero'
+            placeholder='Paste a 1920×900 image URL or upload (max 3MB)'
+            hint='Use a 1920×900 px (or larger) JPG/PNG with the subject centered. Wider files keep the hero carousel crisp.'
+          />
           <div className='grid grid-cols-2 gap-4'>
             <Field label='Title (optional)'>
               <Input value={formData.title || ''} onChange={(e) => update('title', e.target.value)} placeholder='Slide title' />
@@ -521,9 +646,14 @@ function ItemForm({ section, initialData, onSave, onCancel, isSaving }: {
           <Field label='Role/Description'>
             <Input value={formData.role || ''} onChange={(e) => update('role', e.target.value)} placeholder='Oversees regional missions and supports parish outreach teams.' />
           </Field>
-          <Field label='Image URL *'>
-            <Input value={formData.imageUrl || ''} onChange={(e) => update('imageUrl', e.target.value)} placeholder='https://example.com/photo.jpg' required />
-          </Field>
+          <UploadField
+            label='Image *'
+            value={formData.imageUrl || ''}
+            onChange={(url) => update('imageUrl', url)}
+            folder='homepage/patrons'
+            placeholder='Square headshot · 800×800px or larger'
+            hint='Upload a square 800×800 px photo with space around the shoulders for best cropping.'
+          />
           <Field label='Bio (optional)'>
             <Textarea value={formData.bio || ''} onChange={(e) => update('bio', e.target.value)} placeholder='Extended biography...' rows={3} />
           </Field>
@@ -540,9 +670,14 @@ function ItemForm({ section, initialData, onSave, onCancel, isSaving }: {
               <Input value={formData.role || ''} onChange={(e) => update('role', e.target.value)} placeholder='Youth Retreat Participant' required />
             </Field>
           </div>
-          <Field label='Image URL *'>
-            <Input value={formData.imageUrl || ''} onChange={(e) => update('imageUrl', e.target.value)} placeholder='https://example.com/photo.jpg' required />
-          </Field>
+          <UploadField
+            label='Image *'
+            value={formData.imageUrl || ''}
+            onChange={(url) => update('imageUrl', url)}
+            folder='homepage/testimonials'
+          placeholder='Square portrait · 600×600px'
+          hint='Square 600×600 px portrait keeps the testimonial cards balanced on desktop & mobile.'
+          />
           <Field label='Quote *'>
             <Textarea value={formData.quote || ''} onChange={(e) => update('quote', e.target.value)} placeholder='Their testimonial quote...' rows={4} required />
           </Field>
@@ -568,11 +703,35 @@ function ItemForm({ section, initialData, onSave, onCancel, isSaving }: {
           <Field label='Title *'>
             <Input value={formData.title || ''} onChange={(e) => update('title', e.target.value)} placeholder='Retreats' required />
           </Field>
-          <Field label='Image URL *'>
-            <Input value={formData.imageUrl || ''} onChange={(e) => update('imageUrl', e.target.value)} placeholder='https://example.com/image.jpg' required />
-          </Field>
+          <UploadField
+            label='Image *'
+            value={formData.imageUrl || ''}
+            onChange={(url) => update('imageUrl', url)}
+            folder='homepage/quick-links'
+          placeholder='Landscape graphic · 900×600px'
+          hint='Use a 3:2 or 4:3 landscape (≈900×600 px) so grid cards stay sharp.'
+          />
           <Field label='Link URL (optional)'>
             <Input value={formData.href || ''} onChange={(e) => update('href', e.target.value)} placeholder='/retreats' />
+          </Field>
+          <Field label='Parent link (optional)'>
+            <select
+              className='h-10 w-full rounded-lg border border-slate-200 px-3 text-sm'
+              value={formData.parentId ?? ''}
+              onChange={(e) => update('parentId', e.target.value ? e.target.value : null)}
+            >
+              <option value=''>Show as top-level card</option>
+              {parentOptions.map((link) => {
+                if (link.id === formData.id) return null
+                const disabled = descendantIds.has(link.id)
+                return (
+                  <option key={link.id} value={link.id} disabled={disabled}>
+                    {`${'— '.repeat(link.depth)}${link.title}`}
+                  </option>
+                )
+              })}
+            </select>
+            <p className='text-xs text-slate-500'>Choose a parent to turn this into a sublink. Leave blank to display as a primary card.</p>
           </Field>
         </>
       )}
@@ -601,6 +760,136 @@ function ItemForm({ section, initialData, onSave, onCancel, isSaving }: {
   )
 }
 
+function BrandingSettingsCard({
+  data,
+  isSaving,
+  onSave,
+  showLoader = false,
+}: {
+  data: BrandingSettings
+  isSaving: boolean
+  onSave: (payload: BrandingSettings) => void
+  showLoader?: boolean
+}) {
+  const [form, setForm] = useState<BrandingSettings>(data ?? DEFAULT_BRANDING)
+
+  useEffect(() => {
+    setForm(data ?? DEFAULT_BRANDING)
+  }, [data])
+
+  const update = (field: keyof BrandingSettings, value: string) => {
+    setForm((prev) => ({ ...prev, [field]: value }))
+  }
+
+  const handleReset = () => setForm(data ?? DEFAULT_BRANDING)
+  const handleSave = () => {
+    onSave({
+      primaryLogoUrl: form.primaryLogoUrl?.trim() || DEFAULT_BRANDING.primaryLogoUrl,
+      inverseLogoUrl: form.inverseLogoUrl?.trim() || '',
+      logoAlt: form.logoAlt?.trim() || 'Site logo',
+    })
+  }
+
+  if (showLoader) {
+    return (
+      <div className='flex h-48 items-center justify-center'>
+        <Loader2 className='h-6 w-6 animate-spin text-slate-400' />
+      </div>
+    )
+  }
+
+  return (
+    <div className='space-y-6'>
+      <div className='grid gap-6 lg:grid-cols-2'>
+        <UploadField
+          label='Primary logo (light backgrounds)'
+          value={form.primaryLogoUrl}
+          onChange={(url) => update('primaryLogoUrl', url)}
+          folder='branding/primary'
+          placeholder='PNG/SVG · 240×80px minimum'
+          hint='Displayed in the header, auth screens, PDFs, and receipts. Upload a transparent PNG or SVG at least 240×80 px.'
+        />
+        <UploadField
+          label='Inverse logo (dark backgrounds)'
+          value={form.inverseLogoUrl || ''}
+          onChange={(url) => update('inverseLogoUrl', url)}
+          folder='branding/inverse'
+          placeholder='PNG/SVG · 240×80px minimum'
+          hint='Used on dark sections like the footer. Leave empty to reuse the primary logo.'
+        />
+      </div>
+
+      <div className='grid gap-4 md:grid-cols-2'>
+        <div className='rounded-2xl border border-slate-200 p-4 bg-white shadow-sm'>
+          <p className='text-sm font-semibold text-slate-800 mb-2'>Light surface preview</p>
+          <div className='relative flex h-24 items-center justify-center rounded-xl border border-dashed border-slate-200 bg-slate-50'>
+            {form.primaryLogoUrl ? (
+              <Image
+                src={form.primaryLogoUrl}
+                alt={form.logoAlt || 'Logo preview'}
+                fill
+                sizes='200px'
+                className='object-contain p-4'
+              />
+            ) : (
+              <span className='text-xs text-slate-400'>Upload a primary logo to preview</span>
+            )}
+          </div>
+          <p className='mt-2 text-xs text-slate-500'>Displayed on white / light gray backgrounds.</p>
+        </div>
+
+        <div className='rounded-2xl border border-slate-800/40 p-4 bg-slate-900 shadow-inner'>
+          <p className='text-sm font-semibold text-white mb-2'>Dark surface preview</p>
+          <div className='relative flex h-24 items-center justify-center rounded-xl border border-dashed border-slate-700 bg-slate-800/70'>
+            {(form.inverseLogoUrl || form.primaryLogoUrl) ? (
+              <Image
+                src={form.inverseLogoUrl || form.primaryLogoUrl}
+                alt={form.logoAlt || 'Logo preview'}
+                fill
+                sizes='200px'
+                className='object-contain p-4'
+              />
+            ) : (
+              <span className='text-xs text-slate-400'>Upload an inverse logo for dark areas</span>
+            )}
+          </div>
+          <p className='mt-2 text-xs text-slate-400'>Shown on the footer, overlays, and hero banners.</p>
+        </div>
+      </div>
+
+      <div className='grid gap-4 sm:grid-cols-2'>
+        <Field label='Accessible alt text'>
+          <Input
+            value={form.logoAlt || ''}
+            onChange={(e) => update('logoAlt', e.target.value)}
+            placeholder='Divine Mercy Retreat Center logo'
+          />
+        </Field>
+        <div className='rounded-xl border border-dashed border-slate-200 bg-slate-50/60 p-4 text-sm text-slate-600'>
+          <p className='font-semibold text-slate-800'>Pro tip</p>
+          <p className='mt-1 text-xs text-slate-500'>
+            Transparent PNG/SVG at 240×80 px keeps the carousel + navigation crisp. Larger files are automatically resized on the frontend.
+          </p>
+        </div>
+      </div>
+
+      <div className='flex justify-end gap-3'>
+        <Button type='button' variant='ghost' onClick={handleReset} disabled={isSaving}>
+          Reset
+        </Button>
+        <Button
+          type='button'
+          className='bg-blue-600 hover:bg-blue-700'
+          onClick={handleSave}
+          disabled={isSaving || !form.primaryLogoUrl}>
+          {isSaving ? <Loader2 className='h-4 w-4 animate-spin mr-2' /> : <PencilLine className='h-4 w-4 mr-2' />}
+          Save branding
+        </Button>
+      </div>
+    </div>
+  )
+}
+
 function Field({ label, children }: { label: string; children: React.ReactNode }) {
   return (
     <div className='space-y-2'>
@@ -619,7 +908,7 @@ function getDefaultData(section: SectionType) {
     case 'testimonials':
       return { name: '', role: '', imageUrl: '', quote: '', rating: 5, order: 0, isActive: true }
     case 'quickLinks':
-      return { title: '', imageUrl: '', href: '', order: 0, isActive: true }
+      return { title: '', imageUrl: '', href: '', parentId: null, order: 0, isActive: true }
   }
 }
 

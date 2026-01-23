@@ -1,7 +1,7 @@
 'use client'
 
 import Image from 'next/image'
-import { useState, useRef } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { 
   X, Play, Pause, Search, Camera, Video,
@@ -10,20 +10,15 @@ import {
   Clock, User, Music, ExternalLink
 } from 'lucide-react'
 
-import { galleryCollections, galleryVideos, galleryHighlights, galleryAudio, galleryCDs } from '@/app/data/gallery'
 import type { GalleryMedia } from '@/app/types/gallery'
-
-// Combine all images for the photos gallery
-const allPhotos = [
-  ...galleryHighlights,
-  ...galleryCollections.flatMap(c => c.items),
-]
+import { useGalleryContent } from '@/app/hooks/useGalleryContent'
 
 type TabType = 'photos' | 'videos' | 'audio' | 'cds'
 
 const GalleryPage = () => {
   const [selectedImage, setSelectedImage] = useState<GalleryMedia | null>(null)
   const [selectedIndex, setSelectedIndex] = useState<number>(0)
+  const [activeVideo, setActiveVideo] = useState<GalleryMedia | null>(null)
   const [activeTab, setActiveTab] = useState<TabType>('photos')
   const [searchQuery, setSearchQuery] = useState('')
   const [currentAudio, setCurrentAudio] = useState<GalleryMedia | null>(null)
@@ -31,6 +26,8 @@ const GalleryPage = () => {
   const [audioProgress, setAudioProgress] = useState(0)
   const [isMuted, setIsMuted] = useState(false)
   const audioRef = useRef<HTMLAudioElement>(null)
+  const { photos, videos, audio: audioItems, cds, isLoading } = useGalleryContent()
+  const allPhotos = photos
 
   const handleImageSelect = (image: GalleryMedia, index: number) => {
     setSelectedImage(image)
@@ -38,15 +35,17 @@ const GalleryPage = () => {
   }
 
   const handlePrevious = () => {
-    const newIndex = selectedIndex > 0 ? selectedIndex - 1 : allPhotos.length - 1
+    if (!filteredPhotos.length) return
+    const newIndex = selectedIndex > 0 ? selectedIndex - 1 : filteredPhotos.length - 1
     setSelectedIndex(newIndex)
-    setSelectedImage(allPhotos[newIndex])
+    setSelectedImage(filteredPhotos[newIndex])
   }
 
   const handleNext = () => {
-    const newIndex = selectedIndex < allPhotos.length - 1 ? selectedIndex + 1 : 0
+    if (!filteredPhotos.length) return
+    const newIndex = selectedIndex < filteredPhotos.length - 1 ? selectedIndex + 1 : 0
     setSelectedIndex(newIndex)
-    setSelectedImage(allPhotos[newIndex])
+    setSelectedImage(filteredPhotos[newIndex])
   }
 
   // Audio player controls
@@ -82,33 +81,44 @@ const GalleryPage = () => {
     : allPhotos
 
   const filteredVideos = searchQuery
-    ? galleryVideos.filter(v => 
+    ? videos.filter(v => 
         v.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
         v.description?.toLowerCase().includes(searchQuery.toLowerCase())
       )
-    : galleryVideos
+    : videos
 
   const filteredAudio = searchQuery
-    ? galleryAudio.filter(a => 
+    ? audioItems.filter(a => 
         a.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
         a.description?.toLowerCase().includes(searchQuery.toLowerCase()) ||
         a.artist?.toLowerCase().includes(searchQuery.toLowerCase())
       )
-    : galleryAudio
+    : audioItems
 
   const filteredCDs = searchQuery
-    ? galleryCDs.filter(cd => 
+    ? cds.filter(cd => 
         cd.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
         cd.description?.toLowerCase().includes(searchQuery.toLowerCase()) ||
         cd.artist?.toLowerCase().includes(searchQuery.toLowerCase())
       )
-    : galleryCDs
+    : cds
+
+  useEffect(() => {
+    if (!selectedImage) return
+    const index = filteredPhotos.findIndex((item) => item.id === selectedImage.id)
+    if (index === -1) {
+      setSelectedImage(null)
+      setSelectedIndex(0)
+    } else {
+      setSelectedIndex(index)
+    }
+  }, [filteredPhotos, selectedImage?.id])
 
   const tabs = [
-    { id: 'photos' as TabType, label: 'Photos', icon: ImageIcon, count: allPhotos.length },
-    { id: 'videos' as TabType, label: 'Videos', icon: Film, count: galleryVideos.length },
-    { id: 'audio' as TabType, label: 'Audio', icon: Headphones, count: galleryAudio.length },
-    { id: 'cds' as TabType, label: 'CDs', icon: Disc3, count: galleryCDs.length },
+    { id: 'photos' as TabType, label: 'Photos', icon: ImageIcon, count: photos.length },
+    { id: 'videos' as TabType, label: 'Videos', icon: Film, count: videos.length },
+    { id: 'audio' as TabType, label: 'Audio', icon: Headphones, count: audioItems.length },
+    { id: 'cds' as TabType, label: 'CDs', icon: Disc3, count: cds.length },
   ]
 
   return (
@@ -209,6 +219,9 @@ const GalleryPage = () => {
 
       {/* Content Sections */}
       <div className='container mx-auto max-w-6xl px-4 py-12'>
+    {isLoading && (
+      <div className='mb-6 text-center text-sm text-stone-500'>Loading gallery…</div>
+    )}
         <AnimatePresence mode='wait'>
           {/* Photos Tab */}
           {activeTab === 'photos' && (
@@ -297,18 +310,38 @@ const GalleryPage = () => {
                     className='group bg-white rounded-3xl overflow-hidden border border-stone-100 shadow-sm hover:shadow-xl transition-all duration-300'
                   >
                     <div className='relative aspect-video bg-stone-900 overflow-hidden'>
-                      <video
-                        src={video.src}
-                        poster={video.poster}
-                        controls
-                        playsInline
-                        className='w-full h-full object-cover'
-                      />
-                      <div className='absolute inset-0 flex items-center justify-center pointer-events-none opacity-100 group-hover:opacity-0 transition-opacity duration-300'>
-                        <div className='p-5 bg-amber-500 rounded-full shadow-2xl shadow-amber-500/30'>
-                          <Play className='w-8 h-8 text-white fill-current ml-1' />
-                        </div>
-                      </div>
+                      {video.youtubeId || video.src.includes('youtube.com') ? (
+                        <>
+                          {video.poster ? (
+                            <Image src={video.poster} alt={video.title} fill className='object-cover' />
+                          ) : (
+                            <div className='w-full h-full flex items-center justify-center text-stone-500'>YouTube Video</div>
+                          )}
+                          <button
+                            onClick={() => setActiveVideo(video)}
+                            className='absolute inset-0 flex items-center justify-center bg-black/20 opacity-100 transition-opacity hover:bg-black/30'
+                          >
+                            <div className='p-5 bg-amber-500 rounded-full shadow-2xl shadow-amber-500/30'>
+                              <Play className='w-8 h-8 text-white fill-current ml-1' />
+                            </div>
+                          </button>
+                        </>
+                      ) : (
+                        <>
+                          <video
+                            src={video.src}
+                            poster={video.poster}
+                            controls
+                            playsInline
+                            className='w-full h-full object-cover'
+                          />
+                          <div className='absolute inset-0 flex items-center justify-center pointer-events-none opacity-100 group-hover:opacity-0 transition-opacity duration-300'>
+                            <div className='p-5 bg-amber-500 rounded-full shadow-2xl shadow-amber-500/30'>
+                              <Play className='w-8 h-8 text-white fill-current ml-1' />
+                            </div>
+                          </div>
+                        </>
+                      )}
                     </div>
                     <div className='p-6'>
                       <h3 className='font-bold text-lg text-stone-900 mb-2 group-hover:text-amber-600 transition-colors'>
@@ -604,6 +637,45 @@ const GalleryPage = () => {
                 </div>
               </motion.div>
             </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Video Player Modal */}
+      <AnimatePresence>
+        {activeVideo && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className='fixed inset-0 z-50 bg-stone-950/95 backdrop-blur-sm flex items-center justify-center p-4 sm:p-10'
+            onClick={() => setActiveVideo(null)}
+          >
+            <button
+              className='absolute top-6 right-6 z-10 p-3 bg-white/10 text-white rounded-full hover:bg-white/20 transition-colors'
+              onClick={() => setActiveVideo(null)}
+            >
+              <X className='w-6 h-6' />
+            </button>
+            <motion.div
+              initial={{ scale: 0.9, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.9, opacity: 0 }}
+              className='relative w-full max-w-4xl aspect-video rounded-2xl overflow-hidden bg-black shadow-2xl'
+              onClick={(e) => e.stopPropagation()}
+            >
+              {activeVideo.youtubeId || activeVideo.src.includes('youtube.com') ? (
+                <iframe
+                  src={activeVideo.src}
+                  title={activeVideo.title}
+                  allow='accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture'
+                  allowFullScreen
+                  className='h-full w-full border-0'
+                />
+              ) : (
+                <video src={activeVideo.src} poster={activeVideo.poster} controls autoPlay className='h-full w-full object-cover' />
+              )}
+            </motion.div>
           </motion.div>
         )}
       </AnimatePresence>

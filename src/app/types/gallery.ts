@@ -10,6 +10,7 @@ export type GalleryMedia = {
   caption?: string
   date?: string
   poster?: string
+  youtubeId?: string
   // Audio/CD specific fields
   duration?: string
   artist?: string

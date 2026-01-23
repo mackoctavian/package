@@ -1,12 +1,14 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { 
-  Plus, Edit2, Trash2, Eye, EyeOff, Star, StarOff, 
+import {
+  Plus, Edit2, Trash2, Eye, EyeOff, Star, StarOff,
   Search, ChevronDown, MoreVertical, GripVertical,
   Church, Users, Calendar, MapPin, Mail, Phone
 } from 'lucide-react'
 import Image from 'next/image'
+import { UploadField } from '@/app/components/Admin/UploadField'
+import { ModuleGate } from '@/app/components/Admin/ModuleGate'
 
 type Ministry = {
   id: string
@@ -250,7 +252,8 @@ export default function MinistriesAdminPage() {
   )
 
   return (
-    <div className='px-6 py-8 space-y-8'>
+    <ModuleGate moduleId='ministries'>
+      <div className='px-6 py-8 space-y-8'>
       {/* Header */}
       <div className='flex flex-col sm:flex-row sm:items-center justify-between gap-4'>
         <div className='space-y-1'>
@@ -547,16 +550,13 @@ export default function MinistriesAdminPage() {
 
               {/* Images */}
               <div className='grid grid-cols-1 md:grid-cols-2 gap-4'>
-                <div>
-                  <label className='block text-sm font-medium text-slate-700 mb-1'>Hero Image URL</label>
-                  <input
-                    type='text'
-                    value={formData.heroImage}
-                    onChange={(e) => setFormData({ ...formData, heroImage: e.target.value })}
-                    className='w-full px-3 py-2 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary'
-                    placeholder='/images/ministries/example.jpg'
-                  />
-                </div>
+                <UploadField
+                  label='Hero image'
+                  value={formData.heroImage}
+                  onChange={(url) => setFormData({ ...formData, heroImage: url })}
+                  folder='ministries/hero'
+                  hint='Upload a wide image shown at the top of the ministry page.'
+                />
                 <div>
                   <label className='block text-sm font-medium text-slate-700 mb-1'>Icon Name</label>
                   <input
@@ -622,15 +622,12 @@ export default function MinistriesAdminPage() {
                     className='w-full px-3 py-2 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary'
                   />
                 </div>
-                <div>
-                  <label className='block text-sm font-medium text-slate-700 mb-1'>Coordinator Image URL</label>
-                  <input
-                    type='text'
-                    value={formData.coordinatorImage}
-                    onChange={(e) => setFormData({ ...formData, coordinatorImage: e.target.value })}
-                    className='w-full px-3 py-2 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary'
-                  />
-                </div>
+                <UploadField
+                  label='Coordinator image'
+                  value={formData.coordinatorImage}
+                  onChange={(url) => setFormData({ ...formData, coordinatorImage: url })}
+                  folder='ministries/coordinators'
+                />
               </div>
               <div>
                 <label className='block text-sm font-medium text-slate-700 mb-1'>Coordinator Bio</label>
@@ -707,6 +704,7 @@ export default function MinistriesAdminPage() {
           </div>
         </div>
       )}
-    </div>
+      </div>
+    </ModuleGate>
   )
 }

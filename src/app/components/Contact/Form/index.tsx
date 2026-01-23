@@ -2,18 +2,21 @@
 
 import { useState, useEffect } from 'react'
 import { motion } from 'framer-motion'
-import { Mail, Phone, MapPin, Send, Loader2, CheckCircle, Clock, ArrowUpRight } from 'lucide-react'
+import { Mail, Phone, MapPin, Send, Loader2, CheckCircle, Clock, ArrowUpRight, AlertCircle } from 'lucide-react'
+
+const createInitialFormState = () => ({
+  firstname: '',
+  lastname: '',
+  email: '',
+  phnumber: '',
+  message: '',
+})
 
 const ContactForm = () => {
-  const [formData, setFormData] = useState({
-    firstname: '',
-    lastname: '',
-    email: '',
-    phnumber: '',
-    message: '',
-  })
+  const [formData, setFormData] = useState(() => createInitialFormState())
   const [status, setStatus] = useState<'idle' | 'submitting' | 'success' | 'error'>('idle')
   const [isFormValid, setIsFormValid] = useState(false)
+  const [feedbackMessage, setFeedbackMessage] = useState<string | null>(null)
 
   useEffect(() => {
     const isValid = Object.values(formData).every((value) => value.trim() !== '')
@@ -27,14 +30,40 @@ const ContactForm = () => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
+    if (!isFormValid || status === 'submitting') return
+
     setStatus('submitting')
-    
-    // Simulate network request
-    setTimeout(() => {
-        setStatus('success')
-        setFormData({ firstname: '', lastname: '', email: '', phnumber: '', message: '' })
-        setTimeout(() => setStatus('idle'), 5000)
-    }, 2000)
+    setFeedbackMessage(null)
+
+    try {
+      const response = await fetch('/api/feedback', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ...formData, metadata: { source: 'homepage-contact' } }),
+      })
+
+      if (!response.ok) {
+        const payload = await response.json().catch(() => ({}))
+        throw new Error(payload.error ?? 'Unable to send your message right now.')
+      }
+
+      setStatus('success')
+      setFormData(createInitialFormState())
+      setFeedbackMessage('Thank you for reaching out! We will get back to you shortly.')
+
+      setTimeout(() => {
+        setStatus('idle')
+        setFeedbackMessage(null)
+      }, 5000)
+    } catch (error) {
+      console.error('[contact-form][submit]', error)
+      setStatus('error')
+      setFeedbackMessage(error instanceof Error ? error.message : 'Unable to send your message. Please try again later.')
+
+      setTimeout(() => {
+        setStatus('idle')
+      }, 4000)
+    }
   }
 
   const contactInfo = [
@@ -231,6 +260,8 @@ const ContactForm = () => {
                     ? 'bg-slate-100 text-slate-400 cursor-not-allowed'
                     : status === 'success'
                     ? 'bg-emerald-500 text-white'
+                    : status === 'error'
+                    ? 'bg-red-500 text-white'
                     : 'bg-gradient-to-r from-blue-600 to-indigo-600 text-white hover:shadow-lg hover:shadow-blue-500/30 hover:scale-[1.02]'
                 }`}
               >
@@ -240,12 +271,26 @@ const ContactForm = () => {
                   <>
                     Message Sent! <CheckCircle className='w-5 h-5' />
                   </>
+                ) : status === 'error' ? (
+                  <>
+                    Try Again <AlertCircle className='w-5 h-5' />
+                  </>
                 ) : (
                   <>
                     Send Message <Send className='w-4 h-4' />
                   </>
                 )}
               </button>
+              {feedbackMessage && (
+                <p
+                  className={`text-sm text-center ${
+                    status === 'error' ? 'text-red-600' : 'text-emerald-600'
+                  }`}
+                  aria-live='polite'
+                >
+                  {feedbackMessage}
+                </p>
+              )}
             </form>
           </motion.div>
         </div>

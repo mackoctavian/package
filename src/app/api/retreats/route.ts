@@ -20,22 +20,21 @@ export const GET = async () => {
 }
 
 export const POST = async (request: Request) => {
-  const json = await request.json()
-  const parsed = retreatInputSchema.safeParse(json)
-
-  if (!parsed.success) {
-    return NextResponse.json({ error: parsed.error.flatten() }, { status: 400 })
-  }
-
-  const body = parsed.data
-  const availability = body.availability ?? { total: 0, male: 0, female: 0 }
-
   try {
+    const json = await request.json()
+    const parsed = retreatInputSchema.safeParse(json)
+    if (!parsed.success) {
+      return NextResponse.json({ error: parsed.error.flatten() }, { status: 400 })
+    }
+
+    const body = parsed.data
+
+    const availability = body.availability ?? { total: 0, male: 0, female: 0 }
     const created = await prisma.retreat.create({
       data: {
         slug: body.slug,
         title: body.title,
-        subtitle: body.subtitle,
+        subtitle: body.subtitle ?? null,
         speaker: body.speaker,
         conductor: body.conductor,
         description: body.description,
@@ -46,11 +45,11 @@ export const POST = async (request: Request) => {
         availabilityMale: availability.male ?? 0,
         availabilityFemale: availability.female ?? 0,
         status: body.status ?? 'Registration Open',
-        imageSrc: body.imageSrc ?? '/images/courses/coursesOne.svg',
+        imageSrc: body.imageSrc,
         category: body.category,
         detailHref: body.detailHref ?? `/events/${body.slug}`,
         ctaHref: body.ctaHref ?? `/events/${body.slug}#booking`,
-        price: body.price,
+        price: body.price ?? null,
         isPaid: body.isPaid ?? true,
       },
     })

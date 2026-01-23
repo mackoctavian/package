@@ -80,6 +80,9 @@ DIRECT_URL=postgresql://postgres.xxxxxx:your-password@aws-0-us-west-1.pooler.sup
 NEXT_PUBLIC_SUPABASE_URL=your-project-url
 NEXT_PUBLIC_SUPABASE_ANON_KEY=your-public-anon-key
 SUPABASE_SERVICE_ROLE_KEY=your-service-role-key
+RESEND_API_KEY=your-resend-api-key
+RESEND_FROM="DMRC <onboarding@resend.dev>"
+NEXT_PUBLIC_APP_URL=https://www.your-live-site.com
 ```
 
 **Important**: The `DIRECT_URL` uses port **5432** (direct connection) while `DATABASE_URL` uses port **6543** (pooler). This fixes the "prepared statement 's1' already exists" error when running Prisma migrations/push.
@@ -92,3 +95,20 @@ npm run db:push
 
 5. (Optional) Enable Row-Level Security and create policies that allow the service role key to perform the required operations.
 
+---
+
+## Retreat images (Storage bucket)
+
+Retreat records store their `image_src` as an **absolute URL** (typically the public URL returned by Supabase Storage uploads), matching how `content_items.media_url` is handled for news/events.
+
+- If you have existing retreat rows with values like `/images/...`, those are **local Next.js public assets** and are **not** stored in Supabase Storage.
+- To migrate: open the Admin → Retreats dashboard, **upload** a new image for the retreat, and save. The uploaded image is stored in the Supabase Storage bucket and the retreat `image_src` is updated to the returned public URL.
+
+---
+
+## Booking emails (Resend)
+
+When a user **creates** a retreat booking or **reschedules** a booking, the system sends a confirmation email (including the ticket code + a link to view/download the ticket).
+
+- **Website**: emails are sent server-side from the Next.js booking API routes.
+- **Mobile app (`dmrc-mobile`)**: after a booking/reschedule is saved to Supabase, the app calls the Next.js endpoint to send the email. This requires `EXPO_PUBLIC_WEB_BASE_URL` to be set to your deployed Next.js site URL.

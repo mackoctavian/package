@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server'
 
 import prisma from '@/lib/prisma'
 import { mapPrismaBooking } from '../utils'
+import { sendRetreatBookingEmail } from '@/lib/email/retreat-booking'
 
 type RouteContext = {
   params: { id: string }
@@ -28,6 +29,7 @@ export const PATCH = async (request: Request, { params }: RouteContext) => {
   const body = await request.json()
   const { status, paymentStatus, attended, notes, retreatId, retreatTitle } = body
   const updates: Record<string, unknown> = {}
+  const isReschedule = Boolean(retreatId)
 
   if (status) {
     updates.status = status
@@ -68,6 +70,13 @@ export const PATCH = async (request: Request, { params }: RouteContext) => {
       where: { id: params.id },
       data: updates,
     })
+
+    // Best-effort: send reschedule confirmation email if this update changed the retreat
+    if (isReschedule) {
+      sendRetreatBookingEmail({ bookingId: updated.id, kind: 'rescheduled' }).catch((error) => {
+        console.error('[retreat-bookings][PATCH] email failed:', error)
+      })
+    }
 
     return NextResponse.json({ data: mapPrismaBooking(updated) })
   } catch (error) {

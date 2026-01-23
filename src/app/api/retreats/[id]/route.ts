@@ -9,8 +9,9 @@ type RouteContext = {
   params: { id: string }
 }
 
-export const GET = async (_request: Request, { params }: RouteContext) => {
+export const GET = async (_request: Request, context: RouteContext) => {
   try {
+    const params = await context.params
     const record = await prisma.retreat.findUnique({
       where: { id: params.id },
       include: { bookings: true },
@@ -27,7 +28,8 @@ export const GET = async (_request: Request, { params }: RouteContext) => {
   }
 }
 
-export const PATCH = async (request: Request, { params }: RouteContext) => {
+export const PATCH = async (request: Request, context: RouteContext) => {
+  const params = await context.params
   const json = await request.json()
   const parsed = retreatUpdateSchema.safeParse(json)
 
@@ -92,8 +94,9 @@ export const PATCH = async (request: Request, { params }: RouteContext) => {
   }
 }
 
-export const DELETE = async (_request: Request, { params }: RouteContext) => {
+export const DELETE = async (_request: Request, context: RouteContext) => {
   try {
+    const params = await context.params
     await prisma.retreat.delete({
       where: { id: params.id },
     })

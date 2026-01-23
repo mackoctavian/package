@@ -4,6 +4,23 @@ import { useRef, useState } from 'react'
 import { QRCodeSVG } from 'qrcode.react'
 import { CalendarDays, MapPin, User, Mail, Phone, Download, Ticket, CheckCircle2, Loader2 } from 'lucide-react'
 
+const palette = {
+  slate50: '#f8fafc',
+  slate100: '#f1f5f9',
+  slate200: '#e2e8f0',
+  slate400: '#94a3b8',
+  slate500: '#64748b',
+  slate600: '#475569',
+  slate700: '#334155',
+  slate900: '#0f172a',
+  blue500: '#3b82f6',
+  blue600: '#2563eb',
+  indigo600: '#4f46e5',
+  emerald50: '#ecfdf5',
+  emerald400: '#34d399',
+  emerald600: '#059669',
+}
+
 interface TicketDisplayProps {
   booking: {
     id: string
@@ -19,9 +36,10 @@ interface TicketDisplayProps {
     timeRange?: string
     location: string
   }
+  ticketUrl?: string
 }
 
-export default function TicketDisplay({ booking, retreat }: TicketDisplayProps) {
+export default function TicketDisplay({ booking, retreat, ticketUrl }: TicketDisplayProps) {
   const ticketRef = useRef<HTMLDivElement>(null)
   const [isDownloading, setIsDownloading] = useState(false)
 
@@ -36,11 +54,13 @@ export default function TicketDisplay({ booking, retreat }: TicketDisplayProps) 
         scale: 2,
         logging: false,
       })
-      
+
       const link = document.createElement('a')
       link.download = `retreat-ticket-${booking.ticketCode}.png`
       link.href = canvas.toDataURL('image/png')
+      document.body.appendChild(link)
       link.click()
+      document.body.removeChild(link)
     } catch (error) {
       console.error('Failed to download ticket:', error)
     } finally {
@@ -51,14 +71,16 @@ export default function TicketDisplay({ booking, retreat }: TicketDisplayProps) 
   return (
     <div className='space-y-6'>
       {/* Ticket */}
-      <div 
+      <div
         ref={ticketRef}
-        className='bg-white rounded-3xl overflow-hidden shadow-2xl border border-slate-200 max-w-md mx-auto'
-      >
+        className='rounded-3xl overflow-hidden shadow-2xl border max-w-md mx-auto'
+        style={{ backgroundColor: '#ffffff', borderColor: palette.slate200, color: palette.slate600 }}>
         {/* Header */}
-        <div className='bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-600 p-6 text-white relative overflow-hidden'>
-          <div className='absolute top-0 right-0 w-32 h-32 bg-white/10 rounded-full -translate-y-1/2 translate-x-1/2' />
-          <div className='absolute bottom-0 left-0 w-24 h-24 bg-white/10 rounded-full translate-y-1/2 -translate-x-1/2' />
+        <div
+          className='p-6 text-white relative overflow-hidden'
+          style={{ background: `linear-gradient(130deg, ${palette.blue600}, ${palette.indigo600})` }}>
+          <div className='absolute top-0 right-0 w-32 h-32 rounded-full pointer-events-none' style={{ background: 'rgba(255,255,255,0.12)' }} />
+          <div className='absolute bottom-0 left-0 w-24 h-24 rounded-full pointer-events-none' style={{ background: 'rgba(255,255,255,0.12)' }} />
           <div className='relative'>
             <div className='flex items-center gap-2 mb-3'>
               <Ticket className='h-5 w-5' />
@@ -69,19 +91,16 @@ export default function TicketDisplay({ booking, retreat }: TicketDisplayProps) 
         </div>
 
         {/* QR Code Section */}
-        <div className='p-8 bg-gradient-to-b from-slate-50 to-white flex flex-col items-center'>
-          <div className='bg-white p-5 rounded-2xl shadow-lg border border-slate-100'>
-            <QRCodeSVG
-              value={booking.ticketCode}
-              size={160}
-              level='H'
-              includeMargin={false}
-            />
+        <div className='p-8 flex flex-col items-center' style={{ background: `linear-gradient(180deg, ${palette.slate50}, #ffffff)` }}>
+          <div className='bg-white p-5 rounded-2xl shadow-lg' style={{ border: `1px solid ${palette.slate200}` }}>
+            <QRCodeSVG value={ticketUrl ?? booking.ticketCode} size={160} level='H' includeMargin={false} />
           </div>
-          <p className='mt-5 text-3xl font-mono font-bold text-slate-900 tracking-widest'>
+          <p className='mt-5 text-3xl font-mono font-bold tracking-widest' style={{ color: palette.slate900 }}>
             {booking.ticketCode}
           </p>
-          <p className='text-sm text-slate-500 mt-2'>Scan at check-in for fast entry</p>
+          <p className='text-sm mt-2' style={{ color: palette.slate500 }}>
+            Scan at check-in for fast entry
+          </p>
         </div>
 
         {/* Details */}
@@ -89,74 +108,102 @@ export default function TicketDisplay({ booking, retreat }: TicketDisplayProps) 
           {/* Attendee Info */}
           <div className='space-y-3'>
             <div className='flex items-center gap-3'>
-              <div className='w-9 h-9 rounded-full bg-blue-100 flex items-center justify-center'>
-                <User className='h-4 w-4 text-blue-600' />
+              <div className='w-9 h-9 rounded-full flex items-center justify-center' style={{ backgroundColor: '#dbeafe' }}>
+                <User className='h-4 w-4' style={{ color: palette.blue600 }} />
               </div>
               <div>
-                <p className='text-xs text-slate-500 uppercase tracking-wide'>Attendee</p>
-                <p className='font-semibold text-slate-900'>{booking.fullName}</p>
+                <p className='text-xs uppercase tracking-wide' style={{ color: palette.slate500 }}>
+                  Attendee
+                </p>
+                <p className='font-semibold' style={{ color: palette.slate900 }}>
+                  {booking.fullName}
+                </p>
               </div>
             </div>
             <div className='flex items-center gap-3'>
-              <div className='w-9 h-9 rounded-full bg-slate-100 flex items-center justify-center'>
-                <Mail className='h-4 w-4 text-slate-600' />
+              <div className='w-9 h-9 rounded-full flex items-center justify-center' style={{ backgroundColor: palette.slate50 }}>
+                <Mail className='h-4 w-4' style={{ color: palette.slate600 }} />
               </div>
               <div>
-                <p className='text-xs text-slate-500 uppercase tracking-wide'>Email</p>
-                <p className='text-sm text-slate-700'>{booking.email}</p>
+                <p className='text-xs uppercase tracking-wide' style={{ color: palette.slate500 }}>
+                  Email
+                </p>
+                <p className='text-sm' style={{ color: palette.slate700 }}>
+                  {booking.email}
+                </p>
               </div>
             </div>
             <div className='flex items-center gap-3'>
-              <div className='w-9 h-9 rounded-full bg-slate-100 flex items-center justify-center'>
-                <Phone className='h-4 w-4 text-slate-600' />
+              <div className='w-9 h-9 rounded-full flex items-center justify-center' style={{ backgroundColor: palette.slate50 }}>
+                <Phone className='h-4 w-4' style={{ color: palette.slate600 }} />
               </div>
               <div>
-                <p className='text-xs text-slate-500 uppercase tracking-wide'>Phone</p>
-                <p className='text-sm text-slate-700'>{booking.phone}</p>
+                <p className='text-xs uppercase tracking-wide' style={{ color: palette.slate500 }}>
+                  Phone
+                </p>
+                <p className='text-sm' style={{ color: palette.slate700 }}>
+                  {booking.phone}
+                </p>
               </div>
             </div>
           </div>
 
           {/* Divider with cutout effect */}
-          <div className='border-t-2 border-dashed border-slate-200 relative py-1'>
-            <div className='absolute -left-9 -top-4 w-8 h-8 bg-gradient-to-b from-slate-50 to-white rounded-full' />
-            <div className='absolute -right-9 -top-4 w-8 h-8 bg-gradient-to-b from-slate-50 to-white rounded-full' />
+          <div className='border-t-2 border-dashed relative py-1' style={{ borderColor: palette.slate200 }}>
+            <div className='absolute -left-9 -top-4 w-8 h-8 rounded-full' style={{ background: `linear-gradient(180deg, ${palette.slate50}, #ffffff)` }} />
+            <div className='absolute -right-9 -top-4 w-8 h-8 rounded-full' style={{ background: `linear-gradient(180deg, ${palette.slate50}, #ffffff)` }} />
           </div>
 
           {/* Retreat Info */}
           <div className='space-y-3'>
             <div className='flex items-center gap-3'>
-              <div className='w-9 h-9 rounded-full bg-emerald-100 flex items-center justify-center'>
-                <CalendarDays className='h-4 w-4 text-emerald-600' />
+              <div className='w-9 h-9 rounded-full flex items-center justify-center' style={{ backgroundColor: palette.emerald50 }}>
+                <CalendarDays className='h-4 w-4' style={{ color: palette.emerald600 }} />
               </div>
               <div>
-                <p className='text-xs text-slate-500 uppercase tracking-wide'>Date & Time</p>
-                <p className='font-semibold text-slate-900'>{retreat.dateRange}</p>
-                {retreat.timeRange && <p className='text-xs text-slate-500'>{retreat.timeRange}</p>}
+                <p className='text-xs uppercase tracking-wide' style={{ color: palette.slate500 }}>
+                  Date & Time
+                </p>
+                <p className='font-semibold' style={{ color: palette.slate900 }}>
+                  {retreat.dateRange}
+                </p>
+                {retreat.timeRange && (
+                  <p className='text-xs' style={{ color: palette.slate500 }}>
+                    {retreat.timeRange}
+                  </p>
+                )}
               </div>
             </div>
             <div className='flex items-center gap-3'>
-              <div className='w-9 h-9 rounded-full bg-emerald-100 flex items-center justify-center'>
-                <MapPin className='h-4 w-4 text-emerald-600' />
+              <div className='w-9 h-9 rounded-full flex items-center justify-center' style={{ backgroundColor: palette.emerald50 }}>
+                <MapPin className='h-4 w-4' style={{ color: palette.emerald600 }} />
               </div>
               <div>
-                <p className='text-xs text-slate-500 uppercase tracking-wide'>Location</p>
-                <p className='font-semibold text-slate-900'>{retreat.location}</p>
+                <p className='text-xs uppercase tracking-wide' style={{ color: palette.slate500 }}>
+                  Location
+                </p>
+                <p className='font-semibold' style={{ color: palette.slate900 }}>
+                  {retreat.location}
+                </p>
               </div>
             </div>
           </div>
 
           {/* Status Badge */}
-          <div className='flex items-center justify-center gap-2 py-4 bg-gradient-to-r from-emerald-50 to-green-50 rounded-xl border border-emerald-100'>
-            <CheckCircle2 className='h-5 w-5 text-emerald-600' />
-            <span className='font-bold text-emerald-700'>Booking Confirmed</span>
+          <div
+            className='flex items-center justify-center gap-2 py-4 rounded-xl border'
+            style={{ backgroundColor: palette.emerald50, borderColor: '#a7f3d0', color: palette.emerald600 }}>
+            <CheckCircle2 className='h-5 w-5' />
+            <span className='font-bold'>Booking Confirmed</span>
           </div>
         </div>
 
         {/* Footer */}
-        <div className='bg-slate-50 px-6 py-4 text-center border-t border-slate-100'>
-          <p className='text-sm font-semibold text-slate-700'>Divine Mercy Retreat Center</p>
-          <p className='text-xs text-slate-500 mt-1'>Present this ticket at check-in</p>
+        <div
+          className='px-6 py-4 text-center border-t'
+          style={{ backgroundColor: palette.slate50, borderColor: palette.slate100, color: palette.slate600 }}>
+          <p className='text-sm font-semibold'>Divine Mercy Retreat Center</p>
+          <p className='text-xs mt-1'>Present this ticket at check-in</p>
         </div>
       </div>
 
@@ -165,8 +212,12 @@ export default function TicketDisplay({ booking, retreat }: TicketDisplayProps) 
         <button
           onClick={handleDownload}
           disabled={isDownloading}
-          className='inline-flex items-center gap-2 px-8 py-4 bg-slate-900 text-white rounded-xl font-semibold shadow-lg shadow-slate-900/20 hover:bg-slate-800 transition-all disabled:opacity-50 disabled:cursor-not-allowed'
-        >
+          className='inline-flex items-center gap-2 px-8 py-4 rounded-xl font-semibold shadow-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed'
+          style={{
+            backgroundColor: palette.slate900,
+            color: '#ffffff',
+            boxShadow: '0 20px 25px -5px rgba(15,23,42,0.3)',
+          }}>
           {isDownloading ? (
             <Loader2 className='h-5 w-5 animate-spin' />
           ) : (

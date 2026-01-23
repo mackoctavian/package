@@ -1,12 +1,15 @@
 import type { Metadata } from 'next'
 
 import { ContentManager } from '@/app/components/Admin/content-manager'
+import { requireAdminPageAccess } from '@/lib/auth/admin-session'
 
 export const metadata: Metadata = {
   title: 'Patrons',
 }
 
-export default function PatronsAdminPage() {
+export default async function PatronsAdminPage() {
+  await requireAdminPageAccess('patrons')
+
   return (
     <div className='px-6 py-8'>
       <ContentManager

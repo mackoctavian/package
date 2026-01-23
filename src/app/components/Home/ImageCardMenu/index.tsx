@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import Image from 'next/image'
 import Link from 'next/link'
@@ -13,6 +13,8 @@ type MenuItem = {
   items?: MenuItem[]
   href?: string
 }
+
+const FALLBACK_IMAGE = '/images/dmrc/gallery/IMG_0299.JPG'
 
 const MENU_DATA: MenuItem[] = [
   {
@@ -87,16 +89,43 @@ const MENU_DATA: MenuItem[] = [
 ]
 
 const ImageCardMenu = () => {
-  const [activeCategory, setActiveCategory] = useState<MenuItem | null>(null)
+  const [menuItems, setMenuItems] = useState<MenuItem[]>(MENU_DATA)
+  const [categoryStack, setCategoryStack] = useState<MenuItem[]>([])
+  const [isLoading, setIsLoading] = useState(true)
+  const activeCategory = categoryStack[categoryStack.length - 1] ?? null
+  const rootItems = isLoading ? MENU_DATA : menuItems
+
+  useEffect(() => {
+    let isMounted = true
+    const load = async () => {
+      try {
+        const response = await fetch('/api/homepage/quick-links', { cache: 'no-store' })
+        if (!response.ok) throw new Error('Failed to load quick links')
+        const json = await response.json()
+        if (!isMounted) return
+        const mapped = mapQuickLinksToMenu(json.data ?? [])
+        setMenuItems(mapped)
+        setCategoryStack([])
+      } catch (error) {
+        console.warn('[ImageCardMenu] using fallback menu', error)
+      } finally {
+        if (isMounted) setIsLoading(false)
+      }
+    }
+    load()
+    return () => {
+      isMounted = false
+    }
+  }, [])
 
   const handleCategoryClick = (category: MenuItem) => {
-    if (category.items) {
-      setActiveCategory(category)
+    if (category.items?.length) {
+      setCategoryStack((prev) => [...prev, category])
     }
   }
 
   const handleBack = () => {
-    setActiveCategory(null)
+    setCategoryStack((prev) => prev.slice(0, -1))
   }
 
   return (
@@ -162,7 +191,9 @@ const ImageCardMenu = () => {
               transition={{ duration: 0.35, ease: 'easeInOut' }}
               className='grid grid-cols-2 md:grid-cols-4 gap-4'
             >
-              {MENU_DATA.map((category, index) => (
+              {rootItems.map((category, index) => {
+                const hasChildren = !!category.items?.length
+                return (
                 <motion.div
                   key={category.id}
                   initial={{ opacity: 0, y: 20 }}
@@ -172,10 +203,15 @@ const ImageCardMenu = () => {
                 >
                   <CategoryCard
                     item={category}
-                    onClick={() => (category.href ? null : handleCategoryClick(category))}
+                    onClick={hasChildren ? () => handleCategoryClick(category) : undefined}
                   />
                 </motion.div>
-              ))}
+              )})}
+              {!isLoading && rootItems.length === 0 && (
+                <div className='col-span-full rounded-2xl border border-dashed border-slate-200 p-6 text-center text-sm text-slate-500'>
+                  No quick links available yet. Publish quick links in the admin to populate this section.
+                </div>
+              )}
             </motion.div>
           ) : (
             <motion.div
@@ -186,22 +222,58 @@ const ImageCardMenu = () => {
               transition={{ duration: 0.35, ease: 'easeInOut' }}
               className='grid grid-cols-2 md:grid-cols-4 gap-4'
             >
-              {activeCategory.items?.map((subItem, index) => (
+              {activeCategory.items?.map((subItem, index) => {
+                const hasChildren = !!subItem.items?.length
+                return (
                 <motion.div
                   key={subItem.id}
                   initial={{ opacity: 0, y: 20 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ duration: 0.3, delay: index * 0.08 }}
                 >
-                  <CategoryCard item={subItem} />
+                  <CategoryCard
+                    item={subItem}
+                    onClick={hasChildren ? () => handleCategoryClick(subItem) : undefined}
+                  />
                 </motion.div>
-              ))}
+              )})}
+              {(!activeCategory.items || activeCategory.items.length === 0) && (
+                <div className='col-span-full rounded-2xl border border-dashed border-slate-200 p-6 text-center text-sm text-slate-500'>
+                  No sublinks have been added for {activeCategory.title} yet.
+                </div>
+              )}
             </motion.div>
           )}
         </AnimatePresence>
       </div>
     </motion.section>
   )
+}
+
+type QuickLinkRecord = {
+  id: string
+  title: string
+  imageUrl?: string | null
+  href?: string | null
+  parentId?: string | null
+  isActive?: boolean | null
+  children?: QuickLinkRecord[]
+}
+
+const mapQuickLinksToMenu = (records: QuickLinkRecord[]): MenuItem[] => {
+  const mapRecord = (record: QuickLinkRecord): MenuItem => ({
+    id: record.id,
+    title: record.title,
+    image: record.imageUrl || FALLBACK_IMAGE,
+    href: record.href || undefined,
+    items: record.children
+      ?.filter((child) => child.isActive !== false)
+      .map((child) => mapRecord(child)) ?? undefined,
+  })
+
+  return records
+    .filter((record) => record.isActive !== false)
+    .map((record) => mapRecord(record))
 }
 
 const CategoryCard = ({ item, onClick }: { item: MenuItem; onClick?: () => void }) => {

@@ -11,17 +11,9 @@ import {
   Book, Disc, Calendar, BookOpen, ArrowRight, Check
 } from 'lucide-react'
 
-import { publicationsData } from '@/app/data/publications'
 import type { PublicationCategory, PublicationType } from '@/app/types/publication'
 
-const categoryConfig: Record<PublicationCategory, { label: string; icon: typeof Book; color: string }> = {
-  Bible: { label: 'Bible', icon: BookOpen, color: 'bg-amber-500' },
-  Books: { label: 'Books', icon: Book, color: 'bg-blue-500' },
-  CDs: { label: 'CDs', icon: Disc, color: 'bg-purple-500' },
-  Calendars: { label: 'Calendars', icon: Calendar, color: 'bg-emerald-500' },
-}
-
-const validCategories: PublicationCategory[] = ['Bible', 'Books', 'CDs', 'Calendars']
+const defaultCategories: PublicationCategory[] = ['Bible', 'Books', 'CDs', 'Calendars']
 
 const tzsFormatter = new Intl.NumberFormat('en-TZ', {
   style: 'currency',
@@ -42,12 +34,10 @@ const PublicationsPageContent = () => {
   const router = useRouter()
   
   const categoryParam = searchParams.get('category')
-  const initialCategory: 'All' | PublicationCategory = 
-    categoryParam && validCategories.includes(categoryParam as PublicationCategory)
-      ? (categoryParam as PublicationCategory)
-      : 'All'
+  const [items, setItems] = useState<PublicationType[]>([])
+  const [loading, setLoading] = useState(true)
+  const [category, setCategory] = useState<'All' | PublicationCategory>('All')
 
-  const [category, setCategory] = useState<'All' | PublicationCategory>(initialCategory)
   const [searchTerm, setSearchTerm] = useState('')
   const [cart, setCart] = useState<Record<string, number>>({})
   const [toastMessage, setToastMessage] = useState<string | null>(null)
@@ -57,10 +47,79 @@ const PublicationsPageContent = () => {
   const [showFilters, setShowFilters] = useState(false)
   const [cartOpen, setCartOpen] = useState(false)
 
+  const categoryList = useMemo(() => {
+    const dynamic = Array.from(new Set(items.map((i) => i.category).filter(Boolean))) as PublicationCategory[]
+    return Array.from(new Set([...defaultCategories, ...dynamic])) as PublicationCategory[]
+  }, [items])
+
+  const iconMap: Record<string, typeof Book> = { Bible: BookOpen, Books: Book, CDs: Disc, Calendars: Calendar }
+  const colorMap: Record<string, string> = {
+    Bible: 'bg-amber-500',
+    Books: 'bg-blue-500',
+    CDs: 'bg-purple-500',
+    Calendars: 'bg-emerald-500',
+  }
+
+  const categoryConfig = useMemo(() => {
+    const cfg: Record<PublicationCategory, { label: string; icon: typeof Book; color: string }> = {} as any
+    categoryList.forEach((cat) => {
+      cfg[cat] = {
+        label: cat,
+        icon: iconMap[cat] || Book,
+        color: colorMap[cat] || 'bg-slate-500',
+      }
+    })
+    return cfg
+  }, [categoryList])
+
   // Sync category with URL
   useEffect(() => {
-    if (categoryParam && validCategories.includes(categoryParam as PublicationCategory)) {
-      setCategory(categoryParam as PublicationCategory)
+    const fetchItems = async () => {
+      try {
+        const res = await fetch('/api/content/publications', { cache: 'no-store' })
+        if (!res.ok) throw new Error('Failed to load')
+        const payload = await res.json()
+        const mapped: PublicationType[] =
+          (payload.data || []).map((item: any, idx: number) => {
+            const meta = item.metadata || {}
+            return {
+              id: item.id,
+              title: item.title,
+              subtitle: item.summary || '',
+              description: item.body || '',
+              author: meta.author || 'Unknown',
+              category: item.category || 'Books',
+              format: meta.format || 'Paperback',
+              coverImage: item.mediaUrl || '/images/courses/coursesOne.svg',
+              price: meta.price != null ? Number(meta.price) : 0,
+              originalPrice: meta.originalPrice != null ? Number(meta.originalPrice) : undefined,
+              rating: 4.8,
+              totalReviews: 0,
+              publishedOn: item.publishDate || new Date().toISOString(),
+              badge: meta.badge || undefined,
+              inStock: meta.inStock !== undefined ? Boolean(meta.inStock) : true,
+              soldCount: meta.soldCount ? Number(meta.soldCount) : undefined,
+            } as PublicationType
+          }) || []
+        if (mapped.length > 0) {
+          setItems(mapped)
+        } else {
+          const { publicationsData } = await import('@/app/data/publications')
+          setItems(publicationsData)
+        }
+      } catch (error) {
+        const fallback = await import('@/app/data/publications').then((m) => m.publicationsData)
+        setItems(fallback)
+      } finally {
+        setLoading(false)
+      }
+    }
+    fetchItems()
+  }, [])
+
+  useEffect(() => {
+    if (categoryParam) {
+      setCategory(categoryParam as any)
     }
   }, [categoryParam])
 
@@ -80,7 +139,7 @@ const PublicationsPageContent = () => {
   }, [toastMessage])
 
   const filteredItems = useMemo(() => {
-    let items = publicationsData.filter((item) => {
+    let next = items.filter((item) => {
       const matchesCategory = category === 'All' || item.category === category
       const matchesSearch =
         searchTerm.trim().length === 0 ||
@@ -92,31 +151,31 @@ const PublicationsPageContent = () => {
     // Sort items
     switch (sortBy) {
       case 'price-low':
-        items = [...items].sort((a, b) => a.price - b.price)
+        next = [...next].sort((a, b) => a.price - b.price)
         break
       case 'price-high':
-        items = [...items].sort((a, b) => b.price - a.price)
+        next = [...next].sort((a, b) => b.price - a.price)
         break
       case 'newest':
-        items = [...items].sort((a, b) => new Date(b.publishedOn).getTime() - new Date(a.publishedOn).getTime())
+        next = [...next].sort((a, b) => new Date(b.publishedOn).getTime() - new Date(a.publishedOn).getTime())
         break
       case 'rating':
-        items = [...items].sort((a, b) => b.rating - a.rating)
+        next = [...next].sort((a, b) => b.rating - a.rating)
         break
     }
 
-    return items
-  }, [category, searchTerm, sortBy])
+    return next
+  }, [category, searchTerm, sortBy, items])
 
   const cartItems = useMemo<CartEntry[]>(() => {
     return Object.entries(cart)
       .map(([productId, quantity]) => {
-        const product = publicationsData.find((item) => item.id === productId)
+        const product = items.find((item) => item.id === productId)
         if (!product) return null
         return { product, quantity }
       })
       .filter((entry): entry is CartEntry => entry !== null)
-  }, [cart])
+  }, [cart, items])
 
   const itemsInCart = useMemo(() => cartItems.reduce((count, entry) => count + entry.quantity, 0), [cartItems])
   const subtotal = useMemo(() => cartItems.reduce((total, entry) => total + entry.product.price * entry.quantity, 0), [cartItems])
@@ -188,10 +247,10 @@ const PublicationsPageContent = () => {
             >
               All Listings
             </button>
-            {(Object.keys(categoryConfig) as PublicationCategory[]).map((cat) => {
+            {(categoryList as PublicationCategory[]).map((cat) => {
               const config = categoryConfig[cat]
               const Icon = config.icon
-              const count = publicationsData.filter(p => p.category === cat).length
+              const count = items.filter((p) => p.category === cat).length
               return (
                 <button
                   key={cat}

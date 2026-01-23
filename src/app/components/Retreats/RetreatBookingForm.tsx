@@ -4,8 +4,10 @@ import { useMemo, useState } from 'react'
 import { Icon } from '@iconify/react/dist/iconify.js'
 import Link from 'next/link'
 import toast from 'react-hot-toast'
-import { useRouter } from 'next/navigation'
+import { CheckCircle2, CreditCard, ShieldCheck, Smartphone } from 'lucide-react'
+
 import { RetreatType } from '@/app/types/retreat'
+import RetreatTicket from '@/app/components/Retreats/RetreatTicket'
 
 type FormState = {
   acceptTerms: boolean
@@ -31,6 +33,13 @@ type FormState = {
   parish: string
   acceptInstructions: boolean
   familyMembers: { name: string; relationship: string; age: string }[]
+  paymentMethod: 'card' | 'mobile'
+  cardName: string
+  cardNumber: string
+  cardExpiry: string
+  cardCvc: string
+  mobileNetwork: string
+  mobileNumber: string
 }
 
 const initialState: FormState = {
@@ -57,6 +66,13 @@ const initialState: FormState = {
   parish: '',
   acceptInstructions: false,
   familyMembers: [],
+  paymentMethod: 'card',
+  cardName: '',
+  cardNumber: '',
+  cardExpiry: '',
+  cardCvc: '',
+  mobileNetwork: 'Vodacom M-Pesa',
+  mobileNumber: '',
 }
 
 const steps = [
@@ -90,6 +106,11 @@ const steps = [
     title: 'Family Members',
     icon: 'solar:users-group-rounded-bold-duotone',
   },
+  {
+    id: 'payment',
+    title: 'Payment & Confirmation',
+    icon: 'solar:card-send-bold-duotone',
+  },
 ] as const
 
 type StepId = (typeof steps)[number]['id']
@@ -101,7 +122,15 @@ const requiredFieldsByStep: Record<StepId, (keyof FormState)[]> = {
   contact: ['phone', 'whatsapp', 'email'],
   parish: ['diocese', 'parish'],
   family: ['acceptInstructions'],
+  payment: [],
 }
+
+const mobileNetworks = ['Vodacom M-Pesa', 'Airtel Money', 'Tigo Pesa', 'Halopesa']
+const cardLogos = ['Visa', 'Mastercard', 'American Express']
+const amountFormatter =
+  typeof Intl !== 'undefined'
+    ? new Intl.NumberFormat('sw-TZ', { style: 'currency', currency: 'TZS', maximumFractionDigits: 0 })
+    : null
 
 const calculateAgeFromDob = (dob: string): string => {
   if (!dob) return ''
@@ -123,13 +152,31 @@ interface RetreatBookingFormProps {
   retreat: RetreatType
 }
 
+type BookingConfirmation = {
+  booking: {
+    id: string
+    fullName: string
+    email: string
+    phone: string
+    status: string
+  }
+  ticketCode: string
+  ticketUrl: string
+}
+
 const RetreatBookingForm = ({ retreat }: RetreatBookingFormProps) => {
   const [form, setForm] = useState<FormState>(initialState)
   const [currentStep, setCurrentStep] = useState(0)
   const [errors, setErrors] = useState<Partial<Record<keyof FormState, string>>>({})
   const [isSubmitting, setIsSubmitting] = useState(false)
+  const [confirmation, setConfirmation] = useState<BookingConfirmation | null>(null)
   const step = steps[currentStep]
-  const router = useRouter()
+  const amountLabel = useMemo(() => {
+    if (retreat.isPaid === false) {
+      return 'Sponsored / Free'
+    }
+    return amountFormatter?.format(retreat.price ?? 0) ?? `${retreat.price ?? 0} TSh`
+  }, [retreat.isPaid, retreat.price])
 
   const updateField = <K extends keyof FormState>(field: K, value: FormState[K]) => {
     setForm((prev) => {
@@ -178,6 +225,28 @@ const RetreatBookingForm = ({ retreat }: RetreatBookingFormProps) => {
   }
 
   const validateStep = (stepId: StepId) => {
+    if (stepId === 'payment') {
+      if (retreat.isPaid === false) {
+        setErrors({})
+        return true
+      }
+
+      const paymentErrors: Partial<Record<keyof FormState, string>> = {}
+
+      if (form.paymentMethod === 'card') {
+        if (!form.cardName.trim()) paymentErrors.cardName = 'Cardholder name is required.'
+        if (!/^[0-9\s]{12,19}$/.test(form.cardNumber.replace(/\s+/g, ''))) paymentErrors.cardNumber = 'Enter a valid card number.'
+        if (!/^\d{2}\s?\/\s?\d{2}$/.test(form.cardExpiry)) paymentErrors.cardExpiry = 'Enter expiry as MM/YY.'
+        if (!/^\d{3,4}$/.test(form.cardCvc)) paymentErrors.cardCvc = 'Enter a valid CVC.'
+      } else {
+        if (!form.mobileNetwork.trim()) paymentErrors.mobileNetwork = 'Select a mobile network.'
+        if (!/^[0-9+\s-]{7,15}$/.test(form.mobileNumber)) paymentErrors.mobileNumber = 'Enter a valid mobile number.'
+      }
+
+      setErrors(paymentErrors)
+      return Object.keys(paymentErrors).length === 0
+    }
+
     let fields = requiredFieldsByStep[stepId]
     if (stepId === 'parish' && form.nonCatholic) {
       fields = []
@@ -237,45 +306,73 @@ const RetreatBookingForm = ({ retreat }: RetreatBookingFormProps) => {
     goToStep(currentStep - 1)
   }
 
-  const handleSubmit = async () => {
-    if (!validateStep('family')) return
+  const submitBooking = async () => {
+    const response = await fetch('/api/retreats/bookings', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        retreatId: retreat.id,
+        retreatTitle: retreat.title,
+        paymentStatus: retreat.isPaid === false ? 'waived' : 'paid',
+        form,
+      }),
+    })
+
+    const payload = await response.json().catch(() => ({}))
+
+    if (!response.ok) {
+      throw new Error(payload?.error ?? 'Unable to submit booking.')
+    }
+
+    return payload
+  }
+
+  const handleConfirmBooking = async () => {
+    if (!validateStep('payment')) return
     setIsSubmitting(true)
 
     try {
-      const response = await fetch('/api/retreats/bookings', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          retreatId: retreat.id,
-          retreatTitle: retreat.title,
-          paymentStatus: retreat.isPaid === false ? 'waived' : 'pending',
-          form,
-        }),
-      })
+      // Simulate a quick payment processing step
+      await new Promise((resolve) => setTimeout(resolve, 900))
+      const payload = await submitBooking()
+      const booking = payload?.data
 
-      const payload = await response.json().catch(() => ({}))
+      if (booking?.id) {
+        const ticketCode = payload?.ticketCode ?? booking.ticketCode ?? `DMRC-${booking.id.slice(0, 8).toUpperCase()}`
+        const ticketUrl = `${window.location.origin}/retreats/check-booking?code=${encodeURIComponent(ticketCode)}`
 
-      if (!response.ok) {
-        throw new Error(payload?.error ?? 'Unable to submit booking.')
-      }
-
-      const booking = payload.data
-
+        setConfirmation({
+          booking: {
+            id: booking.id,
+            fullName: booking.fullName,
+            email: booking.email,
+            phone: booking.phone ?? form.phone,
+            status: booking.status,
+          },
+          ticketCode,
+          ticketUrl,
+        })
       setForm(initialState)
       setCurrentStep(0)
       setErrors({})
-      toast.success('Registration received! Redirecting to payment…')
-
-      if (booking?.id) {
-        router.push(`/retreats/${retreat.slug}/payment?booking=${booking.id}`)
+        toast.success('Booking confirmed! Your ticket is ready below.')
+        window.scrollTo({ top: 0, behavior: 'smooth' })
       }
     } catch (error) {
       toast.error(error instanceof Error ? error.message : 'Unable to submit booking.')
     } finally {
       setIsSubmitting(false)
     }
+  }
+
+  const handleNewBooking = () => {
+    setConfirmation(null)
+    setForm(initialState)
+    setCurrentStep(0)
+    setErrors({})
+    window.scrollTo({ top: 0, behavior: 'smooth' })
   }
 
   const displaySteps = useMemo(
@@ -332,6 +429,57 @@ const RetreatBookingForm = ({ retreat }: RetreatBookingFormProps) => {
       ...prev,
       familyMembers: prev.familyMembers.filter((_, i) => i !== index),
     }))
+  }
+
+  if (confirmation) {
+    return (
+      <div id='booking' className='space-y-10'>
+        <div className='rounded-3xl border border-emerald-200 bg-emerald-50/80 p-6 text-center shadow-sm'>
+          <div className='mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-white text-emerald-600 shadow'>
+            <CheckCircle2 className='h-8 w-8' />
+          </div>
+          <h3 className='text-3xl font-bold text-emerald-900'>Booking Confirmed</h3>
+          <p className='mt-2 text-sm text-emerald-700'>
+            Your ticket code{' '}
+            <span className='font-mono font-semibold text-emerald-900'>{confirmation.ticketCode}</span> is ready. Present the QR code at
+            check-in for a smooth arrival.
+          </p>
+        </div>
+
+        <RetreatTicket
+          booking={{
+            id: confirmation.booking.id,
+            fullName: confirmation.booking.fullName,
+            email: confirmation.booking.email,
+            phone: confirmation.booking.phone,
+            ticketCode: confirmation.ticketCode,
+            status: confirmation.booking.status,
+          }}
+          retreat={{
+            title: retreat.title,
+            dateRange: retreat.dateRange,
+            timeRange: retreat.timeRange,
+            location: retreat.location,
+          }}
+          ticketUrl={confirmation.ticketUrl}
+        />
+
+        <div className='flex flex-wrap items-center justify-center gap-3'>
+          <Link
+            href='/retreats/check-booking'
+            className='inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-6 py-3 text-sm font-semibold text-slate-700 shadow-sm transition hover:border-primary/40 hover:text-primary'>
+            <Icon icon='solar:qr-code-bold-duotone' className='text-lg' />
+            Check booking status
+          </Link>
+          <button
+            type='button'
+            onClick={handleNewBooking}
+            className='inline-flex items-center gap-2 rounded-xl bg-primary px-6 py-3 text-sm font-semibold text-white shadow-lg shadow-primary/30 transition hover:bg-primary/90'>
+            Book another retreat
+          </button>
+        </div>
+      </div>
+    )
   }
 
   return (
@@ -829,6 +977,168 @@ const RetreatBookingForm = ({ retreat }: RetreatBookingFormProps) => {
                 </div>
               )}
 
+      {step.id === 'payment' && (
+        <div className='space-y-6'>
+          <div className='rounded-2xl border border-gray-200 bg-white p-6 shadow-sm'>
+            <div className='flex flex-wrap items-center justify-between gap-4'>
+              <div>
+                <p className='text-xs font-semibold uppercase tracking-[0.35em] text-gray-500'>Retreat</p>
+                <p className='text-lg font-semibold text-gray-900'>{retreat.title}</p>
+                <p className='text-sm text-gray-500'>{retreat.dateRange}</p>
+              </div>
+              <div className='text-right'>
+                <p className='text-xs font-semibold uppercase tracking-[0.35em] text-gray-500'>Amount Due</p>
+                <p className='text-2xl font-bold text-gray-900'>{amountLabel}</p>
+              </div>
+            </div>
+            <div className='mt-4 grid gap-3 sm:grid-cols-2 text-sm text-gray-600'>
+              <div className='rounded-xl border border-gray-200 bg-gray-50 px-4 py-3'>
+                <p className='text-xs uppercase tracking-wide text-gray-500'>Primary guest</p>
+                <p className='font-semibold text-gray-900'>{form.fullName || '—'}</p>
+              </div>
+              <div className='rounded-xl border border-gray-200 bg-gray-50 px-4 py-3'>
+                <p className='text-xs uppercase tracking-wide text-gray-500'>Contact</p>
+                <p className='font-semibold text-gray-900'>{form.email || form.phone || '—'}</p>
+              </div>
+            </div>
+          </div>
+
+          {retreat.isPaid === false ? (
+            <div className='flex items-start gap-4 rounded-2xl border border-emerald-200 bg-emerald-50/80 p-6 text-emerald-800'>
+              <ShieldCheck className='h-6 w-6 flex-shrink-0' />
+              <div>
+                <p className='text-sm font-semibold uppercase tracking-wide text-emerald-700'>No payment required</p>
+                <p className='mt-2 text-sm text-emerald-700'>
+                  This retreat is fully sponsored for registered guests. Click &ldquo;Complete booking&rdquo; to confirm your spot and receive
+                  your ticket instantly.
+                </p>
+              </div>
+            </div>
+          ) : (
+            <div className='space-y-6'>
+              <div className='grid gap-4 sm:grid-cols-2'>
+                <button
+                  type='button'
+                  onClick={() => updateField('paymentMethod', 'card')}
+                  className={`flex items-center gap-3 rounded-2xl border px-4 py-3 text-left text-sm font-semibold transition ${
+                    form.paymentMethod === 'card'
+                      ? 'border-primary bg-primary/10 text-primary shadow-sm'
+                      : 'border-gray-200 bg-white text-gray-600 hover:border-primary/40 hover:text-primary'
+                  }`}>
+                  <CreditCard className='h-5 w-5' />
+                  Card payment
+                </button>
+                <button
+                  type='button'
+                  onClick={() => updateField('paymentMethod', 'mobile')}
+                  className={`flex items-center gap-3 rounded-2xl border px-4 py-3 text-left text-sm font-semibold transition ${
+                    form.paymentMethod === 'mobile'
+                      ? 'border-primary bg-primary/10 text-primary shadow-sm'
+                      : 'border-gray-200 bg-white text-gray-600 hover:border-primary/40 hover:text-primary'
+                  }`}>
+                  <Smartphone className='h-5 w-5' />
+                  Mobile money
+                </button>
+              </div>
+
+              {form.paymentMethod === 'card' ? (
+                <div className='space-y-5'>
+                  <div>
+                    <label className='text-xs font-semibold uppercase tracking-wide text-gray-600'>Cardholder name</label>
+                    <input
+                      type='text'
+                      value={form.cardName}
+                      onChange={(event) => updateField('cardName', event.target.value)}
+                      placeholder='Name on card'
+                      className='mt-2 w-full rounded-lg border border-gray-200 px-4 py-3 text-sm shadow-sm focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary'
+                    />
+                    {renderError('cardName')}
+                  </div>
+                  <div>
+                    <label className='text-xs font-semibold uppercase tracking-wide text-gray-600'>Card number</label>
+                    <input
+                      type='text'
+                      inputMode='numeric'
+                      value={form.cardNumber}
+                      onChange={(event) => updateField('cardNumber', event.target.value)}
+                      placeholder='4242 4242 4242 4242'
+                      className='mt-2 w-full rounded-lg border border-gray-200 px-4 py-3 text-sm shadow-sm focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary'
+                    />
+                    {renderError('cardNumber')}
+                  </div>
+                  <div className='grid gap-4 sm:grid-cols-2'>
+                    <div>
+                      <label className='text-xs font-semibold uppercase tracking-wide text-gray-600'>Expiry (MM/YY)</label>
+                      <input
+                        type='text'
+                        value={form.cardExpiry}
+                        onChange={(event) => updateField('cardExpiry', event.target.value)}
+                        placeholder='MM / YY'
+                        className='mt-2 w-full rounded-lg border border-gray-200 px-4 py-3 text-sm shadow-sm focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary'
+                      />
+                      {renderError('cardExpiry')}
+                    </div>
+                    <div>
+                      <label className='text-xs font-semibold uppercase tracking-wide text-gray-600'>CVC</label>
+                      <input
+                        type='password'
+                        maxLength={4}
+                        value={form.cardCvc}
+                        onChange={(event) => updateField('cardCvc', event.target.value)}
+                        placeholder='123'
+                        className='mt-2 w-full rounded-lg border border-gray-200 px-4 py-3 text-sm shadow-sm focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary'
+                      />
+                      {renderError('cardCvc')}
+                    </div>
+                  </div>
+                  <div className='flex flex-wrap gap-2 text-xs text-gray-400'>
+                    {cardLogos.map((logo) => (
+                      <span key={logo} className='rounded-full border border-gray-200 px-3 py-1'>
+                        {logo}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              ) : (
+                <div className='space-y-5'>
+                  <div className='grid gap-4 sm:grid-cols-2'>
+                    <div>
+                      <label className='text-xs font-semibold uppercase tracking-wide text-gray-600'>Mobile network</label>
+                      <select
+                        value={form.mobileNetwork}
+                        onChange={(event) => updateField('mobileNetwork', event.target.value)}
+                        className='mt-2 w-full rounded-lg border border-gray-200 px-4 py-3 text-sm shadow-sm focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary'>
+                        {mobileNetworks.map((network) => (
+                          <option key={network} value={network}>
+                            {network}
+                          </option>
+                        ))}
+                      </select>
+                      {renderError('mobileNetwork')}
+                    </div>
+                    <div>
+                      <label className='text-xs font-semibold uppercase tracking-wide text-gray-600'>Mobile number</label>
+                      <input
+                        type='tel'
+                        value={form.mobileNumber}
+                        onChange={(event) => updateField('mobileNumber', event.target.value)}
+                        placeholder='07XX XXX XXX'
+                        className='mt-2 w-full rounded-lg border border-gray-200 px-4 py-3 text-sm shadow-sm focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary'
+                      />
+                      {renderError('mobileNumber')}
+                    </div>
+                  </div>
+                  <div className='rounded-xl border border-gray-200 bg-gray-50 px-4 py-3 text-xs text-gray-500'>
+                    A secure payment request will be initiated to your mobile wallet. Confirm the prompt on your device to complete the
+                    payment.
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+                </div>
+              )}
+
               <div className='rounded-xl border border-gray-200 bg-gray-50 px-4 py-3'>
                 <label className='flex items-center gap-3 text-sm font-medium text-gray-700'>
                   <input
@@ -874,12 +1184,12 @@ const RetreatBookingForm = ({ retreat }: RetreatBookingFormProps) => {
         ) : (
           <button
             type='button'
-            onClick={handleSubmit}
+            onClick={handleConfirmBooking}
             disabled={isSubmitting}
             className={`inline-flex items-center justify-center rounded-lg px-6 py-3 text-sm font-semibold text-white shadow-sm transition ${
               isSubmitting ? 'bg-primary/60 cursor-not-allowed' : 'bg-primary hover:bg-primary/90'
             }`}>
-            {isSubmitting ? 'Submitting...' : 'Register'}
+            {isSubmitting ? 'Processing...' : 'Complete booking'}
           </button>
         )}
       </div>

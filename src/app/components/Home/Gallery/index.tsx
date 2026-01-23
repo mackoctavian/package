@@ -5,17 +5,15 @@ import Image from 'next/image'
 import Link from 'next/link'
 import { X, ChevronLeft, ChevronRight, ArrowUpRight } from 'lucide-react'
 import { useState } from 'react'
-import { galleryHighlights, galleryCollections } from '@/app/data/gallery'
+import { useGalleryContent } from '@/app/hooks/useGalleryContent'
 
 const Gallery = () => {
   const [selectedId, setSelectedId] = useState<string | null>(null)
   const [selectedIndex, setSelectedIndex] = useState<number>(0)
+  const { photos, isLoading } = useGalleryContent()
 
   // Get all images for the gallery display
-  const allImages = [
-    ...galleryHighlights,
-    ...galleryCollections.flatMap(c => c.items),
-  ].slice(0, 8)
+  const allImages = photos.slice(0, 8)
 
   const handleImageClick = (id: string, index: number) => {
     setSelectedId(id)
@@ -86,6 +84,15 @@ const Gallery = () => {
         </div>
 
         {/* Photo Grid - Clean Photo-Only Design */}
+        {isLoading && allImages.length === 0 ? (
+          <div className='flex h-48 items-center justify-center text-sm text-slate-500'>
+            Loading gallery…
+          </div>
+        ) : allImages.length === 0 ? (
+          <div className='rounded-2xl border border-dashed border-slate-200 bg-white/70 px-6 py-14 text-center text-sm text-slate-500'>
+            Publish gallery media in the admin to showcase highlights here.
+          </div>
+        ) : (
         <div className='grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 md:gap-4'>
           {allImages.map((item, index) => {
             // Create varying aspect ratios for visual interest
@@ -127,6 +134,7 @@ const Gallery = () => {
             )
           })}
         </div>
+        )}
 
         {/* Lightbox Modal */}
         <AnimatePresence>

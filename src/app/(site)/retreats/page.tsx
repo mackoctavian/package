@@ -17,20 +17,38 @@ import type { RetreatType, RetreatCategory } from '@/app/types/retreat'
 
 import { Home, Church, Flame } from 'lucide-react'
 
-const categoryConfig: Record<Exclude<RetreatCategory, 'all'>, { label: string; icon: typeof Users; color: string }> = {
-  residential: { label: 'Residential Retreat', icon: Home, color: 'bg-violet-500' },
-  parish: { label: 'Parish Retreats', icon: Church, color: 'bg-blue-500' },
-  special: { label: 'Special Retreats', icon: Sparkles, color: 'bg-emerald-500' },
-  'jesus-mission': { label: 'Jesus Mission Retreats', icon: Flame, color: 'bg-amber-500' },
+const defaultCategoryTabs = [
+  { value: 'residential-retreat', label: 'Residential Retreats', icon: Home, color: 'bg-violet-500' },
+  { value: 'parish-retreat', label: 'Parish Retreats', icon: Church, color: 'bg-blue-500' },
+  { value: 'special-retreat', label: 'Special Retreats', icon: Sparkles, color: 'bg-emerald-500' },
+  { value: 'jesus-mission-retreat', label: 'Jesus Mission Retreats', icon: Flame, color: 'bg-amber-500' },
+]
+
+const categoryConfig: Record<string, { label: string; icon: typeof Users; color: string }> = defaultCategoryTabs.reduce(
+  (acc, category) => {
+    acc[category.value] = category
+    return acc
+  },
+  {} as Record<string, { label: string; icon: typeof Users; color: string }>
+)
+
+const legacyCategoryMap: Record<string, string> = {
+  residential: 'residential-retreat',
+  parish: 'parish-retreat',
+  special: 'special-retreat',
+  'jesus-mission': 'jesus-mission-retreat',
 }
 
-const statusStyles: Record<RetreatType['status'], { bg: string; text: string }> = {
+Object.entries(legacyCategoryMap).forEach(([legacy, target]) => {
+  categoryConfig[legacy] = categoryConfig[target]
+})
+
+const statusStyles: Record<string, { bg: string; text: string }> = {
   'Registration Open': { bg: 'bg-emerald-50', text: 'text-emerald-700' },
   Waitlist: { bg: 'bg-amber-50', text: 'text-amber-700' },
   Closed: { bg: 'bg-slate-100', text: 'text-slate-500' },
+  Ongoing: { bg: 'bg-sky-50', text: 'text-sky-700' },
 }
-
-const validCategories: Exclude<RetreatCategory, 'all'>[] = ['residential', 'parish', 'special', 'jesus-mission']
 
 const tzsFormatter = new Intl.NumberFormat('en-TZ', {
   style: 'currency',
@@ -39,9 +57,27 @@ const tzsFormatter = new Intl.NumberFormat('en-TZ', {
   minimumFractionDigits: 0,
 })
 
-type CartEntry = { retreat: RetreatType; attendees: { male: number; female: number } }
+type CartEntry = { retreat: EnhancedRetreat; attendees: { male: number; female: number } }
 type ViewMode = 'grid' | 'list'
 type SortOption = 'date' | 'price-low' | 'price-high' | 'availability' | 'popular'
+type EnhancedRetreat = RetreatType & {
+  parsedStart: Date | null
+  parsedEnd: Date | null
+  displayStatus: string
+}
+
+const parseDateToken = (value?: string | null) => {
+  if (!value) return null
+  const parsed = new Date(value)
+  return Number.isNaN(parsed.getTime()) ? null : parsed
+}
+
+const normalizeCategoryLabel = (value?: string) =>
+  value
+    ? value
+        .replace(/[-_]/g, ' ')
+        .replace(/\b\w/g, (char) => char.toUpperCase())
+    : 'Retreat'
 
 const fetchRetreats = async (): Promise<RetreatType[]> => {
   const res = await fetch('/api/retreats', { cache: 'no-store' })
@@ -57,12 +93,9 @@ const RetreatsPageContent = () => {
   const router = useRouter()
   
   const categoryParam = searchParams.get('category')
-  const initialCategory: 'All' | Exclude<RetreatCategory, 'all'> = 
-    categoryParam && validCategories.includes(categoryParam as Exclude<RetreatCategory, 'all'>)
-      ? (categoryParam as Exclude<RetreatCategory, 'all'>)
-      : 'All'
+  const initialCategory = (categoryParam as RetreatCategory) || 'All'
 
-  const [category, setCategory] = useState<'All' | Exclude<RetreatCategory, 'all'>>(initialCategory)
+  const [category, setCategory] = useState<'All' | RetreatCategory>(initialCategory)
   const [searchTerm, setSearchTerm] = useState('')
   const [cart, setCart] = useState<Record<string, { male: number; female: number }>>({})
   const [toastMessage, setToastMessage] = useState<string | null>(null)
@@ -72,7 +105,7 @@ const RetreatsPageContent = () => {
   const [cartOpen, setCartOpen] = useState(false)
 
   const {
-    data: retreats = [],
+    data: fetchedRetreats = [],
     isLoading,
     isError,
   } = useQuery({
@@ -81,14 +114,43 @@ const RetreatsPageContent = () => {
     staleTime: 1000 * 60,
   })
 
+  const upcomingRetreats = useMemo<EnhancedRetreat[]>(() => {
+    const today = new Date()
+    today.setHours(0, 0, 0, 0)
+    const now = new Date()
+
+    return fetchedRetreats
+      .map((retreat) => {
+        const [startToken, endToken] = (retreat.dateRange ?? '').split('–').map((token) => token?.trim() ?? '')
+        const parsedStart = parseDateToken(startToken)
+        const parsedEnd = parseDateToken(endToken || startToken)
+        const isOngoing = parsedStart && parsedEnd && now >= parsedStart && now <= parsedEnd
+
+        return {
+          ...retreat,
+          parsedStart,
+          parsedEnd,
+          displayStatus: isOngoing ? 'Ongoing' : retreat.status,
+        }
+      })
+      .filter((retreat) => {
+        if (!retreat.parsedEnd) return true
+        const endOfDay = new Date(retreat.parsedEnd)
+        endOfDay.setHours(23, 59, 59, 999)
+        return endOfDay >= today
+      })
+  }, [fetchedRetreats])
+
   // Sync category with URL
   useEffect(() => {
-    if (categoryParam && validCategories.includes(categoryParam as Exclude<RetreatCategory, 'all'>)) {
-      setCategory(categoryParam as Exclude<RetreatCategory, 'all'>)
+    if (categoryParam) {
+      setCategory(categoryParam as RetreatCategory)
+    } else {
+      setCategory('All')
     }
   }, [categoryParam])
 
-  const handleCategoryChange = (newCategory: 'All' | Exclude<RetreatCategory, 'all'>) => {
+  const handleCategoryChange = (newCategory: 'All' | RetreatCategory) => {
     setCategory(newCategory)
     if (newCategory === 'All') {
       router.push('/retreats')
@@ -104,7 +166,7 @@ const RetreatsPageContent = () => {
   }, [toastMessage])
 
   const filteredItems = useMemo(() => {
-    let items = retreats.filter((item) => {
+    let items: EnhancedRetreat[] = upcomingRetreats.filter((item) => {
       const matchesCategory = category === 'All' || item.category === category
       const matchesSearch =
         searchTerm.trim().length === 0 ||
@@ -116,6 +178,13 @@ const RetreatsPageContent = () => {
 
     // Sort items
     switch (sortBy) {
+      case 'date':
+        items = [...items].sort((a, b) => {
+          const aTime = a.parsedStart?.getTime() ?? Number.POSITIVE_INFINITY
+          const bTime = b.parsedStart?.getTime() ?? Number.POSITIVE_INFINITY
+          return aTime - bTime
+        })
+        break
       case 'price-low':
         items = [...items].sort((a, b) => (a.price ?? 0) - (b.price ?? 0))
         break
@@ -135,17 +204,26 @@ const RetreatsPageContent = () => {
     }
 
     return items
-  }, [retreats, category, searchTerm, sortBy])
+  }, [upcomingRetreats, category, searchTerm, sortBy])
+
+  const bookableRetreatIds = useMemo(() => {
+    const sorted = [...upcomingRetreats].sort((a, b) => {
+      const aTime = a.parsedStart?.getTime() ?? Number.POSITIVE_INFINITY
+      const bTime = b.parsedStart?.getTime() ?? Number.POSITIVE_INFINITY
+      return aTime - bTime
+    })
+    return sorted.slice(0, 3).map((item) => item.id)
+  }, [upcomingRetreats])
 
   const cartItems = useMemo<CartEntry[]>(() => {
     return Object.entries(cart)
       .map(([retreatId, attendees]) => {
-        const retreat = retreats.find((item) => item.id === retreatId)
+        const retreat = upcomingRetreats.find((item) => item.id === retreatId)
         if (!retreat) return null
         return { retreat, attendees }
       })
       .filter((entry): entry is CartEntry => entry !== null)
-  }, [cart, retreats])
+  }, [cart, upcomingRetreats])
 
   const totalAttendees = useMemo(() => 
     cartItems.reduce((count, entry) => count + entry.attendees.male + entry.attendees.female, 0), 
@@ -161,8 +239,13 @@ const RetreatsPageContent = () => {
 
   const showToast = (message: string) => setToastMessage(message)
 
-  const handleAddToCart = (retreat: RetreatType, gender: 'male' | 'female') => {
-    if (retreat.status === 'Closed') {
+  const handleAddToCart = (retreat: EnhancedRetreat, gender: 'male' | 'female') => {
+    if (!bookableRetreatIds.includes(retreat.id)) {
+      showToast('Only the first three upcoming retreats are open for booking right now.')
+      return
+    }
+
+    if (retreat.displayStatus === 'Closed') {
       showToast('This retreat is closed for registration.')
       return
     }
@@ -193,7 +276,7 @@ const RetreatsPageContent = () => {
     })
   }
 
-  const handleDecreaseQuantity = (retreat: RetreatType, gender: 'male' | 'female') => {
+  const handleDecreaseQuantity = (retreat: EnhancedRetreat, gender: 'male' | 'female') => {
     setCart((prev) => {
       const current = prev[retreat.id]
       if (!current || current[gender] === 0) return prev
@@ -209,7 +292,7 @@ const RetreatsPageContent = () => {
     })
   }
 
-  const handleRemoveFromCart = (retreat: RetreatType) => {
+  const handleRemoveFromCart = (retreat: EnhancedRetreat) => {
     if (!cart[retreat.id]) return
     setCart((prev) => {
       const { [retreat.id]: _, ...rest } = prev
@@ -297,23 +380,23 @@ const RetreatsPageContent = () => {
             >
               All Retreats
             </button>
-            {(Object.keys(categoryConfig) as Exclude<RetreatCategory, 'all'>[]).map((cat) => {
-              const config = categoryConfig[cat]
+            {defaultCategoryTabs.map((cat) => {
+              const config = categoryConfig[cat.value]
               const Icon = config.icon
-              const count = retreats.filter(p => p.category === cat).length
+              const count = upcomingRetreats.filter((p) => p.category === cat.value || legacyCategoryMap[p.category] === cat.value).length
               return (
                 <button
-                  key={cat}
-                  onClick={() => handleCategoryChange(cat)}
+                  key={cat.value}
+                  onClick={() => handleCategoryChange(cat.value)}
                   className={`inline-flex items-center gap-2 px-5 py-2.5 rounded-full text-sm font-semibold whitespace-nowrap transition-all ${
-                    category === cat
+                    category === cat.value
                       ? 'bg-slate-900 text-white shadow-lg'
                       : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
                   }`}
                 >
                   <Icon className='w-4 h-4' />
                   {config.label}
-                  <span className={`text-xs ${category === cat ? 'text-white/70' : 'text-slate-400'}`}>({count})</span>
+                  <span className={`text-xs ${category === cat.value ? 'text-white/70' : 'text-slate-400'}`}>({count})</span>
                 </button>
               )
             })}
@@ -368,7 +451,7 @@ const RetreatsPageContent = () => {
                   onClick={() => handleCategoryChange('All')}
                   className='inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-indigo-100 text-indigo-700 text-xs font-semibold hover:bg-indigo-200 transition-colors'
                 >
-                  {categoryConfig[category].label}
+                  {categoryConfig[category]?.label ?? normalizeCategoryLabel(category)}
                   <X className='w-3 h-3' />
                 </button>
               )}
@@ -422,6 +505,7 @@ const RetreatsPageContent = () => {
                     retreat={retreat} 
                     onAddToCart={handleAddToCart} 
                     cart={cart} 
+                    isBookable={bookableRetreatIds.includes(retreat.id)}
                   />
                 </motion.div>
               ))}
@@ -442,6 +526,7 @@ const RetreatsPageContent = () => {
                     retreat={retreat} 
                     onAddToCart={handleAddToCart} 
                     cart={cart} 
+                    isBookable={bookableRetreatIds.includes(retreat.id)}
                   />
                 </motion.div>
               ))}
@@ -668,16 +753,27 @@ const RetreatsPageContent = () => {
 const RetreatCard = ({ 
   retreat, 
   onAddToCart, 
-  cart 
+  cart,
+  isBookable,
 }: { 
-  retreat: RetreatType
-  onAddToCart: (r: RetreatType, gender: 'male' | 'female') => void
+  retreat: EnhancedRetreat
+  onAddToCart: (r: EnhancedRetreat, gender: 'male' | 'female') => void
   cart: Record<string, { male: number; female: number }>
+  isBookable: boolean
 }) => {
   const cartItem = cart[retreat.id]
   const totalInCart = cartItem ? cartItem.male + cartItem.female : 0
-  const status = statusStyles[retreat.status]
-  const categoryInfo = retreat.category !== 'all' ? categoryConfig[retreat.category as Exclude<RetreatCategory, 'all'>] : null
+  const statusKey = retreat.displayStatus || retreat.status
+  const status = statusStyles[statusKey] ?? statusStyles['Registration Open']
+  const resolvedCategoryKey = categoryConfig[retreat.category]
+    ? retreat.category
+    : legacyCategoryMap[retreat.category] ?? retreat.category
+  const categoryInfo = resolvedCategoryKey ? categoryConfig[resolvedCategoryKey] : null
+  const categoryLabel = categoryInfo?.label ?? normalizeCategoryLabel(retreat.category)
+  const categoryColor = categoryInfo?.color ?? 'bg-slate-600'
+  const canBook = isBookable && retreat.displayStatus !== 'Closed'
+  const bookingNotice =
+    retreat.displayStatus === 'Closed' ? 'Registration Closed' : 'Bookings limited to the next 3 retreats'
 
   return (
     <article className='group bg-white border border-slate-100 rounded-3xl overflow-hidden hover:shadow-2xl hover:shadow-slate-200/50 hover:border-slate-200 transition-all duration-500'>
@@ -694,7 +790,7 @@ const RetreatCard = ({
         {/* Status Badge */}
         <div className='absolute top-4 left-4'>
           <span className={`px-3 py-1.5 rounded-full text-[11px] font-bold uppercase tracking-wider ${status.bg} ${status.text}`}>
-            {retreat.status}
+            {statusKey}
           </span>
         </div>
 
@@ -722,9 +818,9 @@ const RetreatCard = ({
       <div className='p-5'>
         {/* Category & Speaker */}
         <div className='flex items-center gap-2 mb-3'>
-          {categoryInfo && (
-            <span className={`px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider ${categoryInfo.color} text-white`}>
-              {categoryInfo.label}
+          {retreat.category && retreat.category !== 'all' && (
+            <span className={`px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider ${categoryColor} text-white`}>
+              {categoryLabel}
             </span>
           )}
           <span className='text-xs text-slate-500'>with {retreat.speaker}</span>
@@ -756,7 +852,7 @@ const RetreatCard = ({
         </div>
 
         {/* Add to Cart Buttons */}
-        {retreat.status !== 'Closed' ? (
+        {canBook ? (
           <div className='flex gap-2'>
             <button
               onClick={() => onAddToCart(retreat, 'male')}
@@ -775,16 +871,16 @@ const RetreatCard = ({
           </div>
         ) : (
           <div className='py-2.5 rounded-xl bg-slate-100 text-slate-500 text-sm font-semibold text-center'>
-            Registration Closed
+            {bookingNotice}
           </div>
         )}
 
         <Link
           href={retreat.ctaHref}
           className={`mt-3 inline-flex items-center justify-center gap-2 w-full py-2.5 rounded-xl text-sm font-semibold transition-colors ${
-            retreat.status === 'Closed'
-              ? 'bg-slate-100 text-slate-400 cursor-not-allowed pointer-events-none'
-              : 'bg-slate-900 text-white hover:bg-indigo-600'
+            canBook
+              ? 'bg-slate-900 text-white hover:bg-indigo-600'
+              : 'bg-slate-100 text-slate-400 cursor-not-allowed pointer-events-none'
           }`}
         >
           Book Now
@@ -805,16 +901,27 @@ const RetreatCard = ({
 const RetreatListItem = ({ 
   retreat, 
   onAddToCart, 
-  cart 
+  cart,
+  isBookable,
 }: { 
-  retreat: RetreatType
-  onAddToCart: (r: RetreatType, gender: 'male' | 'female') => void
+  retreat: EnhancedRetreat
+  onAddToCart: (r: EnhancedRetreat, gender: 'male' | 'female') => void
   cart: Record<string, { male: number; female: number }>
+  isBookable: boolean
 }) => {
   const cartItem = cart[retreat.id]
   const totalInCart = cartItem ? cartItem.male + cartItem.female : 0
-  const status = statusStyles[retreat.status]
-  const categoryInfo = retreat.category !== 'all' ? categoryConfig[retreat.category as Exclude<RetreatCategory, 'all'>] : null
+  const statusKey = retreat.displayStatus || retreat.status
+  const status = statusStyles[statusKey] ?? statusStyles['Registration Open']
+  const resolvedCategoryKey = categoryConfig[retreat.category]
+    ? retreat.category
+    : legacyCategoryMap[retreat.category] ?? retreat.category
+  const categoryInfo = resolvedCategoryKey ? categoryConfig[resolvedCategoryKey] : null
+  const categoryLabel = categoryInfo?.label ?? normalizeCategoryLabel(retreat.category)
+  const categoryColor = categoryInfo?.color ?? 'bg-slate-600'
+  const canBook = isBookable && retreat.displayStatus !== 'Closed'
+  const bookingNotice =
+    retreat.displayStatus === 'Closed' ? 'Registration Closed' : 'Bookings limited to the next 3 retreats'
 
   return (
     <article className='flex gap-5 p-5 bg-white border border-slate-100 rounded-3xl hover:shadow-xl hover:shadow-slate-200/50 hover:border-slate-200 transition-all duration-300'>
@@ -828,7 +935,7 @@ const RetreatListItem = ({
         />
         <div className='absolute top-3 left-3'>
           <span className={`px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider ${status.bg} ${status.text}`}>
-            {retreat.status}
+            {statusKey}
           </span>
         </div>
       </div>
@@ -838,9 +945,9 @@ const RetreatListItem = ({
         <div className='flex items-start justify-between gap-4 mb-2'>
           <div>
             <div className='flex items-center gap-2 mb-2'>
-              {categoryInfo && (
-                <span className={`px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider ${categoryInfo.color} text-white`}>
-                  {categoryInfo.label}
+              {retreat.category && retreat.category !== 'all' && (
+                <span className={`px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider ${categoryColor} text-white`}>
+                  {categoryLabel}
                 </span>
               )}
               <span className='text-xs text-slate-500'>with {retreat.speaker}</span>
@@ -879,7 +986,7 @@ const RetreatListItem = ({
 
         {/* Actions */}
         <div className='flex items-center gap-3 mt-auto flex-wrap'>
-          {retreat.status !== 'Closed' ? (
+          {canBook ? (
             <>
               <button
                 onClick={() => onAddToCart(retreat, 'male')}
@@ -898,16 +1005,16 @@ const RetreatListItem = ({
             </>
           ) : (
             <span className='px-4 py-2.5 rounded-xl bg-slate-100 text-slate-500 text-sm font-semibold'>
-              Registration Closed
+              {bookingNotice}
             </span>
           )}
 
           <Link
             href={retreat.ctaHref}
             className={`px-4 py-2.5 rounded-xl text-sm font-semibold flex items-center gap-1.5 ${
-              retreat.status === 'Closed'
-                ? 'bg-slate-100 text-slate-400 cursor-not-allowed pointer-events-none'
-                : 'bg-slate-900 text-white hover:bg-indigo-600 transition-colors'
+              canBook
+                ? 'bg-slate-900 text-white hover:bg-indigo-600 transition-colors'
+                : 'bg-slate-100 text-slate-400 cursor-not-allowed pointer-events-none'
             }`}
           >
             Book Now

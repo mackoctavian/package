@@ -1,7 +1,8 @@
 'use client'
 
-import { useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import Link from 'next/link'
+import { useSearchParams } from 'next/navigation'
 import { motion, AnimatePresence } from 'framer-motion'
 import { 
   Search, Calendar, User, Phone, Hash, 
@@ -14,15 +15,11 @@ import type { RetreatType } from '@/app/types/retreat'
 
 type FormState = {
   bookingId: string
-  fullName: string
-  phone: string
 }
 
 type MessageState = { type: 'success' | 'error'; text: string } | null
 
-const initialForm: FormState = { bookingId: '', fullName: '', phone: '' }
-
-const normalizePhone = (value: string) => value.replace(/\s+/g, '')
+const initialForm: FormState = { bookingId: '' }
 
 const statusConfig = {
   pending: { color: 'bg-amber-100 text-amber-700 border-amber-200', icon: Clock, label: 'Pending' },
@@ -46,7 +43,42 @@ export default function CheckBookingPage() {
   const [actionLoading, setActionLoading] = useState<'cancel' | 'reschedule' | null>(null)
   const [message, setMessage] = useState<MessageState>(null)
   const [rescheduleTo, setRescheduleTo] = useState('')
-  const [searchMethod, setSearchMethod] = useState<'id' | 'details'>('id')
+  const searchParams = useSearchParams()
+  const autoLookupRef = useRef<string | null>(null)
+
+  const lookupByBookingId = useCallback(
+    async (rawValue: string) => {
+      const bookingId = rawValue.trim()
+      if (!bookingId) {
+        setMessage({ type: 'error', text: 'Please enter your booking ID.' })
+        return
+      }
+      setMessage(null)
+      setLookupLoading(true)
+      try {
+        const response = await fetch('/api/retreats/bookings/lookup', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ bookingId }),
+        })
+
+        if (!response.ok) {
+          const error = await response.json().catch(() => ({}))
+          throw new Error(error?.error ?? 'Booking not found.')
+        }
+
+        const data = await response.json()
+        setBooking(data.data as RetreatBooking)
+        setMessage({ type: 'success', text: 'Booking found! You can manage it below.' })
+      } catch (error) {
+        setBooking(null)
+        setMessage({ type: 'error', text: error instanceof Error ? error.message : 'Booking lookup failed.' })
+      } finally {
+        setLookupLoading(false)
+      }
+    },
+    [],
+  )
 
   useEffect(() => {
     const loadRetreats = async () => {
@@ -69,60 +101,32 @@ export default function CheckBookingPage() {
     }
   }, [booking])
 
+  useEffect(() => {
+    const codeParam = searchParams.get('code')
+    if (!codeParam || autoLookupRef.current === codeParam) return
+    autoLookupRef.current = codeParam
+    setForm({ bookingId: codeParam })
+    lookupByBookingId(codeParam)
+  }, [searchParams, lookupByBookingId])
+
   const eligibleRetreats = useMemo(() => {
     if (!booking) return []
-    return retreats.filter((retreat) => retreat.id !== booking.retreatId && retreat.status !== 'Closed')
+    const available = retreats.filter(
+      (retreat) => retreat.id !== booking.retreatId && retreat.status === 'Registration Open',
+    )
+    return available.slice(0, 3)
   }, [booking, retreats])
 
   const canCancel = Boolean(booking && booking.status !== 'cancelled')
   const canReschedule = Boolean(booking && eligibleRetreats.length > 0)
 
-  const handleInputChange = (field: keyof FormState, value: string) => {
-    setForm((prev) => ({ ...prev, [field]: value }))
+  const handleInputChange = (value: string) => {
+    setForm({ bookingId: value })
   }
 
   const handleLookup = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault()
-    setMessage(null)
-
-    const payload: Partial<FormState> = {}
-    if (searchMethod === 'id') {
-      if (!form.bookingId.trim()) {
-        setMessage({ type: 'error', text: 'Please enter your booking ID.' })
-        return
-      }
-      payload.bookingId = form.bookingId.trim()
-    } else {
-      if (!form.fullName.trim() || !form.phone.trim()) {
-        setMessage({ type: 'error', text: 'Please enter both your full name and phone number.' })
-        return
-      }
-      payload.fullName = form.fullName.trim()
-      payload.phone = normalizePhone(form.phone)
-    }
-
-    setLookupLoading(true)
-    try {
-      const response = await fetch('/api/retreats/bookings/lookup', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload),
-      })
-
-      if (!response.ok) {
-        const error = await response.json()
-        throw new Error(error?.error ?? 'Booking not found.')
-      }
-
-      const data = await response.json()
-      setBooking(data.data as RetreatBooking)
-      setMessage({ type: 'success', text: 'Booking found! You can manage it below.' })
-    } catch (error) {
-      setBooking(null)
-      setMessage({ type: 'error', text: error instanceof Error ? error.message : 'Booking lookup failed.' })
-    } finally {
-      setLookupLoading(false)
-    }
+    await lookupByBookingId(form.bookingId)
   }
 
   const handleCancel = async () => {
@@ -250,44 +254,8 @@ export default function CheckBookingPage() {
                   </div>
                 </div>
 
-                {/* Search Method Toggle */}
-                <div className='flex bg-slate-100 rounded-xl p-1 mb-6'>
-                  <button
-                    type='button'
-                    onClick={() => setSearchMethod('id')}
-                    className={`flex-1 py-2.5 px-4 rounded-lg text-sm font-medium transition-all ${
-                      searchMethod === 'id'
-                        ? 'bg-white text-slate-900 shadow-sm'
-                        : 'text-slate-600 hover:text-slate-900'
-                    }`}
-                  >
-                    <Hash className='w-4 h-4 inline mr-1.5' />
-                    Booking ID
-                  </button>
-                  <button
-                    type='button'
-                    onClick={() => setSearchMethod('details')}
-                    className={`flex-1 py-2.5 px-4 rounded-lg text-sm font-medium transition-all ${
-                      searchMethod === 'details'
-                        ? 'bg-white text-slate-900 shadow-sm'
-                        : 'text-slate-600 hover:text-slate-900'
-                    }`}
-                  >
-                    <User className='w-4 h-4 inline mr-1.5' />
-                    Name & Phone
-                  </button>
-                </div>
-
                 <form onSubmit={handleLookup} className='space-y-4'>
-                  <AnimatePresence mode='wait'>
-                    {searchMethod === 'id' ? (
-                      <motion.div
-                        key='booking-id'
-                        initial={{ opacity: 0, y: 10 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        exit={{ opacity: 0, y: -10 }}
-                        transition={{ duration: 0.2 }}
-                      >
+                  <div>
                         <label className='block text-sm font-semibold text-slate-700 mb-2'>
                           Booking ID
                         </label>
@@ -296,58 +264,15 @@ export default function CheckBookingPage() {
                           <input
                             type='text'
                             className='w-full pl-12 pr-4 py-3.5 bg-slate-50 border border-slate-200 rounded-xl text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all'
-                            placeholder='e.g. RBK-42a1ff'
+                        placeholder='Enter your booking ID or ticket code'
                             value={form.bookingId}
-                            onChange={(e) => handleInputChange('bookingId', e.target.value)}
+                        onChange={(e) => handleInputChange(e.target.value)}
                           />
                         </div>
                         <p className='mt-2 text-xs text-slate-500'>
-                          Find this in your confirmation email
-                        </p>
-                      </motion.div>
-                    ) : (
-                      <motion.div
-                        key='name-phone'
-                        initial={{ opacity: 0, y: 10 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        exit={{ opacity: 0, y: -10 }}
-                        transition={{ duration: 0.2 }}
-                        className='space-y-4'
-                      >
-                        <div>
-                          <label className='block text-sm font-semibold text-slate-700 mb-2'>
-                            Full Name
-                          </label>
-                          <div className='relative'>
-                            <User className='absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400' />
-                            <input
-                              type='text'
-                              className='w-full pl-12 pr-4 py-3.5 bg-slate-50 border border-slate-200 rounded-xl text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all'
-                              placeholder='Name used during booking'
-                              value={form.fullName}
-                              onChange={(e) => handleInputChange('fullName', e.target.value)}
-                            />
-                          </div>
+                      This appears in your confirmation email and on your ticket.
+                    </p>
                         </div>
-                        <div>
-                          <label className='block text-sm font-semibold text-slate-700 mb-2'>
-                            Phone Number
-                          </label>
-                          <div className='relative'>
-                            <Phone className='absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400' />
-                            <input
-                              type='tel'
-                              className='w-full pl-12 pr-4 py-3.5 bg-slate-50 border border-slate-200 rounded-xl text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all'
-                              placeholder='+255 700 000 000'
-                              value={form.phone}
-                              onChange={(e) => handleInputChange('phone', e.target.value)}
-                            />
-                          </div>
-                        </div>
-                      </motion.div>
-                    )}
-                  </AnimatePresence>
-
                   <button
                     type='submit'
                     disabled={lookupLoading}
@@ -553,6 +478,9 @@ export default function CheckBookingPage() {
                                     </option>
                                   ))}
                                 </select>
+                                  <p className='text-xs text-slate-500 mb-3'>
+                                    Showing the next three bookable retreats only.
+                                  </p>
                                 <button
                                   onClick={handleReschedule}
                                   disabled={actionLoading === 'reschedule' || !rescheduleTo}
@@ -606,7 +534,7 @@ export default function CheckBookingPage() {
                       </div>
                       <h3 className='text-2xl font-bold text-slate-900 mb-3'>Find Your Booking</h3>
                       <p className='text-slate-500 max-w-sm mb-8'>
-                        Enter your booking ID or registration details in the search form to view and manage your retreat booking.
+                        Enter your booking ID in the search form to view and manage your retreat booking.
                       </p>
                       <div className='flex flex-wrap items-center justify-center gap-4'>
                         <Link
