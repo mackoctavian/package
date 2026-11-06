@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 
 import prisma from '@/lib/prisma'
+import { guardAdminApi } from '@/lib/auth/api-guard'
 
 const mapRecord = (record: any) => ({
   id: record.id,
@@ -72,7 +73,11 @@ const buildPayload = (body: any) => {
   return payload
 }
 
-export async function PATCH(request: Request, { params }: { params: { id: string } }) {
+export async function PATCH(request: Request, { params: paramsPromise }: { params: Promise<{ id: string }> }) {
+  const params = await paramsPromise
+  const denied = await guardAdminApi('ministries')
+  if (denied) return denied
+
   try {
     const body = await request.json()
     const updates = buildPayload(body)
@@ -93,7 +98,11 @@ export async function PATCH(request: Request, { params }: { params: { id: string
   }
 }
 
-export async function DELETE(_: Request, { params }: { params: { id: string } }) {
+export async function DELETE(_: Request, { params: paramsPromise }: { params: Promise<{ id: string }> }) {
+  const params = await paramsPromise
+  const denied = await guardAdminApi('ministries')
+  if (denied) return denied
+
   try {
     await prisma.ministry.delete({ where: { id: params.id } })
     return NextResponse.json({ success: true })

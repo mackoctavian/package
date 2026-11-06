@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server'
 import prisma from '@/lib/prisma'
+import { guardAdminApi } from '@/lib/auth/api-guard'
 
 export async function GET() {
   try {
@@ -13,6 +14,9 @@ export async function GET() {
 }
 
 export async function POST(request: Request) {
+  const denied = await guardAdminApi('homepage')
+  if (denied) return denied
+
   try {
     const body = await request.json()
     

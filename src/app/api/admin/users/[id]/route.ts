@@ -24,7 +24,8 @@ const serializeUser = (user: {
   createdAt: user.createdAt,
 })
 
-export const PATCH = async (request: Request, { params }: { params: { id: string } }) => {
+export const PATCH = async (request: Request, { params: paramsPromise }: { params: Promise<{ id: string }> }) => {
+  const params = await paramsPromise
   const auth = await requireAdminApiAccess('team')
   if ('error' in auth) {
     return NextResponse.json({ error: auth.error }, { status: auth.status })
@@ -107,7 +108,8 @@ export const PATCH = async (request: Request, { params }: { params: { id: string
   return NextResponse.json({ data: serializeUser(updated) })
 }
 
-export const DELETE = async (_request: Request, { params }: { params: { id: string } }) => {
+export const DELETE = async (_request: Request, { params: paramsPromise }: { params: Promise<{ id: string }> }) => {
+  const params = await paramsPromise
   const auth = await requireAdminApiAccess('team')
   if ('error' in auth) {
     return NextResponse.json({ error: auth.error }, { status: auth.status })

@@ -1,8 +1,13 @@
 import { NextResponse } from 'next/server'
 import prisma from '@/lib/prisma'
 import { nanoid } from 'nanoid'
+import { guardAdminApi } from '@/lib/auth/api-guard'
 
-export async function POST(request: Request, { params }: { params: { id: string } }) {
+export async function POST(request: Request, { params: paramsPromise }: { params: Promise<{ id: string }> }) {
+  const params = await paramsPromise
+  const denied = await guardAdminApi('retreats')
+  if (denied) return denied
+
   try {
     const bookingId = params.id
 

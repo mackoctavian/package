@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server'
 import prisma from '@/lib/prisma'
+import { guardAdminApi } from '@/lib/auth/api-guard'
 
 const getQuickLinkId = (request: Request, params?: { id?: string }) => {
   if (params?.id) return params.id
@@ -8,7 +9,11 @@ const getQuickLinkId = (request: Request, params?: { id?: string }) => {
   return segments[segments.length - 1] ?? ''
 }
 
-export async function PATCH(request: Request, { params }: { params: { id: string } }) {
+export async function PATCH(request: Request, { params: paramsPromise }: { params: Promise<{ id: string }> }) {
+  const params = await paramsPromise
+  const denied = await guardAdminApi('homepage')
+  if (denied) return denied
+
   try {
     const quickLinkId = getQuickLinkId(request, params)
     if (!quickLinkId) {
@@ -35,7 +40,11 @@ export async function PATCH(request: Request, { params }: { params: { id: string
   }
 }
 
-export async function DELETE(request: Request, { params }: { params: { id: string } }) {
+export async function DELETE(request: Request, { params: paramsPromise }: { params: Promise<{ id: string }> }) {
+  const params = await paramsPromise
+  const denied = await guardAdminApi('homepage')
+  if (denied) return denied
+
   try {
     const quickLinkId = getQuickLinkId(request, params)
     if (!quickLinkId) {

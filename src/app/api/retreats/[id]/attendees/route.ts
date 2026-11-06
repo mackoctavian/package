@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server'
 import prisma from '@/lib/prisma'
+import { guardAdminApi } from '@/lib/auth/api-guard'
 
 // Get all attendees/bookings for a specific retreat
 const getRetreatId = (request: Request, params?: { id?: string }) => {
@@ -9,7 +10,11 @@ const getRetreatId = (request: Request, params?: { id?: string }) => {
   return segments[segments.length - 2] ?? ''
 }
 
-export async function GET(request: Request, { params }: { params: { id: string } }) {
+export async function GET(request: Request, { params: paramsPromise }: { params: Promise<{ id: string }> }) {
+  const params = await paramsPromise
+  const denied = await guardAdminApi('retreats')
+  if (denied) return denied
+
   try {
     const retreatId = getRetreatId(request, params)
     if (!retreatId) {

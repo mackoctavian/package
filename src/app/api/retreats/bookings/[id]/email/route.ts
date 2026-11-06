@@ -2,12 +2,17 @@ import { NextResponse } from 'next/server'
 
 import prisma from '@/lib/prisma'
 import { sendRetreatBookingEmail, type RetreatBookingEmailKind } from '@/lib/email/retreat-booking'
+import { guardAdminApi } from '@/lib/auth/api-guard'
 
 type RouteContext = {
-  params: { id: string }
+  params: Promise<{ id: string }>
 }
 
-export async function POST(request: Request, { params }: RouteContext) {
+export async function POST(request: Request, { params: paramsPromise }: RouteContext) {
+  const params = await paramsPromise
+  const denied = await guardAdminApi('retreats')
+  if (denied) return denied
+
   try {
     const body = await request.json().catch(() => ({}))
     const ticketCode = typeof body?.ticketCode === 'string' ? body.ticketCode.trim() : ''

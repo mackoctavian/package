@@ -4,12 +4,16 @@ import { Prisma } from '@prisma/client'
 import prisma from '@/lib/prisma'
 import { mapPrismaRetreat } from '../utils'
 import { retreatUpdateSchema } from '@/lib/validators/retreat'
+import { guardAdminApi } from '@/lib/auth/api-guard'
 
 type RouteContext = {
-  params: { id: string }
+  params: Promise<{ id: string }>
 }
 
 export const GET = async (_request: Request, context: RouteContext) => {
+  const denied = await guardAdminApi('retreats')
+  if (denied) return denied
+
   try {
     const params = await context.params
     const record = await prisma.retreat.findUnique({
@@ -29,6 +33,9 @@ export const GET = async (_request: Request, context: RouteContext) => {
 }
 
 export const PATCH = async (request: Request, context: RouteContext) => {
+  const denied = await guardAdminApi('retreats')
+  if (denied) return denied
+
   const params = await context.params
   const json = await request.json()
   const parsed = retreatUpdateSchema.safeParse(json)
@@ -95,6 +102,9 @@ export const PATCH = async (request: Request, context: RouteContext) => {
 }
 
 export const DELETE = async (_request: Request, context: RouteContext) => {
+  const denied = await guardAdminApi('retreats')
+  if (denied) return denied
+
   try {
     const params = await context.params
     await prisma.retreat.delete({

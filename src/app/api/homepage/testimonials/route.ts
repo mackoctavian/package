@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 import prisma from '@/lib/prisma'
 import { type TestimonialType } from '@/app/types/testimonial'
+import { guardAdminApi } from '@/lib/auth/api-guard'
 
 const FALLBACK_TESTIMONIALS: Array<{ name: string; role: string; imageUrl: string; quote: string; rating: number; order: number; isActive: boolean }> = [
   {
@@ -48,6 +49,9 @@ export async function GET() {
 }
 
 export async function POST(request: Request) {
+  const denied = await guardAdminApi('homepage')
+  if (denied) return denied
+
   try {
     const body = await request.json()
     

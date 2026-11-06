@@ -1,10 +1,14 @@
 import { NextResponse } from 'next/server'
 
 import { uploadToSupabaseStorage } from '@/lib/supabase/uploads'
+import { guardAdminApi } from '@/lib/auth/api-guard'
 
 export const runtime = 'nodejs'
 
 export async function POST(request: Request) {
+  const denied = await guardAdminApi()
+  if (denied) return denied
+
   try {
     const formData = await request.formData()
     const file = formData.get('file')
