@@ -1,6 +1,10 @@
 import { NextResponse } from 'next/server'
 
 import prisma from '@/lib/prisma'
+import type { AdminModuleId } from '@/lib/auth/admin-permissions'
+import { guardAdminApi } from '@/lib/auth/api-guard'
+
+type RouteContext = { params: Promise<{ type: string; id: string }> }
 
 const SUPPORTED_TYPES = new Set(['gallery', 'news', 'events', 'publications', 'patrons', 'about', 'ministries', 'articles'])
 
@@ -35,9 +39,18 @@ const buildPayload = (body: any) => {
   return payload
 }
 
-export const PATCH = async (request: Request, { params }: { params: { type: string; id: string } }) => {
+export const PATCH = async (request: Request, context: RouteContext) => {
+  const params = await context.params
+  let type: string
   try {
-    resolveType(params.type)
+    type = resolveType(params.type)
+  } catch (error) {
+    return NextResponse.json({ error: (error as Error).message }, { status: 400 })
+  }
+  const denied = await guardAdminApi(type as AdminModuleId)
+  if (denied) return denied
+
+  try {
     const json = await request.json()
     const data = buildPayload(json)
     if (!Object.keys(data).length) {
@@ -55,11 +68,20 @@ export const PATCH = async (request: Request, { params }: { params: { type: stri
   }
 }
 
-export const DELETE = async (_: Request, { params }: { params: { type: string; id: string } }) => {
+export const DELETE = async (_: Request, context: RouteContext) => {
+  const params = await context.params
+  let type: string
   try {
-    resolveType(params.type)
+    type = resolveType(params.type)
+  } catch (error) {
+    return NextResponse.json({ error: (error as Error).message }, { status: 400 })
+  }
+  const denied = await guardAdminApi(type as AdminModuleId)
+  if (denied) return denied
+
+  try {
     await prisma.contentItem.delete({
-      where: { id: params.id },
+      where: { id: params.id, type },
     })
     return NextResponse.json({ success: true })
   } catch (error) {

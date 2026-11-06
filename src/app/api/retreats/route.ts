@@ -4,6 +4,7 @@ import { retreatData } from '@/app/data/retreats'
 import prisma from '@/lib/prisma'
 import { mapPrismaRetreat } from './utils'
 import { retreatInputSchema } from '@/lib/validators/retreat'
+import { guardAdminApi } from '@/lib/auth/api-guard'
 
 export const GET = async () => {
   try {
@@ -20,6 +21,9 @@ export const GET = async () => {
 }
 
 export const POST = async (request: Request) => {
+  const denied = await guardAdminApi('retreats')
+  if (denied) return denied
+
   try {
     const json = await request.json()
     const parsed = retreatInputSchema.safeParse(json)

@@ -1,8 +1,12 @@
 import { NextResponse } from 'next/server'
 import prisma from '@/lib/prisma'
+import { guardAdminApi } from '@/lib/auth/api-guard'
 
 // Scan QR code and check in user
 export async function POST(request: Request) {
+  const denied = await guardAdminApi('retreats')
+  if (denied) return denied
+
   try {
     const body = await request.json()
     const { ticketCode } = body
@@ -106,6 +110,9 @@ export async function POST(request: Request) {
 
 // Lookup ticket info without checking in
 export async function GET(request: Request) {
+  const denied = await guardAdminApi('retreats')
+  if (denied) return denied
+
   try {
     const { searchParams } = new URL(request.url)
     const ticketCode = searchParams.get('code')

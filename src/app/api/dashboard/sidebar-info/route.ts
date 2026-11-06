@@ -1,6 +1,10 @@
 import { NextResponse } from 'next/server'
+import { guardAdminApi } from '@/lib/auth/api-guard'
 
 export const GET = async () => {
+  const denied = await guardAdminApi()
+  if (denied) return denied
+
   return NextResponse.json({
     profile: {
       id: 'admin',

@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 
 import prisma from '@/lib/prisma'
+import { guardAdminApi } from '@/lib/auth/api-guard'
 
 const mapRecord = (record: any) => ({
   id: record.id,
@@ -72,6 +73,9 @@ export async function GET(request: Request) {
 }
 
 export async function POST(request: Request) {
+  const denied = await guardAdminApi('ministries')
+  if (denied) return denied
+
   try {
     const body = await request.json()
     const payload = buildPayload(body)

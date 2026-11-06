@@ -1,6 +1,10 @@
 import { NextResponse } from 'next/server'
 
 import prisma from '@/lib/prisma'
+import type { AdminModuleId } from '@/lib/auth/admin-permissions'
+import { guardAdminApi, isAdminRequest } from '@/lib/auth/api-guard'
+
+type RouteContext = { params: Promise<{ type: string }> }
 
 const SUPPORTED_TYPES = new Set(['gallery', 'news', 'events', 'publications', 'patrons', 'about', 'ministries', 'articles'])
 
@@ -40,12 +44,14 @@ const buildPayload = (body: any) => {
   }
 }
 
-export const GET = async (_: Request, context: { params: { type: string } }) => {
+export const GET = async (_: Request, context: RouteContext) => {
   try {
     const params = await context.params
     const type = resolveType(params.type)
+    // Drafts are only visible to admins who manage this content type.
+    const canSeeDrafts = await isAdminRequest(type as AdminModuleId)
     const items = await prisma.contentItem.findMany({
-      where: { type },
+      where: canSeeDrafts ? { type } : { type, status: 'published' },
       orderBy: { updatedAt: 'desc' },
     })
     return NextResponse.json({ data: items })
@@ -54,10 +60,18 @@ export const GET = async (_: Request, context: { params: { type: string } }) => 
   }
 }
 
-export const POST = async (request: Request, context: { params: { type: string } }) => {
+export const POST = async (request: Request, context: RouteContext) => {
+  const params = await context.params
+  let type: string
   try {
-    const params = await context.params
-    const type = resolveType(params.type)
+    type = resolveType(params.type)
+  } catch (error) {
+    return NextResponse.json({ error: (error as Error).message }, { status: 400 })
+  }
+  const denied = await guardAdminApi(type as AdminModuleId)
+  if (denied) return denied
+
+  try {
     const raw = await request.json()
     const payload = buildPayload(raw)
 

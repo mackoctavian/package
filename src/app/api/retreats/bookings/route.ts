@@ -5,12 +5,16 @@ import prisma from '@/lib/prisma'
 import { retreatBookingPayloadSchema } from '@/lib/validators/retreat'
 import { sendRetreatBookingEmail } from '@/lib/email/retreat-booking'
 import { mapPrismaBooking } from './utils'
+import { guardAdminApi, isAdminRequest } from '@/lib/auth/api-guard'
 
 const normalizePhone = (value?: string | null) => value?.replace(/\s+/g, '') ?? undefined
 
 const generateTicketCode = () => `DMRC-${nanoid(8).toUpperCase()}`
 
 export const GET = async () => {
+  const denied = await guardAdminApi('retreats')
+  if (denied) return denied
+
   try {
     const records = await prisma.retreatBooking.findMany({
       orderBy: { createdAt: 'desc' },
@@ -30,27 +34,43 @@ export const POST = async (request: Request) => {
     return NextResponse.json({ error: parsed.error.flatten() }, { status: 400 })
   }
 
-  const { retreatId, retreatTitle, form, note, paymentStatus } = parsed.data
+  const { retreatId, form, note } = parsed.data
 
   try {
+    const retreat = await prisma.retreat.findUnique({
+      where: { id: retreatId },
+      select: { id: true, title: true, status: true, isPaid: true },
+    })
+    if (!retreat) {
+      return NextResponse.json({ error: 'This retreat could not be found.' }, { status: 404 })
+    }
+    const isAdmin = await isAdminRequest('retreats')
+    if (retreat.status === 'Closed' && !isAdmin) {
+      return NextResponse.json({ error: 'Registration for this retreat is closed.' }, { status: 409 })
+    }
+
+    // Payment status is decided by the server: the public form cannot mark a booking as paid.
+    const paymentStatus =
+      isAdmin && parsed.data.paymentStatus ? parsed.data.paymentStatus : retreat.isPaid === false ? 'waived' : 'pending'
+
     // Generate a unique ticket code
     const ticketCode = generateTicketCode()
 
     const created = await prisma.retreatBooking.create({
       data: {
-        retreatId,
-        retreatTitle,
+        retreatId: retreat.id,
+        retreatTitle: retreat.title,
         fullName: form.fullName,
         email: form.email,
         phone: normalizePhone(form.phone) ?? form.phone,
         whatsapp: normalizePhone(form.whatsapp) ?? form.whatsapp,
         status: 'pending',
-        paymentStatus: paymentStatus ?? 'pending',
+        paymentStatus,
         attended: false,
         ticketCode,
         familyMembers: form.familyMembers ?? [],
         formPayload: form,
-        notes: note,
+        notes: isAdmin ? note : undefined,
       },
     })
 
