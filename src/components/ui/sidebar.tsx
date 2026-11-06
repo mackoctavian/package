@@ -42,7 +42,7 @@ export function SidebarProvider({ defaultOpen = true, children }: SidebarProvide
       toggleSidebar: () => setOpen((prev) => !prev),
       setOpenMobile: setOpen,
       isMobile,
-      state: open ? 'expanded' : 'collapsed',
+      state: (open ? 'expanded' : 'collapsed') as SidebarContextValue['state'],
     }),
     [open, isMobile],
   )

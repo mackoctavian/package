@@ -1,7 +1,9 @@
+import { Prisma } from '@prisma/client'
 import { NextResponse } from 'next/server'
 
 import prisma from '@/lib/prisma'
 import { requireAdminApiAccess } from '@/lib/auth/admin-session'
+import { botResponse, isBotSubmission, rateLimit } from '@/lib/security/public-form'
 
 type FeedbackPayload = {
   firstname?: string
@@ -60,8 +62,12 @@ export const GET = async () => {
 }
 
 export const POST = async (request: Request) => {
+  const limited = rateLimit(request, 'feedback', { limit: 5, windowMs: 10 * 60_000 })
+  if (limited) return limited
+
   try {
     const json = await request.json()
+    if (isBotSubmission(json)) return botResponse()
     const validation = validateFeedbackPayload(json)
     if ('error' in validation) {
       return NextResponse.json({ error: validation.error }, { status: 400 })
@@ -76,7 +82,7 @@ export const POST = async (request: Request) => {
         email: payload.email,
         phoneNumber: payload.phnumber,
         message: payload.message,
-        metadata: (json?.metadata as Record<string, unknown> | undefined) ?? { source: 'homepage/contact-form' },
+        metadata: ((json?.metadata as Prisma.InputJsonValue | undefined) ?? { source: 'homepage/contact-form' }) as Prisma.InputJsonValue,
       },
     })
 

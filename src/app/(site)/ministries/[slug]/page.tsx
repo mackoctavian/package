@@ -72,7 +72,7 @@ export default async function MinistryDetailPage({ params }: MinistryRouteProps)
                         <SmartImage src={activity.image} alt={activity.title} fill sizes='(min-width: 1024px) 30vw, 100vw' className='object-cover' />
                       </div>
                       <div className='p-6'>
-                        {formatDate(activity.date) && <p className='text-xs font-semibold uppercase tracking-widest text-gold-600'>{formatDate(activity.date)}</p>}
+                        {formatDate(activity.date) && <p className='text-xs font-semibold uppercase tracking-widest text-gold-700'>{formatDate(activity.date)}</p>}
                         <h3 className='mt-2 font-display text-2xl font-semibold text-navy-900'>{activity.title}</h3>
                         <p className='mt-2 text-sm leading-relaxed text-muted-foreground'>{activity.description}</p>
                       </div>
@@ -114,7 +114,7 @@ export default async function MinistryDetailPage({ params }: MinistryRouteProps)
                 <div className='rounded-[2rem] bg-parchment p-8'>
                   <h2 className='font-display text-2xl font-semibold text-navy-900'>Connect with the team</h2>
                   <p className='mt-3 flex items-center gap-2 text-sm text-navy-800'>
-                    <UserRound className='h-4 w-4 text-gold-600' /> {ministry.contact.coordinator}
+                    <UserRound className='h-4 w-4 text-gold-700' /> {ministry.contact.coordinator}
                   </p>
                   <div className='mt-5 flex flex-col gap-2'>
                     {ministry.contact.email && (

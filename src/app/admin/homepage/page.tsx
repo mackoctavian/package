@@ -186,13 +186,13 @@ export default function HomepageCMSPage() {
   // Mutations
   const createMutation = useMutation({
     mutationFn: async ({ section, data }: { section: SectionType; data: any }) => {
-      const endpoints = {
+      const endpoints: Record<Exclude<SectionType, 'branding'>, string> = {
         hero: '/api/homepage/hero',
         patrons: '/api/homepage/patrons',
         testimonials: '/api/homepage/testimonials',
         quickLinks: '/api/homepage/quick-links',
       }
-      const res = await fetch(endpoints[section], {
+      const res = await fetch(endpoints[section as Exclude<SectionType, 'branding'>], {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(data),
@@ -211,13 +211,13 @@ export default function HomepageCMSPage() {
 
   const updateMutation = useMutation({
     mutationFn: async ({ section, id, data }: { section: SectionType; id: string; data: any }) => {
-      const endpoints = {
+      const endpoints: Record<Exclude<SectionType, 'branding'>, string> = {
         hero: `/api/homepage/hero/${id}`,
         patrons: `/api/homepage/patrons/${id}`,
         testimonials: `/api/homepage/testimonials/${id}`,
         quickLinks: `/api/homepage/quick-links/${id}`,
       }
-      const res = await fetch(endpoints[section], {
+      const res = await fetch(endpoints[section as Exclude<SectionType, 'branding'>], {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(data),
@@ -236,13 +236,13 @@ export default function HomepageCMSPage() {
 
   const deleteMutation = useMutation({
     mutationFn: async ({ section, id }: { section: SectionType; id: string }) => {
-      const endpoints = {
+      const endpoints: Record<Exclude<SectionType, 'branding'>, string> = {
         hero: `/api/homepage/hero/${id}`,
         patrons: `/api/homepage/patrons/${id}`,
         testimonials: `/api/homepage/testimonials/${id}`,
         quickLinks: `/api/homepage/quick-links/${id}`,
       }
-      const res = await fetch(endpoints[section], { method: 'DELETE' })
+      const res = await fetch(endpoints[section as Exclude<SectionType, 'branding'>], { method: 'DELETE' })
       if (!res.ok) throw new Error('Failed to delete')
       return res.json()
     },

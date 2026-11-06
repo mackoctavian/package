@@ -93,8 +93,12 @@
   .container {
     @apply mx-auto w-full max-w-7xl px-4 sm:px-6 lg:px-8;
   }
+}
+
+/* Components layer so colour utilities (e.g. text-gold-300 on dark heroes) override the default. */
+@layer components {
   .eyebrow {
-    @apply inline-flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.2em] text-gold-600;
+    @apply inline-flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.2em] text-gold-700;
   }
   .eyebrow::before {
     content: '';

@@ -328,8 +328,8 @@ export function AdminMembersManager() {
             <Button variant='outline' onClick={() => setIsInviteOpen(false)}>
               Cancel
             </Button>
-            <Button onClick={() => createMutation.mutate()} disabled={createMutation.isLoading}>
-              {createMutation.isLoading ? <Loader2 className='h-4 w-4 animate-spin' /> : 'Invite admin'}
+            <Button onClick={() => createMutation.mutate()} disabled={createMutation.isPending}>
+              {createMutation.isPending ? <Loader2 className='h-4 w-4 animate-spin' /> : 'Invite admin'}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -399,8 +399,8 @@ export function AdminMembersManager() {
             <Button variant='outline' onClick={() => setIsEditOpen(false)}>
               Cancel
             </Button>
-            <Button onClick={() => updateMutation.mutate()} disabled={updateMutation.isLoading}>
-              {updateMutation.isLoading ? <Loader2 className='h-4 w-4 animate-spin' /> : 'Save changes'}
+            <Button onClick={() => updateMutation.mutate()} disabled={updateMutation.isPending}>
+              {updateMutation.isPending ? <Loader2 className='h-4 w-4 animate-spin' /> : 'Save changes'}
             </Button>
           </DialogFooter>
         </DialogContent>

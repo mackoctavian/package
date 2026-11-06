@@ -66,7 +66,7 @@ export default function ApostolatePage() {
         <div className='container grid gap-6 md:grid-cols-2'>
           {sections.map((section) => (
             <article key={section.title} className='flex flex-col rounded-[2rem] border border-border bg-white p-8 shadow-soft'>
-              <span className='flex h-12 w-12 items-center justify-center rounded-2xl bg-parchment text-gold-600'>
+              <span className='flex h-12 w-12 items-center justify-center rounded-2xl bg-parchment text-gold-700'>
                 <section.icon className='h-6 w-6' />
               </span>
               <h2 className='mt-5 text-3xl'>{section.title}</h2>

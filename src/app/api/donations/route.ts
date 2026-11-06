@@ -1,7 +1,9 @@
+import { Prisma } from '@prisma/client'
 import { NextResponse } from 'next/server'
 
 import prisma from '@/lib/prisma'
 import { requireAdminApiAccess } from '@/lib/auth/admin-session'
+import { botResponse, isBotSubmission, rateLimit } from '@/lib/security/public-form'
 
 type DonationPayload = {
   fullName?: string
@@ -73,8 +75,12 @@ export const GET = async () => {
 }
 
 export const POST = async (request: Request) => {
+  const limited = rateLimit(request, 'donations', { limit: 10, windowMs: 10 * 60_000 })
+  if (limited) return limited
+
   try {
     const json = await request.json()
+    if (isBotSubmission(json)) return botResponse()
     const validation = validatePayload(json)
     if ('error' in validation) {
       return NextResponse.json({ error: validation.error }, { status: 400 })
@@ -91,7 +97,7 @@ export const POST = async (request: Request) => {
         currency: payload.currency,
         paymentMethod: payload.paymentMethod,
         prayerIntention: payload.prayerIntention,
-        metadata: (json?.metadata as Record<string, unknown> | undefined) ?? { source: 'donation-form' },
+        metadata: ((json?.metadata as Prisma.InputJsonValue | undefined) ?? { source: 'donation-form' }) as Prisma.InputJsonValue,
       },
     })
 

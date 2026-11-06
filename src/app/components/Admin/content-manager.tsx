@@ -344,7 +344,7 @@ export function ContentManager({ type, title, description, emptyState, metadataF
     setIsDeleteOpen(true)
   }
 
-  const isSaving = createMutation.isLoading || updateMutation.isLoading
+  const isSaving = createMutation.isPending || updateMutation.isPending
 
   const renderForm = () => {
     if (type === 'news') {
@@ -486,15 +486,15 @@ export function ContentManager({ type, title, description, emptyState, metadataF
             <DialogDescription>This action cannot be undone. The entry will be permanently removed.</DialogDescription>
           </DialogHeader>
           <DialogFooter>
-            <Button variant='ghost' onClick={() => setIsDeleteOpen(false)} disabled={deleteMutation.isLoading}>
+            <Button variant='ghost' onClick={() => setIsDeleteOpen(false)} disabled={deleteMutation.isPending}>
               Cancel
             </Button>
             <Button
               variant='destructive'
               className='gap-2'
-              disabled={deleteMutation.isLoading}
+              disabled={deleteMutation.isPending}
               onClick={() => deleteId && deleteMutation.mutate(deleteId)}>
-              {deleteMutation.isLoading ? <Loader2 className='h-4 w-4 animate-spin' /> : <Trash2 className='h-4 w-4' />}
+              {deleteMutation.isPending ? <Loader2 className='h-4 w-4 animate-spin' /> : <Trash2 className='h-4 w-4' />}
               Delete
             </Button>
           </DialogFooter>

@@ -185,7 +185,7 @@ export function MassAndGivingSection() {
           <Link
             key={panel.href}
             href={panel.href}
-            className='group relative isolate flex min-h-[420px] flex-col justify-end overflow-hidden rounded-[2rem] p-8 text-white shadow-lift sm:p-10'
+            className='group relative isolate flex min-h-[420px] flex-col justify-end overflow-hidden rounded-[2rem] bg-navy-900 p-8 text-white shadow-lift sm:p-10'
           >
             <SmartImage
               src={panel.image}

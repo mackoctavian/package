@@ -37,7 +37,7 @@ export default async function PublicationsPage() {
           <div className='container grid gap-4 py-6 sm:grid-cols-3'>
             {perks.map((perk) => (
               <div key={perk.title} className='flex items-start gap-3'>
-                <perk.icon className='mt-0.5 h-5 w-5 shrink-0 text-gold-600' />
+                <perk.icon className='mt-0.5 h-5 w-5 shrink-0 text-gold-700' />
                 <div>
                   <p className='text-sm font-semibold text-navy-900'>{perk.title}</p>
                   <p className='text-xs text-muted-foreground'>{perk.text}</p>

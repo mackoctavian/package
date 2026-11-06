@@ -7,7 +7,7 @@ import { ArrowRight, CheckCircle2, Loader2 } from 'lucide-react'
 import { givingFunds } from '@/app/data/giving'
 
 import { Button } from '@/app/components/ui/button'
-import { Field, inputClass } from '@/app/components/site/FormFields'
+import { Field, Honeypot, inputClass } from '@/app/components/site/FormFields'
 import MockCheckout from '@/app/components/giving/MockCheckout'
 import { cn } from '@/lib/utils'
 
@@ -27,6 +27,7 @@ export default function DonationFlow() {
   const [details, setDetails] = useState({ fullName: '', email: '', phone: '', prayerIntention: '' })
   const [errors, setErrors] = useState<Record<string, string>>({})
   const [saving, setSaving] = useState(false)
+  const [website, setWebsite] = useState('')
   const [saveError, setSaveError] = useState<string | null>(null)
   const [reference] = useState(makeReference)
 
@@ -67,6 +68,7 @@ export default function DonationFlow() {
           currency: 'TZS',
           paymentMethod: method,
           metadata: { source: 'donation-page', fund, reference, demoCheckout: true },
+          website,
         }),
       })
       if (!response.ok) {
@@ -136,7 +138,7 @@ export default function DonationFlow() {
                       )}
                     >
                       <input type='radio' name='fund' className='sr-only' checked={active} onChange={() => setFund(item.id)} />
-                      <item.icon className={cn('mt-0.5 h-5 w-5 shrink-0', active ? 'text-navy-900' : 'text-gold-600')} />
+                      <item.icon className={cn('mt-0.5 h-5 w-5 shrink-0', active ? 'text-navy-900' : 'text-gold-700')} />
                       <span>
                         <span className='block font-semibold text-navy-900'>{item.label}</span>
                         <span className='mt-0.5 block text-xs text-muted-foreground'>{item.text}</span>
@@ -206,6 +208,7 @@ export default function DonationFlow() {
 
         {step === 'details' && (
           <div className='space-y-5'>
+            <Honeypot value={website} onChange={setWebsite} />
             <Field label='Full name' htmlFor='d-name' required error={errors.fullName}>
               <input
                 id='d-name'

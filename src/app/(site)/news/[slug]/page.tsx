@@ -117,7 +117,7 @@ export default async function NewsDetailPage({ params }: NewsRouteProps) {
                         <li key={retreat.id}>
                           <Link href={retreat.detailHref || `/events/${retreat.slug}`} className='group flex gap-4'>
                             <span className='flex h-14 w-14 shrink-0 flex-col items-center justify-center rounded-xl bg-parchment'>
-                              <span className='text-[10px] font-semibold tracking-widest text-gold-600'>{date?.month ?? 'TBA'}</span>
+                              <span className='text-[10px] font-semibold tracking-widest text-gold-700'>{date?.month ?? 'TBA'}</span>
                               <span className='font-display text-xl font-bold leading-none text-navy-900'>{date?.day ?? ''}</span>
                             </span>
                             <span>

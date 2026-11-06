@@ -3,6 +3,7 @@
 import { useState } from 'react'
 import { CheckCircle2, Clock, Loader2, Mail, MapPin, Phone, Send } from 'lucide-react'
 
+import { Honeypot } from '@/app/components/site/FormFields'
 import { Button } from '@/app/components/ui/button'
 import { siteConfig } from '@/app/data/site'
 import { cn } from '@/lib/utils'
@@ -16,6 +17,7 @@ export default function ContactSection() {
   const [form, setForm] = useState(emptyForm)
   const [status, setStatus] = useState<'idle' | 'submitting' | 'success' | 'error'>('idle')
   const [error, setError] = useState<string | null>(null)
+  const [website, setWebsite] = useState('')
 
   const update = (event: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) =>
     setForm((prev) => ({ ...prev, [event.target.name]: event.target.value }))
@@ -28,7 +30,7 @@ export default function ContactSection() {
       const response = await fetch('/api/feedback', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ ...form, metadata: { source: 'homepage-contact' } }),
+        body: JSON.stringify({ ...form, metadata: { source: 'homepage-contact' }, website }),
       })
       if (!response.ok) {
         const payload = await response.json().catch(() => ({}))
@@ -58,31 +60,31 @@ export default function ContactSection() {
           <p className='mt-4 text-lg text-muted-foreground'>
             Questions about a retreat, a group booking or a Mass intention? Our office team will reply within one working day.
           </p>
-          <dl className='mt-10 grid gap-6 sm:grid-cols-2'>
+          <ul className='mt-10 grid gap-6 sm:grid-cols-2'>
             {details.map((item) => (
-              <div key={item.label} className='flex gap-4'>
-                <span className='flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-navy-900 text-gold-300'>
+              <li key={item.label} className='flex gap-4'>
+                <span aria-hidden='true' className='flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-navy-900 text-gold-300'>
                   <item.icon className='h-5 w-5' />
                 </span>
                 <div>
-                  <dt className='text-xs font-semibold uppercase tracking-wider text-muted-foreground'>{item.label}</dt>
+                  <p className='text-xs font-semibold uppercase tracking-wider text-muted-foreground'>{item.label}</p>
                   {item.lines.map((line) =>
                     item.href ? (
-                      <dd key={line}>
+                      <p key={line}>
                         <a href={item.href} className='text-navy-900 hover:text-gold-600' target={item.href.startsWith('http') ? '_blank' : undefined} rel='noopener noreferrer'>
                           {line}
                         </a>
-                      </dd>
+                      </p>
                     ) : (
-                      <dd key={line} className='text-navy-900'>
+                      <p key={line} className='text-navy-900'>
                         {line}
-                      </dd>
+                      </p>
                     ),
                   )}
                 </div>
-              </div>
+              </li>
             ))}
-          </dl>
+          </ul>
         </div>
 
         <div className='lg:col-span-7'>
@@ -98,6 +100,7 @@ export default function ContactSection() {
               </div>
             ) : (
               <form onSubmit={submit} className='grid gap-5 sm:grid-cols-2'>
+                <Honeypot value={website} onChange={setWebsite} />
                 <label className='block'>
                   <span className='mb-1.5 block text-sm font-medium text-navy-800'>First name</span>
                   <input required name='firstname' autoComplete='given-name' value={form.firstname} onChange={update} className={fieldClass} />
