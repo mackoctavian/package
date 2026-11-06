@@ -1,268 +1,64 @@
-'use client'
+import type { Metadata } from 'next'
+import { Quote } from 'lucide-react'
 
-import { useMemo, useState } from 'react'
+import SmartImage from '@/app/components/site/SmartImage'
+import DonationFlow from '@/app/components/giving/DonationFlow'
+import { givingFunds as funds } from '@/app/data/giving'
+import { imagery } from '@/app/data/site'
 
-const presetAmounts = [50000, 100000, 200000, 500000]
-const paymentOptions = [
-  { id: 'card', label: 'Card Payment', description: 'Visa, Mastercard, Amex' },
-  { id: 'mobile', label: 'Mobile Money', description: 'M-Pesa, Tigo Pesa, Airtel Money' },
-  { id: 'bank', label: 'Bank Transfer', description: 'Direct bank transfer instructions' },
-]
-
-const formatCurrency = (value: number) =>
-  new Intl.NumberFormat('sw-TZ', { style: 'currency', currency: 'TZS', maximumFractionDigits: 0 }).format(value)
+export const metadata: Metadata = {
+  title: 'Give online',
+  description: 'Support the Divine Mercy Retreat Center: retreat scholarships, mercy outreach and the care of the chapel and house.',
+}
 
 export default function DonationPage() {
-  const [selectedAmount, setSelectedAmount] = useState<number | null>(presetAmounts[0])
-  const [customAmount, setCustomAmount] = useState('')
-  const [paymentMethod, setPaymentMethod] = useState(paymentOptions[0].id)
-  const [status, setStatus] = useState<'idle' | 'submitting' | 'submitted'>('idle')
-  const [submitError, setSubmitError] = useState<string | null>(null)
-  const [form, setForm] = useState({
-    fullName: '',
-    email: '',
-    phone: '',
-    prayerIntention: '',
-  })
-
-  const amount = useMemo(() => {
-    if (customAmount) {
-      const parsed = Number(customAmount.replace(/[^0-9]/g, ''))
-      return Number.isFinite(parsed) && parsed > 0 ? parsed : null
-    }
-    return selectedAmount
-  }, [customAmount, selectedAmount])
-
-  const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
-    event.preventDefault()
-    if (!amount) {
-      return
-    }
-
-    setStatus('submitting')
-    setSubmitError(null)
-
-    try {
-      const response = await fetch('/api/donations', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          fullName: form.fullName,
-          email: form.email,
-          phone: form.phone,
-          amount,
-          currency: 'TZS',
-          paymentMethod,
-          prayerIntention: form.prayerIntention,
-          metadata: { source: 'donation-page' },
-        }),
-      })
-
-      if (!response.ok) {
-        const payload = await response.json().catch(() => ({}))
-        throw new Error(payload.error ?? 'Unable to submit your donation right now.')
-      }
-
-      setStatus('submitted')
-      setForm({ fullName: '', email: '', phone: '', prayerIntention: '' })
-      setCustomAmount('')
-      setSelectedAmount(presetAmounts[0])
-    } catch (error) {
-      setSubmitError(error instanceof Error ? error.message : 'Unable to submit donation. Please try again later.')
-      setStatus('idle')
-    }
-  }
-
   return (
-    <section className='py-28'>
-      <div className='w-full px-2 sm:px-4 lg:px-6'>
-        <div className='w-full max-w-7xl mx-auto'>
-          {/* Header Section */}
-          <div className='mb-10 space-y-6'>
-            <p className='text-xs font-semibold uppercase tracking-[0.45em] text-primary'>Mission Partner</p>
-            <h1 className='text-4xl font-semibold text-slate-900 sm:text-5xl'>
-              Sustain Divine Mercy Retreat Center with a gift
-            </h1>
-            <p className='text-base text-slate-600 max-w-4xl'>
-              Every donation fuels evangelisation, retreat scholarships, pastoral counselling, and mercy missions across
-              Tanzania. Choose a preset amount or enter a custom gift and we'll guide you through the payment method you
-              prefer.
-            </p>
-          </div>
-
-          {/* Info Section */}
-          <div className='mb-10'>
-            <div className='rounded-3xl border border-slate-200 bg-white/80 p-6 shadow-[0_20px_55px_rgba(15,23,42,0.1)] max-w-4xl'>
-              <h2 className='text-xl font-semibold text-slate-900'>Where your giving goes</h2>
-              <ul className='mt-4 space-y-3 text-sm text-slate-600'>
-                <li className='flex items-start gap-3'>
-                  <span className='mt-1 h-2 w-2 rounded-full bg-primary'></span>
-                  Scholarships for families and young adults attending retreats.
-                </li>
-                <li className='flex items-start gap-3'>
-                  <span className='mt-1 h-2 w-2 rounded-full bg-primary'></span>
-                  Mercy missions, parish outreach, and counselling services.
-                </li>
-                <li className='flex items-start gap-3'>
-                  <span className='mt-1 h-2 w-2 rounded-full bg-primary'></span>
-                  Daily operations of the chapel, prayer house, and hospitality team.
-                </li>
-              </ul>
-              <p className='mt-5 text-sm text-slate-500'>
-                DMRC is a registered apostolate. You'll receive an emailed confirmation with your donation summary.
-              </p>
-            </div>
-          </div>
-
-          {/* Form Section */}
-          <div className='rounded-3xl border border-slate-200 bg-white/95 p-6 shadow-[0_24px_65px_rgba(15,23,42,0.12)] max-w-4xl'>
-            <div className='flex items-center justify-between'>
-              <div>
-                <p className='text-xs font-semibold uppercase tracking-[0.35em] text-primary/70'>Donation Form</p>
-                <h2 className='text-2xl font-semibold text-slate-900'>Give securely</h2>
-              </div>
-              <span className='rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.3em] text-emerald-700'>
-                SSL Protected
-              </span>
-            </div>
-            <form onSubmit={handleSubmit} className='mt-6 space-y-5'>
-              <div>
-                <label className='text-sm font-semibold text-slate-700'>Full name</label>
-                <input
-                  type='text'
-                  required
-                  placeholder='Jane Doe'
-                  value={form.fullName}
-                  onChange={(event) => setForm((prev) => ({ ...prev, fullName: event.target.value }))}
-                  className='mt-2 w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-base text-slate-900 placeholder:text-slate-400 focus:border-primary focus:ring-2 focus:ring-primary/30'
-                />
-              </div>
-              <div className='grid gap-4 sm:grid-cols-2'>
-                <div>
-                  <label className='text-sm font-semibold text-slate-700'>Email</label>
-                  <input
-                    type='email'
-                    required
-                    placeholder='you@example.com'
-                    value={form.email}
-                    onChange={(event) => setForm((prev) => ({ ...prev, email: event.target.value }))}
-                    className='mt-2 w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-base text-slate-900 placeholder:text-slate-400 focus:border-primary focus:ring-2 focus:ring-primary/30'
-                  />
-                </div>
-                <div>
-                  <label className='text-sm font-semibold text-slate-700'>Phone</label>
-                  <input
-                    type='tel'
-                    required
-                    placeholder='+255 700 000 000'
-                    value={form.phone}
-                    onChange={(event) => setForm((prev) => ({ ...prev, phone: event.target.value }))}
-                    className='mt-2 w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-base text-slate-900 placeholder:text-slate-400 focus:border-primary focus:ring-2 focus:ring-primary/30'
-                  />
-                </div>
-              </div>
-
-              <div>
-                <label className='text-sm font-semibold text-slate-700'>Select an amount</label>
-                <div className='mt-3 grid grid-cols-2 gap-3 sm:grid-cols-4'>
-                  {presetAmounts.map((value) => (
-                    <button
-                      type='button'
-                      key={value}
-                      onClick={() => {
-                        setSelectedAmount(value)
-                        setCustomAmount('')
-                      }}
-                      className={`rounded-2xl border px-4 py-3 text-sm font-semibold ${
-                        selectedAmount === value && !customAmount
-                          ? 'border-primary bg-primary/10 text-primary'
-                          : 'border-slate-200 text-slate-700 hover:border-primary/50'
-                      }`}>
-                      {formatCurrency(value)}
-                    </button>
-                  ))}
-                </div>
-                <div className='mt-3'>
-                  <label className='text-xs font-medium uppercase tracking-[0.3em] text-slate-500'>Custom amount</label>
-                  <div className='mt-2 flex rounded-2xl border border-slate-200 focus-within:border-primary focus-within:ring-2 focus-within:ring-primary/20'>
-                    <span className='flex items-center px-3 text-sm text-slate-500'>TZS</span>
-                    <input
-                      type='text'
-                      inputMode='numeric'
-                      pattern='[0-9]*'
-                      value={customAmount}
-                      onChange={(event) => {
-                        setCustomAmount(event.target.value)
-                        setSelectedAmount(null)
-                      }}
-                      placeholder='Enter custom amount'
-                      className='w-full rounded-r-2xl bg-transparent px-3 py-3 text-base text-slate-900 placeholder:text-slate-400 focus:outline-none'
-                    />
-                  </div>
-                </div>
-              </div>
-
-              <div>
-                <label className='text-sm font-semibold text-slate-700'>Payment method</label>
-                <div className='mt-3 space-y-3'>
-                  {paymentOptions.map((option) => (
-                    <label
-                      key={option.id}
-                      className={`flex cursor-pointer items-center justify-between rounded-2xl border px-4 py-3 ${
-                        paymentMethod === option.id ? 'border-primary bg-primary/5' : 'border-slate-200'
-                      }`}>
-                      <div>
-                        <p className='text-sm font-semibold text-slate-900'>{option.label}</p>
-                        <p className='text-xs text-slate-500'>{option.description}</p>
-                      </div>
-                      <input
-                        type='radio'
-                        name='paymentMethod'
-                        value={option.id}
-                        checked={paymentMethod === option.id}
-                        onChange={() => setPaymentMethod(option.id)}
-                        className='h-4 w-4 accent-primary'
-                      />
-                    </label>
-                  ))}
-                </div>
-              </div>
-
-              <div>
-                <label className='text-sm font-semibold text-slate-700'>Leave a prayer intention (optional)</label>
-                <textarea
-                  rows={3}
-                  placeholder='Share a family, parish, or personal intention we can pray for.'
-                  value={form.prayerIntention}
-                  onChange={(event) => setForm((prev) => ({ ...prev, prayerIntention: event.target.value }))}
-                  className='mt-2 w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-base text-slate-900 placeholder:text-slate-400 focus:border-primary focus:ring-2 focus:ring-primary/30'
-                />
-              </div>
-
-              <button
-                type='submit'
-                disabled={!amount || status === 'submitting'}
-                className='w-full rounded-2xl bg-primary px-5 py-3 text-base font-semibold text-white transition hover:bg-primary/90 disabled:cursor-not-allowed disabled:opacity-70'>
-                {status === 'submitting'
-                  ? 'Processing gift...'
-                  : amount
-                  ? `Donate ${formatCurrency(amount)}`
-                  : 'Enter amount to donate'}
-              </button>
-              {status === 'submitted' && (
-                <div className='rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-700'>
-                  Thank you! Our team will email a confirmation with instructions to finish your {paymentMethod} donation.
-                </div>
-              )}
-              {submitError && (
-                <div className='rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700'>
-                  {submitError}
-                </div>
-              )}
-            </form>
-          </div>
+    <main>
+      <section className='relative isolate overflow-hidden bg-navy-950 !py-0'>
+        <SmartImage src={imagery.prayerHands} alt='' fill priority sizes='100vw' className='-z-10 object-cover opacity-35' />
+        <div className='absolute inset-0 -z-10 bg-gradient-to-r from-navy-950 via-navy-950/80 to-navy-950/40' />
+        <div className='container py-20 sm:py-24'>
+          <p className='eyebrow text-gold-300'>Give</p>
+          <h1 className='mt-4 max-w-3xl text-5xl leading-[1.05] text-white sm:text-6xl'>Partner with the mission of mercy</h1>
+          <p className='mt-5 max-w-xl text-lg text-navy-100'>
+            Every gift opens the door of DMRC to someone seeking God, and sustains a house of prayer for Tanzania.
+          </p>
         </div>
-      </div>
-    </section>
+      </section>
+
+      <section className='py-14 sm:py-20'>
+        <div className='container grid gap-10 lg:grid-cols-12'>
+          <div className='lg:col-span-7 lg:order-2'>
+            <DonationFlow />
+          </div>
+          <aside className='space-y-6 lg:col-span-5 lg:order-1'>
+            <div className='rounded-[2rem] bg-parchment p-8'>
+              <h2 className='text-3xl'>Where your gift goes</h2>
+              <ul className='mt-6 space-y-5'>
+                {funds.map((fund) => (
+                  <li key={fund.id} className='flex gap-4'>
+                    <span className='flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-white text-gold-600'>
+                      <fund.icon className='h-5 w-5' />
+                    </span>
+                    <div>
+                      <p className='font-semibold text-navy-900'>{fund.label}</p>
+                      <p className='text-sm text-muted-foreground'>{fund.text}</p>
+                    </div>
+                  </li>
+                ))}
+              </ul>
+            </div>
+            <figure className='rounded-[2rem] bg-navy-900 p-8 text-white'>
+              <Quote className='h-8 w-8 text-gold-400' />
+              <blockquote className='mt-4 font-display text-2xl leading-snug'>
+                “Each of you should give what you have decided in your heart to give, not reluctantly or under compulsion, for God loves a
+                cheerful giver.”
+              </blockquote>
+              <figcaption className='mt-4 text-sm uppercase tracking-widest text-navy-200'>2 Corinthians 9:7</figcaption>
+            </figure>
+          </aside>
+        </div>
+      </section>
+    </main>
   )
 }

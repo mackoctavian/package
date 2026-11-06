@@ -240,6 +240,18 @@ function CheckBookingContent() {
                   </dl>
                 </div>
 
+                {!cancelled && booking.paymentStatus === 'pending' && retreat && (
+                  <div className='flex flex-col items-start justify-between gap-4 rounded-[2rem] border border-gold-200 bg-gold-50 p-6 sm:flex-row sm:items-center'>
+                    <div>
+                      <p className='font-semibold text-navy-900'>Your contribution is still pending</p>
+                      <p className='text-sm text-navy-700'>Pay online now to complete your registration.</p>
+                    </div>
+                    <Button asChild variant='gold' size='pill'>
+                      <Link href={`/retreats/${retreat.slug}/payment?booking=${booking.id}`}>Pay contribution</Link>
+                    </Button>
+                  </div>
+                )}
+
                 {!cancelled && (
                   <div className='rounded-[2rem] border border-border bg-white p-6 sm:p-8'>
                     <h3 className='font-display text-2xl font-semibold text-navy-900'>Change of plans?</h3>

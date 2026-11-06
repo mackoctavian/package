@@ -75,16 +75,16 @@ export default async function RetreatPaymentSuccessPage({ params, searchParams }
   const ticketUrl = buildTicketUrl(ticketCode)
 
   return (
-    <main className='bg-gradient-to-b from-emerald-50 to-white py-16 sm:py-20 min-h-screen'>
+    <main className='py-16 sm:py-20'>
       <div className='container mx-auto max-w-4xl px-4'>
         {/* Success Message */}
         <div className='text-center mb-10'>
           <div className='mx-auto flex h-20 w-20 items-center justify-center rounded-full bg-emerald-100 text-emerald-600 mb-6 shadow-lg shadow-emerald-200'>
             <CheckCircle2 className='h-10 w-10' />
           </div>
-          <h1 className='text-4xl font-bold text-slate-900 mb-3'>Booking Confirmed!</h1>
-          <p className='text-lg text-slate-600 max-w-xl mx-auto'>
-            Thank you for your reservation. Your ticket has been generated and a confirmation email has been sent to <strong>{booking.email}</strong>.
+          <h1 className='mb-3 text-5xl text-navy-900'>Thank you — you're all set</h1>
+          <p className='text-lg text-navy-700 max-w-xl mx-auto'>
+            Your contribution has been submitted and your ticket is ready and a confirmation email has been sent to <strong>{booking.email}</strong>.
           </p>
         </div>
 
@@ -110,26 +110,26 @@ export default async function RetreatPaymentSuccessPage({ params, searchParams }
         </div>
 
         {/* Important Info */}
-        <div className='bg-white rounded-2xl border border-slate-200 p-6 mb-8 shadow-sm'>
-          <h2 className='text-lg font-semibold text-slate-900 mb-4 flex items-center gap-2'>
-            <Ticket className='h-5 w-5 text-blue-600' />
+        <div className='bg-white rounded-2xl border border-border p-6 mb-8 shadow-sm'>
+          <h2 className='text-lg font-semibold text-navy-900 mb-4 flex items-center gap-2'>
+            <Ticket className='h-5 w-5 text-gold-600' />
             Important Information
           </h2>
-          <ul className='space-y-3 text-slate-600'>
+          <ul className='space-y-3 text-navy-700'>
             <li className='flex items-start gap-3'>
-              <div className='w-6 h-6 rounded-full bg-blue-100 text-blue-600 flex items-center justify-center text-sm font-bold flex-shrink-0'>1</div>
+              <div className='w-6 h-6 rounded-full bg-gold-100 text-gold-700 flex items-center justify-center text-sm font-bold flex-shrink-0'>1</div>
               <span>Please download or screenshot your ticket and bring it to the retreat.</span>
             </li>
             <li className='flex items-start gap-3'>
-              <div className='w-6 h-6 rounded-full bg-blue-100 text-blue-600 flex items-center justify-center text-sm font-bold flex-shrink-0'>2</div>
+              <div className='w-6 h-6 rounded-full bg-gold-100 text-gold-700 flex items-center justify-center text-sm font-bold flex-shrink-0'>2</div>
               <span>Your QR code will be scanned at check-in for fast and contactless entry.</span>
             </li>
             <li className='flex items-start gap-3'>
-              <div className='w-6 h-6 rounded-full bg-blue-100 text-blue-600 flex items-center justify-center text-sm font-bold flex-shrink-0'>3</div>
+              <div className='w-6 h-6 rounded-full bg-gold-100 text-gold-700 flex items-center justify-center text-sm font-bold flex-shrink-0'>3</div>
               <span>Arrive at least 30 minutes before the scheduled start time.</span>
             </li>
             <li className='flex items-start gap-3'>
-              <div className='w-6 h-6 rounded-full bg-blue-100 text-blue-600 flex items-center justify-center text-sm font-bold flex-shrink-0'>4</div>
+              <div className='w-6 h-6 rounded-full bg-gold-100 text-gold-700 flex items-center justify-center text-sm font-bold flex-shrink-0'>4</div>
               <span>You can also check your booking status anytime using the "Check Booking" feature.</span>
             </li>
           </ul>
@@ -137,24 +137,24 @@ export default async function RetreatPaymentSuccessPage({ params, searchParams }
 
         {/* Summary Cards */}
         <div className='grid gap-4 text-left sm:grid-cols-3 mb-8'>
-          <div className='rounded-2xl border border-slate-200 bg-white px-5 py-4 shadow-sm'>
+          <div className='rounded-2xl border border-border bg-white px-5 py-4 shadow-sm'>
             <p className='flex items-center gap-2 text-xs font-semibold uppercase tracking-wide text-slate-500'>
               <CalendarDays className='h-4 w-4 text-primary' /> Date
             </p>
-            <p className='mt-2 text-base font-semibold text-slate-900'>{retreat.dateRange}</p>
+            <p className='mt-2 text-base font-semibold text-navy-900'>{retreat.dateRange}</p>
             {retreat.timeRange && <p className='text-sm text-slate-500'>{retreat.timeRange}</p>}
           </div>
-          <div className='rounded-2xl border border-slate-200 bg-white px-5 py-4 shadow-sm'>
+          <div className='rounded-2xl border border-border bg-white px-5 py-4 shadow-sm'>
             <p className='flex items-center gap-2 text-xs font-semibold uppercase tracking-wide text-slate-500'>
               <MapPin className='h-4 w-4 text-primary' /> Venue
             </p>
-            <p className='mt-2 text-base font-semibold text-slate-900'>{retreat.location}</p>
+            <p className='mt-2 text-base font-semibold text-navy-900'>{retreat.location}</p>
           </div>
-          <div className='rounded-2xl border border-slate-200 bg-white px-5 py-4 shadow-sm'>
+          <div className='rounded-2xl border border-border bg-white px-5 py-4 shadow-sm'>
             <p className='flex items-center gap-2 text-xs font-semibold uppercase tracking-wide text-slate-500'>
               <Users2 className='h-4 w-4 text-primary' /> Guest
             </p>
-            <p className='mt-2 text-base font-semibold text-slate-900'>{booking.fullName}</p>
+            <p className='mt-2 text-base font-semibold text-navy-900'>{booking.fullName}</p>
             <p className='text-sm text-slate-500'>Booking #{booking.id.slice(0, 8).toUpperCase()}</p>
           </div>
         </div>
@@ -163,12 +163,12 @@ export default async function RetreatPaymentSuccessPage({ params, searchParams }
         <div className='flex flex-wrap items-center justify-center gap-3 text-sm'>
           <Link 
             href='/retreats/check-booking' 
-            className='inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-6 py-3 font-semibold text-slate-700 transition hover:border-primary/40 hover:text-primary shadow-sm'
+            className='inline-flex items-center gap-2 rounded-xl border border-border bg-white px-6 py-3 font-semibold text-slate-700 transition hover:border-primary/40 hover:text-primary shadow-sm'
           >
             <QrCode className='h-4 w-4' />
             Check Booking Status
           </Link>
-          <Link href='/' className='inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-6 py-3 font-semibold text-slate-700 transition hover:border-primary/40 hover:text-primary shadow-sm'>
+          <Link href='/' className='inline-flex items-center gap-2 rounded-xl border border-border bg-white px-6 py-3 font-semibold text-slate-700 transition hover:border-primary/40 hover:text-primary shadow-sm'>
             Return Home
           </Link>
           <Link
