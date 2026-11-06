@@ -23,7 +23,7 @@ import RetreatTicket from '@/app/components/Retreats/RetreatTicket'
 import { Button } from '@/app/components/ui/button'
 import type { RetreatType } from '@/app/types/retreat'
 import { cn } from '@/lib/utils'
-import { Choice, CheckboxCard, Field, inputClass } from './fields'
+import { Choice, CheckboxCard, Field, inputClass } from '@/app/components/site/FormFields'
 import { retreatTerms } from './terms'
 
 /* ----------------------------------------------------------------------------
@@ -314,7 +314,7 @@ export default function BookingWizard({ retreat, ended = false }: { retreat: Ret
           {[
             { title: 'Booking received', text: 'Our team reviews and approves every registration.', done: true },
             paymentPending
-              ? { title: 'Complete your contribution', text: 'We will contact you with payment instructions.', done: false }
+              ? { title: 'Pay your contribution', text: 'Pay now online or later from Manage booking.', done: false }
               : { title: 'No payment needed', text: 'This retreat is offered freely.', done: true },
             { title: 'Check in with your QR code', text: 'Show the ticket below on arrival at DMRC.', done: false },
           ].map((item, i) => (
@@ -340,10 +340,15 @@ export default function BookingWizard({ retreat, ended = false }: { retreat: Ret
         />
 
         <div className='flex flex-wrap justify-center gap-3'>
+          {paymentPending && (
+            <Button asChild variant='gold' size='pill'>
+              <Link href={`/retreats/${retreat.slug}/payment?booking=${confirmation.id}`}>Pay contribution now</Link>
+            </Button>
+          )}
           <Button asChild variant='outline' size='pill'>
             <Link href={`/retreats/check-booking?code=${encodeURIComponent(confirmation.ticketCode)}`}>Manage this booking</Link>
           </Button>
-          <Button asChild size='pill'>
+          <Button asChild variant={paymentPending ? 'ghost' : 'default'} size='pill'>
             <Link href='/retreats'>Browse more retreats</Link>
           </Button>
         </div>
@@ -748,8 +753,8 @@ export default function BookingWizard({ retreat, ended = false }: { retreat: Ret
 
                     {retreat.isPaid !== false && retreat.price ? (
                       <p className='rounded-2xl bg-gold-50 px-5 py-4 text-sm text-gold-800'>
-                        Your contribution of <strong>{formatContribution(retreat)}</strong> per person is paid after registration. We will send
-                        payment instructions with your confirmation.
+                        Your contribution of <strong>{formatContribution(retreat)}</strong> per person is paid after you confirm. You can pay
+                        straight away or later from Manage booking.
                       </p>
                     ) : null}
 

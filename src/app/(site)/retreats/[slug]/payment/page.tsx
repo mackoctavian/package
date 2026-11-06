@@ -58,8 +58,8 @@ export default async function RetreatPaymentPage({ params, searchParams }: PageP
   const booking = mapPrismaBooking(bookingRecord)
 
   return (
-    <main className='bg-slate-50 py-16 sm:py-20'>
-      <div className='container mx-auto max-w-4xl px-4'>
+    <main className='py-12 sm:py-16'>
+      <div className='container max-w-5xl'>
         <RetreatPayment retreat={retreat} booking={booking} />
       </div>
     </main>
