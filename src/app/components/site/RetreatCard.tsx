@@ -48,7 +48,7 @@ export default function RetreatCard({ retreat, className }: RetreatCardProps) {
         <div className='absolute inset-0 bg-gradient-to-t from-navy-950/50 to-transparent' />
         {date && (
           <div className='absolute left-4 top-4 flex flex-col items-center rounded-2xl bg-white/95 px-3 py-2 text-center shadow-soft backdrop-blur'>
-            <span className='text-[11px] font-semibold tracking-widest text-gold-600'>{date.month}</span>
+            <span className='text-[11px] font-semibold tracking-widest text-gold-700'>{date.month}</span>
             <span className='font-display text-2xl font-bold leading-none text-navy-900'>{date.day}</span>
           </div>
         )}
@@ -63,7 +63,7 @@ export default function RetreatCard({ retreat, className }: RetreatCardProps) {
       </Link>
 
       <div className='flex flex-1 flex-col p-6'>
-        <p className='flex items-center justify-between gap-3 text-sm font-medium text-gold-600'>
+        <p className='flex items-center justify-between gap-3 text-sm font-medium text-gold-700'>
           <span>{retreat.dateRange}</span>
           {retreat.category && (
             <span className='rounded-full bg-parchment px-2.5 py-0.5 text-xs font-medium text-navy-700'>{categoryLabel(retreat.category)}</span>

@@ -76,17 +76,17 @@ export default async function PublicationDetailPage({ params }: PageProps) {
 
                 <ul className='mt-8 grid gap-4 sm:grid-cols-3'>
                   <li className='rounded-2xl bg-white p-4 text-sm'>
-                    <Store className='h-5 w-5 text-gold-600' />
+                    <Store className='h-5 w-5 text-gold-700' />
                     <p className='mt-2 font-semibold text-navy-900'>Collect at DMRC</p>
                     <p className='text-muted-foreground'>Free</p>
                   </li>
                   <li className='rounded-2xl bg-white p-4 text-sm'>
-                    <Truck className='h-5 w-5 text-gold-600' />
+                    <Truck className='h-5 w-5 text-gold-700' />
                     <p className='mt-2 font-semibold text-navy-900'>Delivery in Dar</p>
                     <p className='text-muted-foreground'>{formatTZS(DELIVERY_FEE)}</p>
                   </li>
                   <li className='rounded-2xl bg-white p-4 text-sm'>
-                    <BookOpen className='h-5 w-5 text-gold-600' />
+                    <BookOpen className='h-5 w-5 text-gold-700' />
                     <p className='mt-2 font-semibold text-navy-900'>Published</p>
                     <p className='text-muted-foreground'>{new Date(publication.publishedOn).toLocaleDateString('en-GB', { month: 'long', year: 'numeric' })}</p>
                   </li>

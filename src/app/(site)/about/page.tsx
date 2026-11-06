@@ -119,7 +119,7 @@ export default async function AboutPage() {
             </ul>
           </div>
           <div className='mx-auto flex h-48 w-48 flex-col items-center justify-center rounded-full border-4 border-gold-300 bg-white text-center'>
-            <Cross className='h-12 w-12 text-gold-600' />
+            <Cross className='h-12 w-12 text-gold-700' />
             <p className='mt-2 font-display text-2xl font-semibold text-navy-900'>DMRC</p>
             <p className='text-xs uppercase tracking-widest text-muted-foreground'>Vikindu</p>
           </div>

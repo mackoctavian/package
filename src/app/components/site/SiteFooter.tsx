@@ -105,7 +105,7 @@ export default function SiteFooter() {
       </div>
 
       <div className='border-t border-white/10'>
-        <div className='container flex flex-col gap-2 py-6 text-sm text-navy-400 sm:flex-row sm:items-center sm:justify-between'>
+        <div className='container flex flex-col gap-2 py-6 text-sm text-navy-300 sm:flex-row sm:items-center sm:justify-between'>
           <p>
             © {year} {siteConfig.name}, Vikindu. All rights reserved.
           </p>

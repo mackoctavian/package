@@ -37,7 +37,7 @@ export default function DonationPage() {
               <ul className='mt-6 space-y-5'>
                 {funds.map((fund) => (
                   <li key={fund.id} className='flex gap-4'>
-                    <span className='flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-white text-gold-600'>
+                    <span className='flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-white text-gold-700'>
                       <fund.icon className='h-5 w-5' />
                     </span>
                     <div>

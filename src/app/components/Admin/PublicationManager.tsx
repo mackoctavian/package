@@ -228,7 +228,7 @@ export function PublicationManager() {
     setIsDeleteOpen(true)
   }
 
-  const isSaving = createMutation.isLoading || updateMutation.isLoading
+  const isSaving = createMutation.isPending || updateMutation.isPending
 
   return (
     <div className='space-y-6 px-6 py-8'>
@@ -305,8 +305,8 @@ export function PublicationManager() {
                         <p className='font-semibold text-slate-900'>{record.title}</p>
                         <p className='text-xs text-slate-500'>{record.summary ?? '—'}</p>
                       </TableCell>
-                      <TableCell className='text-sm text-slate-500'>{meta['author'] || '—'}</TableCell>
-                      <TableCell className='text-sm text-slate-500'>{meta['format'] || '—'}</TableCell>
+                      <TableCell className='text-sm text-slate-500'>{String(meta['author'] ?? '') || '—'}</TableCell>
+                      <TableCell className='text-sm text-slate-500'>{String(meta['format'] ?? '') || '—'}</TableCell>
                       <TableCell>
                         <Badge className='capitalize'>{record.status}</Badge>
                       </TableCell>
@@ -451,15 +451,15 @@ export function PublicationManager() {
             <DialogDescription>This action cannot be undone. The entry will be permanently removed.</DialogDescription>
           </DialogHeader>
           <DialogFooter>
-            <Button variant='ghost' onClick={() => setIsDeleteOpen(false)} disabled={deleteMutation.isLoading}>
+            <Button variant='ghost' onClick={() => setIsDeleteOpen(false)} disabled={deleteMutation.isPending}>
               Cancel
             </Button>
             <Button
               variant='destructive'
               className='gap-2'
-              disabled={deleteMutation.isLoading}
+              disabled={deleteMutation.isPending}
               onClick={() => deleteId && deleteMutation.mutate(deleteId)}>
-              {deleteMutation.isLoading ? <Loader2 className='h-4 w-4 animate-spin' /> : <Trash2 className='h-4 w-4' />}
+              {deleteMutation.isPending ? <Loader2 className='h-4 w-4 animate-spin' /> : <Trash2 className='h-4 w-4' />}
               Delete
             </Button>
           </DialogFooter>

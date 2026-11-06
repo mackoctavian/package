@@ -23,7 +23,7 @@ import RetreatTicket from '@/app/components/Retreats/RetreatTicket'
 import { Button } from '@/app/components/ui/button'
 import type { RetreatType } from '@/app/types/retreat'
 import { cn } from '@/lib/utils'
-import { Choice, CheckboxCard, Field, inputClass } from '@/app/components/site/FormFields'
+import { Choice, CheckboxCard, Field, Honeypot, inputClass } from '@/app/components/site/FormFields'
 import { retreatTerms } from './terms'
 
 /* ----------------------------------------------------------------------------
@@ -168,6 +168,7 @@ export default function BookingWizard({ retreat, ended = false }: { retreat: Ret
   const [submitError, setSubmitError] = useState<string | null>(null)
   const [confirmation, setConfirmation] = useState<Confirmation | null>(null)
   const [termsOpen, setTermsOpen] = useState(false)
+  const [website, setWebsite] = useState('')
   const topRef = useRef<HTMLDivElement>(null)
 
   const step = steps[stepIndex]
@@ -227,7 +228,7 @@ export default function BookingWizard({ retreat, ended = false }: { retreat: Ret
       const response = await fetch('/api/retreats/bookings', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ retreatId: retreat.id, retreatTitle: retreat.title, form: payloadForm }),
+        body: JSON.stringify({ retreatId: retreat.id, retreatTitle: retreat.title, form: payloadForm, website }),
       })
       const payload = await response.json().catch(() => ({}))
       if (!response.ok) {
@@ -371,7 +372,7 @@ export default function BookingWizard({ retreat, ended = false }: { retreat: Ret
         <div className='border-b border-border bg-parchment/60 px-6 py-5 sm:px-8'>
           <div className='flex items-center justify-between gap-4'>
             <div>
-              <p className='text-xs font-semibold uppercase tracking-[0.2em] text-gold-600'>
+              <p className='text-xs font-semibold uppercase tracking-[0.2em] text-gold-700'>
                 Step {stepIndex + 1} of {steps.length}
               </p>
               <h3 className='mt-1 font-display text-3xl font-semibold text-navy-900'>{step.title}</h3>
@@ -501,6 +502,7 @@ export default function BookingWizard({ retreat, ended = false }: { retreat: Ret
 
                 {step.id === 'contact' && (
                   <div className='space-y-8'>
+                    <Honeypot value={website} onChange={setWebsite} />
                     <div className='grid gap-6 sm:grid-cols-2'>
                       <Field label='Phone number' htmlFor='field-phone' required error={errors.phone}>
                         <input

@@ -112,7 +112,7 @@ export default async function RetreatPaymentSuccessPage({ params, searchParams }
         {/* Important Info */}
         <div className='bg-white rounded-2xl border border-border p-6 mb-8 shadow-sm'>
           <h2 className='text-lg font-semibold text-navy-900 mb-4 flex items-center gap-2'>
-            <Ticket className='h-5 w-5 text-gold-600' />
+            <Ticket className='h-5 w-5 text-gold-700' />
             Important Information
           </h2>
           <ul className='space-y-3 text-navy-700'>

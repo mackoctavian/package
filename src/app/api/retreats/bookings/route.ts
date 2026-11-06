@@ -1,3 +1,4 @@
+import { Prisma } from '@prisma/client'
 import { NextResponse } from 'next/server'
 import { nanoid } from 'nanoid'
 
@@ -6,6 +7,7 @@ import { retreatBookingPayloadSchema } from '@/lib/validators/retreat'
 import { sendRetreatBookingEmail } from '@/lib/email/retreat-booking'
 import { mapPrismaBooking } from './utils'
 import { guardAdminApi, isAdminRequest } from '@/lib/auth/api-guard'
+import { botResponse, isBotSubmission, rateLimit } from '@/lib/security/public-form'
 
 const normalizePhone = (value?: string | null) => value?.replace(/\s+/g, '') ?? undefined
 
@@ -36,7 +38,12 @@ export const GET = async () => {
 }
 
 export const POST = async (request: Request) => {
+  const limited = rateLimit(request, 'bookings', { limit: 15, windowMs: 10 * 60_000 })
+  if (limited) return limited
+
   const json = await request.json()
+  if (isBotSubmission(json)) return botResponse()
+  if (json && typeof json === 'object') delete (json as Record<string, unknown>).website
   const parsed = retreatBookingPayloadSchema.safeParse(json)
 
   if (!parsed.success) {
@@ -79,7 +86,7 @@ export const POST = async (request: Request) => {
         attended: false,
         ticketCode,
         familyMembers: form.familyMembers ?? [],
-        formPayload: form,
+        formPayload: form as Prisma.InputJsonValue,
         notes: isAdmin ? note : undefined,
       },
     })

@@ -297,11 +297,11 @@ const RetreatDetail = ({ retreatId }: RetreatDetailProps) => {
           </DialogHeader>
           <RetreatFormFields form={form} onChange={(field, value) => setForm((prev) => ({ ...prev, [field]: value }))} />
           <DialogFooter>
-            <Button variant='ghost' onClick={() => setIsEditOpen(false)} disabled={updateMutation.isLoading}>
+            <Button variant='ghost' onClick={() => setIsEditOpen(false)} disabled={updateMutation.isPending}>
               Cancel
             </Button>
-            <Button className='gap-2' onClick={() => updateMutation.mutate(form)} disabled={updateMutation.isLoading}>
-              {updateMutation.isLoading ? <Loader2 className='h-4 w-4 animate-spin' /> : <PencilLine className='h-4 w-4' />}
+            <Button className='gap-2' onClick={() => updateMutation.mutate(form)} disabled={updateMutation.isPending}>
+              {updateMutation.isPending ? <Loader2 className='h-4 w-4 animate-spin' /> : <PencilLine className='h-4 w-4' />}
               Save changes
             </Button>
           </DialogFooter>

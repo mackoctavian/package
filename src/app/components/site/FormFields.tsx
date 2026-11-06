@@ -18,7 +18,7 @@ export function Field({ label, htmlFor, required, hint, error, className, childr
     <div className={cn('space-y-1.5', className)}>
       <label htmlFor={htmlFor} className='block text-sm font-medium text-navy-800'>
         {label}
-        {required && <span className='ml-0.5 text-gold-600'>*</span>}
+        {required && <span className='ml-0.5 text-gold-700'>*</span>}
       </label>
       {children}
       {error ? (
@@ -94,6 +94,21 @@ export function CheckboxCard({ checked, onChange, children, error, id }: Checkbo
           {error}
         </p>
       )}
+    </div>
+  )
+}
+
+/**
+ * Hidden "website" field that real visitors never see or fill in. Send its
+ * value with the form; the API silently drops submissions where it is set.
+ */
+export function Honeypot({ value, onChange }: { value: string; onChange: (value: string) => void }) {
+  return (
+    <div aria-hidden='true' className='absolute -left-[9999px] h-px w-px overflow-hidden'>
+      <label>
+        Website
+        <input type='text' name='website' tabIndex={-1} autoComplete='off' value={value} onChange={(e) => onChange(e.target.value)} />
+      </label>
     </div>
   )
 }

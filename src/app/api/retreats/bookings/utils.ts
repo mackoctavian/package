@@ -21,7 +21,7 @@ export const mapPrismaBooking = (row: PrismaRetreatBooking): RetreatBooking => (
   rescheduledToRetreatTitle: row.rescheduledToRetreatTitle ?? undefined,
   rescheduledAt: row.rescheduledAt?.toISOString(),
   ticketCode: row.ticketCode ?? undefined,
-  formPayload: row.formPayload ?? undefined,
+  formPayload: (row.formPayload ?? undefined) as Record<string, unknown> | undefined,
   createdAt: row.createdAt.toISOString(),
   updatedAt: row.updatedAt?.toISOString(),
 })

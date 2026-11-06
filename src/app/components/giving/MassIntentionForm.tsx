@@ -6,7 +6,7 @@ import { CheckCircle2, Cross, Flame, Heart, Loader2, Minus, Plus, Sparkles, User
 
 import { Button } from '@/app/components/ui/button'
 import MockCheckout from '@/app/components/giving/MockCheckout'
-import { CheckboxCard, Field, inputClass } from '@/app/components/site/FormFields'
+import { CheckboxCard, Field, Honeypot, inputClass } from '@/app/components/site/FormFields'
 import { cn } from '@/lib/utils'
 
 export const SUGGESTED_OFFERING_PER_MASS = 10000
@@ -51,6 +51,7 @@ export default function MassIntentionForm() {
   const [form, setForm] = useState<FormState>(initial)
   const [errors, setErrors] = useState<Errors>({})
   const [submitting, setSubmitting] = useState(false)
+  const [website, setWebsite] = useState('')
   const [submitError, setSubmitError] = useState<string | null>(null)
   const [submitted, setSubmitted] = useState<FormState | null>(null)
   const [paying, setPaying] = useState<'no' | 'checkout' | 'paid'>('no')
@@ -99,6 +100,7 @@ export default function MassIntentionForm() {
           ...form,
           donationAmount: form.donationAmount || String(suggested),
           metadata: { source: 'mass-intentions' },
+          website,
         }),
       })
       const payload = await response.json().catch(() => ({}))
@@ -180,6 +182,7 @@ export default function MassIntentionForm() {
 
   return (
     <form id='intention-form' noValidate onSubmit={submit} className='scroll-mt-28 space-y-10 rounded-[2rem] border border-border bg-white p-6 shadow-soft sm:p-10'>
+      <Honeypot value={website} onChange={setWebsite} />
       <fieldset className='space-y-5'>
         <legend className='contents'>{stepTitle(1, 'Choose an intention')}</legend>
         <div className='grid grid-cols-2 gap-3 sm:grid-cols-3'>
@@ -200,7 +203,7 @@ export default function MassIntentionForm() {
                   checked={active}
                   onChange={() => update('intentionType', type.id)}
                 />
-                <type.icon className={cn('h-5 w-5', active ? 'text-gold-300' : 'text-gold-600')} />
+                <type.icon className={cn('h-5 w-5', active ? 'text-gold-300' : 'text-gold-700')} />
                 <span className='mt-3 block font-semibold'>{type.label}</span>
                 <span className={cn('mt-0.5 block text-xs', active ? 'text-navy-200' : 'text-muted-foreground')}>{type.description}</span>
               </label>

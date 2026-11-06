@@ -75,6 +75,8 @@ export interface RetreatFormValues {
   description: string
   startDate: string
   endDate: string
+  startTime: string
+  endTime: string
   location: string
   category: string
   customCategory: string
@@ -570,7 +572,7 @@ const validateFormValues = (form: RetreatFormValues) => {
   }
 
   const handleSaveNew = () => {
-    if (createMutation.isLoading || !guardReadOnlyAction()) return
+    if (createMutation.isPending || !guardReadOnlyAction()) return
   const errors = validateFormValues(createForm)
   if (errors.length) {
     toast.error(errors[0])
@@ -587,7 +589,7 @@ const validateFormValues = (form: RetreatFormValues) => {
   }
 
   const handleSaveEdit = () => {
-    if (!editId || updateMutation.isLoading || !guardReadOnlyAction()) return
+    if (!editId || updateMutation.isPending || !guardReadOnlyAction()) return
   const errors = validateFormValues(editForm)
   if (errors.length) {
     toast.error(errors[0])
@@ -857,11 +859,11 @@ const validateFormValues = (form: RetreatFormValues) => {
           </DialogHeader>
           <RetreatFormFields form={createForm} onChange={(field, value) => setCreateForm((prev) => ({ ...prev, [field]: value }))} />
           <DialogFooter>
-            <Button variant='ghost' onClick={() => setIsCreateOpen(false)} disabled={createMutation.isLoading}>
+            <Button variant='ghost' onClick={() => setIsCreateOpen(false)} disabled={createMutation.isPending}>
               Cancel
             </Button>
-            <Button onClick={handleSaveNew} disabled={createMutation.isLoading} className='gap-2'>
-              {createMutation.isLoading ? <Loader2 className='h-4 w-4 animate-spin' /> : <Plus className='h-4 w-4' />}
+            <Button onClick={handleSaveNew} disabled={createMutation.isPending} className='gap-2'>
+              {createMutation.isPending ? <Loader2 className='h-4 w-4 animate-spin' /> : <Plus className='h-4 w-4' />}
               Save retreat
             </Button>
           </DialogFooter>
@@ -884,11 +886,11 @@ const validateFormValues = (form: RetreatFormValues) => {
           </DialogHeader>
           <RetreatFormFields form={editForm} onChange={(field, value) => setEditForm((prev) => ({ ...prev, [field]: value }))} />
           <DialogFooter>
-            <Button variant='ghost' onClick={() => setIsEditOpen(false)} disabled={updateMutation.isLoading}>
+            <Button variant='ghost' onClick={() => setIsEditOpen(false)} disabled={updateMutation.isPending}>
               Cancel
             </Button>
-            <Button onClick={handleSaveEdit} disabled={updateMutation.isLoading} className='gap-2'>
-              {updateMutation.isLoading ? <Loader2 className='h-4 w-4 animate-spin' /> : <PencilLine className='h-4 w-4' />}
+            <Button onClick={handleSaveEdit} disabled={updateMutation.isPending} className='gap-2'>
+              {updateMutation.isPending ? <Loader2 className='h-4 w-4 animate-spin' /> : <PencilLine className='h-4 w-4' />}
               Save changes
             </Button>
           </DialogFooter>
@@ -911,19 +913,19 @@ const validateFormValues = (form: RetreatFormValues) => {
             </DialogDescription>
           </DialogHeader>
           <DialogFooter>
-            <Button variant='ghost' onClick={() => setDeleteTarget(null)} disabled={deleteMutation.isLoading}>
+            <Button variant='ghost' onClick={() => setDeleteTarget(null)} disabled={deleteMutation.isPending}>
               Cancel
             </Button>
             <Button
               variant='destructive'
               className='gap-2'
-              disabled={deleteMutation.isLoading}
+              disabled={deleteMutation.isPending}
               onClick={() => {
                 if (!deleteTarget) return
                 if (!guardReadOnlyAction()) return
                 deleteMutation.mutate(deleteTarget.id)
               }}>
-              {deleteMutation.isLoading ? <Loader2 className='h-4 w-4 animate-spin' /> : <Trash2 className='h-4 w-4' />}
+              {deleteMutation.isPending ? <Loader2 className='h-4 w-4 animate-spin' /> : <Trash2 className='h-4 w-4' />}
               Delete retreat
             </Button>
           </DialogFooter>

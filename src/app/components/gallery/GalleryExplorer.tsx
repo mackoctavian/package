@@ -193,7 +193,7 @@ export default function GalleryExplorer({ buckets }: { buckets: GalleryBuckets }
               <li key={item.id} className='flex flex-col gap-4 p-5 sm:flex-row sm:items-center sm:p-6'>
                 <div className='flex flex-1 items-center gap-4'>
                   <div className='relative h-16 w-16 shrink-0 overflow-hidden rounded-xl bg-parchment'>
-                    {item.coverArt ? <SmartImage src={item.coverArt} alt='' fill sizes='64px' className='object-cover' /> : <Headphones className='m-5 h-6 w-6 text-gold-600' />}
+                    {item.coverArt ? <SmartImage src={item.coverArt} alt='' fill sizes='64px' className='object-cover' /> : <Headphones className='m-5 h-6 w-6 text-gold-700' />}
                   </div>
                   <div className='min-w-0'>
                     <p className='font-semibold text-navy-900'>{item.title}</p>
