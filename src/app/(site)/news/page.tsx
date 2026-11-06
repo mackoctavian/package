@@ -1,291 +1,83 @@
-import Image from 'next/image'
+import type { Metadata } from 'next'
 import Link from 'next/link'
-import { Metadata } from 'next'
-import type { ContentItem } from '@prisma/client'
+import { ArrowRight, Mail } from 'lucide-react'
 
-import prisma from '@/lib/prisma'
-import { newsItems, pressMentions } from '@/app/data/news'
+import NewsExplorer from '@/app/components/news/NewsExplorer'
+import PageHero from '@/app/components/site/PageHero'
+import SmartImage from '@/app/components/site/SmartImage'
+import { Button } from '@/app/components/ui/button'
+import { imagery, siteConfig } from '@/app/data/site'
+import { formatArticleDate, getArticles } from '@/lib/news/queries'
+
+export const revalidate = 300
 
 export const metadata: Metadata = {
-  title: 'News & Events | Divine Mercy Retreat Center',
-  description:
-    'Stay up to date with announcements, testimonies, and upcoming events at Divine Mercy Retreat Center.',
+  title: 'News & events',
+  description: 'Announcements, testimonies and stories from the Divine Mercy Retreat Center.',
 }
 
-type ArticleCard = {
-  id: string
-  slug: string
-  title: string
-  summary: string
-  heroImage: string
-  tag?: string
-  publishedOn?: string
-  readingTime?: string
-  author?: string
-}
-
-const fallbackImage = '/images/dmrc/gallery/IMG_0299.JPG'
-
-const formatDate = (isoDate?: string) => {
-  if (!isoDate) return ''
-  return new Intl.DateTimeFormat('en-US', {
-    month: 'long',
-    day: 'numeric',
-    year: 'numeric',
-  }).format(new Date(isoDate))
-}
-
-const loadArticles = async (): Promise<ArticleCard[]> => {
-  try {
-    const items = await prisma.contentItem.findMany({
-      where: { type: 'news', status: 'published' },
-      orderBy: [{ publishDate: 'desc' }, { updatedAt: 'desc' }],
-    })
-    if (items.length) {
-      return items.map(mapContentItemToArticle)
-    }
-  } catch (error) {
-    console.error('[news-page] failed to load dynamic content:', error)
-  }
-
-  return newsItems.map(mapStaticArticle)
-}
-
-const mapContentItemToArticle = (item: ContentItem): ArticleCard => {
-  const metadata = (item.metadata ?? {}) as Record<string, unknown>
-  return {
-    id: item.id,
-    slug: item.slug,
-    title: item.title,
-    summary: item.summary ?? item.body ?? '',
-    heroImage: item.mediaUrl || fallbackImage,
-    tag: item.category ?? undefined,
-    publishedOn: (item.publishDate ?? item.createdAt).toISOString(),
-    readingTime: typeof metadata.readingTime === 'string' ? metadata.readingTime : undefined,
-    author: typeof metadata.author === 'string' ? metadata.author : undefined,
-  }
-}
-
-const mapStaticArticle = (item: (typeof newsItems)[number]): ArticleCard => ({
-  id: item.id,
-  slug: item.slug,
-  title: item.title,
-  summary: item.summary,
-  heroImage: item.heroImage,
-  tag: item.tag,
-  publishedOn: item.publishedOn,
-  readingTime: item.readingTime,
-  author: item.author,
-})
-
-const NewsPage = async () => {
-  const articles = await loadArticles()
-  const featuredArticle = articles[0]
-  const remainingArticles = articles.slice(1)
-  const articleCount = Math.max(articles.length - 1, 0)
+export default async function NewsPage() {
+  const articles = await getArticles()
+  const [featured, ...rest] = articles
 
   return (
     <main>
-      {/* Hero Section */}
-      <section className='relative overflow-hidden bg-gradient-to-br from-slate-900 via-indigo-950 to-slate-900 py-32 text-white'>
-        <div className='pointer-events-none absolute inset-0'>
-          <Image
-            src='https://images.unsplash.com/photo-1489515217757-5fd1be406fef?auto=format&fit=crop&w=2000&q=60'
-            alt=''
-            fill
-            className='object-cover object-center opacity-20'
-            priority
-          />
-          <div className='absolute inset-0 bg-gradient-to-br from-indigo-900/80 via-slate-900/90 to-slate-950' />
-          <div className='absolute inset-0 bg-[radial-gradient(ellipse_at_top,_rgba(99,102,241,0.15),_transparent_60%)]' />
-        </div>
-        <div className='relative container mx-auto max-w-5xl px-4 text-center space-y-6'>
-          <span className='inline-flex items-center justify-center rounded-full bg-white/10 backdrop-blur-sm border border-white/20 px-6 py-2.5 text-xs font-semibold uppercase tracking-[0.3em] text-white/90'>
-            ✦ News & Updates
-          </span>
-          <h1 className='text-4xl font-bold sm:text-5xl lg:text-6xl leading-tight'>Stories of Mercy & Mission</h1>
-          <p className='text-lg text-white/70 max-w-2xl mx-auto leading-relaxed'>
-            Discover how the Lord is moving through our ministries—read the latest announcements, testimonies, and
-            stories from the heart of DMRC.
-          </p>
-        </div>
-      </section>
+      <PageHero
+        eyebrow='News & events'
+        title='Stories of mercy and mission'
+        image={imagery.candles}
+        description='Announcements, testimonies and stories of how the Lord is moving through the life of DMRC.'
+      />
 
-      {/* Featured Article */}
-      <section className='bg-white py-16 sm:py-20'>
-        <div className='container mx-auto max-w-6xl px-4'>
-          {featuredArticle ? (
-            <article className='group relative overflow-hidden rounded-3xl bg-slate-900'>
-              <div className='grid lg:grid-cols-2'>
-                <div className='relative h-80 lg:h-auto overflow-hidden'>
-                  <Image
-                    src={featuredArticle.heroImage}
-                    alt={featuredArticle.title}
-                    fill
-                    className='object-cover transition duration-700 group-hover:scale-105'
-                  />
-                  <div className='absolute inset-0 bg-gradient-to-r from-transparent via-slate-900/20 to-slate-900 lg:block hidden' />
-                  <div className='absolute inset-0 bg-gradient-to-t from-slate-900 via-slate-900/50 to-transparent lg:hidden' />
-                </div>
-                <div className='relative p-8 lg:p-12 flex flex-col justify-center'>
-                  <div className='absolute top-0 left-0 w-24 h-24 bg-indigo-500/20 rounded-full blur-3xl' />
-                  <span className='inline-flex w-fit items-center rounded-full bg-indigo-500 px-4 py-1.5 text-xs font-bold uppercase tracking-wider text-white mb-6'>
-                    Featured
-                  </span>
-                  <span className='text-xs font-semibold uppercase tracking-[0.2em] text-indigo-400 mb-3'>
-                    {[formatDate(featuredArticle.publishedOn), featuredArticle.readingTime]
-                      .filter(Boolean)
-                      .join(' · ')}
-                  </span>
-                  <h2 className='text-3xl lg:text-4xl font-bold text-white mb-4 leading-tight'>
-                    <Link href={`/news/${featuredArticle.slug}`} className='hover:text-indigo-300 transition-colors'>
-                      {featuredArticle.title}
-                    </Link>
-                  </h2>
-                  <p className='text-white/70 text-lg leading-relaxed mb-6'>{featuredArticle.summary}</p>
-                  <div className='flex items-center justify-between'>
-                    <span className='text-sm font-medium text-indigo-400'>
-                      {featuredArticle.author ? `By ${featuredArticle.author}` : 'DMRC Communications'}
-                    </span>
-                    <Link
-                      href={`/news/${featuredArticle.slug}`}
-                      className='inline-flex items-center gap-2 px-5 py-2.5 bg-white text-slate-900 rounded-full font-semibold text-sm hover:bg-indigo-100 transition-colors'>
-                      Read Full Story
-                      <span aria-hidden>→</span>
-                    </Link>
-                  </div>
-                </div>
+      {featured && (
+        <section className='!pb-0'>
+          <div className='container'>
+            <article className='group relative grid overflow-hidden rounded-[2rem] border border-border bg-white shadow-soft lg:grid-cols-2'>
+              <div className='relative aspect-[16/10] overflow-hidden lg:aspect-auto lg:min-h-[420px]'>
+                <SmartImage src={featured.heroImage} alt='' fill priority sizes='(min-width: 1024px) 50vw, 100vw' className='object-cover transition-transform duration-700 group-hover:scale-105' />
+              </div>
+              <div className='flex flex-col justify-center p-8 sm:p-12'>
+                <p className='eyebrow'>Latest{featured.tag ? ` · ${featured.tag}` : ''}</p>
+                <h2 className='mt-4 text-4xl leading-tight sm:text-5xl'>
+                  <Link href={`/news/${featured.slug}`} className='after:absolute after:inset-0 focus-visible:outline-none'>
+                    {featured.title}
+                  </Link>
+                </h2>
+                <p className='mt-4 text-lg leading-relaxed text-muted-foreground'>{featured.summary}</p>
+                <p className='mt-6 text-sm text-navy-700'>
+                  {[formatArticleDate(featured.publishedOn), featured.readingTime, featured.author].filter(Boolean).join(' · ')}
+                </p>
+                <span className='mt-8 inline-flex items-center gap-1.5 font-semibold text-navy-900'>
+                  Read the full story <ArrowRight className='h-4 w-4 transition-transform group-hover:translate-x-1' />
+                </span>
               </div>
             </article>
-          ) : (
-            <div className='rounded-3xl border border-dashed border-slate-200 bg-slate-50 p-12 text-center text-sm text-slate-500'>
-              Published stories will appear here once added in the admin.
-            </div>
-          )}
-        </div>
-      </section>
-
-      {/* All Articles Grid */}
-      <section className='bg-slate-50 py-16 sm:py-20'>
-        <div className='container mx-auto max-w-6xl px-4'>
-          <div className='flex items-center justify-between mb-10'>
-            <div>
-              <h2 className='text-3xl font-bold text-slate-900'>Latest News</h2>
-              <p className='text-slate-600 mt-1'>Stories from the Divine Mercy community</p>
-            </div>
-            <span className='text-sm font-medium text-slate-500'>
-              {articleCount} {articleCount === 1 ? 'article' : 'articles'}
-            </span>
-          </div>
-
-          {articleCount === 0 ? (
-            <div className='rounded-2xl border border-dashed border-slate-200 bg-white px-6 py-14 text-center text-sm text-slate-500'>
-              More stories will appear here after you publish additional news entries.
-            </div>
-          ) : (
-            <div className='grid md:grid-cols-2 lg:grid-cols-3 gap-8'>
-              {remainingArticles.map((article) => (
-                <article
-                  key={article.id}
-                  className='group bg-white rounded-3xl overflow-hidden border border-slate-100 shadow-sm hover:shadow-xl hover:border-slate-200 transition-all duration-300'>
-                  <div className='relative h-56 overflow-hidden'>
-                    <Image
-                      src={article.heroImage}
-                      alt={article.title}
-                      fill
-                      className='object-cover transition duration-500 group-hover:scale-110'
-                    />
-                    <div className='absolute inset-0 bg-gradient-to-t from-slate-900/60 via-transparent to-transparent' />
-                    {article.tag ? (
-                      <div className='absolute top-4 left-4'>
-                        <span className='rounded-full bg-indigo-600 px-3 py-1 text-[10px] font-bold uppercase tracking-wider text-white'>
-                          {article.tag}
-                        </span>
-                      </div>
-                    ) : null}
-                  </div>
-                  <div className='p-6 space-y-4'>
-                    <div className='flex items-center gap-3 text-xs font-medium text-slate-500'>
-                      {article.publishedOn ? <span>{formatDate(article.publishedOn)}</span> : null}
-                      {article.readingTime ? (
-                        <>
-                          <span className='w-1 h-1 rounded-full bg-slate-300' />
-                          <span>{article.readingTime}</span>
-                        </>
-                      ) : null}
-                    </div>
-                    <h3 className='text-xl font-bold text-slate-900 leading-tight group-hover:text-indigo-600 transition-colors'>
-                      <Link href={`/news/${article.slug}`}>{article.title}</Link>
-                    </h3>
-                    <p className='text-slate-600 text-sm line-clamp-2'>{article.summary}</p>
-                    <div className='flex items-center justify-between pt-2'>
-                      <span className='text-xs font-semibold text-indigo-600'>
-                        {article.author || 'DMRC Communications'}
-                      </span>
-                      <Link
-                        href={`/news/${article.slug}`}
-                        className='text-sm font-semibold text-slate-900 hover:text-indigo-600 transition-colors flex items-center gap-1'>
-                        Read →
-                      </Link>
-                    </div>
-                  </div>
-                </article>
-              ))}
-            </div>
-          )}
-        </div>
-      </section>
-
-      {/* Press Mentions */}
-      {pressMentions.length > 0 && (
-        <section className='bg-white py-16 sm:py-20'>
-          <div className='container mx-auto max-w-5xl px-4'>
-            <div className='text-center mb-12'>
-              <span className='inline-flex items-center gap-2 px-4 py-1.5 bg-slate-100 rounded-full text-xs font-semibold uppercase tracking-wider text-slate-600 mb-4'>
-                In The Press
-              </span>
-              <h2 className='text-3xl font-bold text-slate-900'>Media Coverage</h2>
-              <p className='text-slate-600 mt-2'>Read how the wider Church is covering DMRC's mission.</p>
-            </div>
-
-            <div className='grid sm:grid-cols-2 lg:grid-cols-3 gap-6'>
-              {pressMentions.map((mention) => (
-                <Link
-                  key={mention.id}
-                  href={mention.url}
-                  target='_blank'
-                  rel='noreferrer'
-                  className='group block p-6 bg-gradient-to-br from-slate-50 to-slate-100/50 rounded-2xl border border-slate-200 hover:border-indigo-200 hover:shadow-lg hover:shadow-indigo-100/50 transition-all duration-300'>
-                  <p className='text-xs font-bold uppercase tracking-[0.2em] text-indigo-600 mb-3'>{mention.outlet}</p>
-                  <h3 className='font-semibold text-slate-900 group-hover:text-indigo-600 transition-colors leading-snug mb-3'>
-                    {mention.title}
-                  </h3>
-                  <p className='text-xs text-slate-500'>{formatDate(mention.publishedOn)}</p>
-                </Link>
-              ))}
-            </div>
           </div>
         </section>
       )}
 
-      {/* CTA Section */}
-      <section className='bg-gradient-to-br from-indigo-600 to-purple-700 py-16 sm:py-20'>
-        <div className='container mx-auto max-w-3xl px-4 text-center space-y-6'>
-          <h2 className='text-3xl font-bold text-white'>Share Your Story</h2>
-          <p className='text-white/80 text-lg'>
-            We would love to hear how Divine Mercy Retreat Center has impacted you. Submit testimonies, event updates,
-            or mission stories to our communications team.
-          </p>
-          <a
-            href='mailto:communications@dmrc.org'
-            className='inline-flex items-center gap-2 rounded-full bg-white px-8 py-4 text-sm font-bold uppercase tracking-wider text-indigo-600 transition hover:bg-indigo-50 hover:shadow-xl'>
-            Email Communications
-            <span aria-hidden>→</span>
-          </a>
+      <section>
+        <div className='container'>
+          <h2 className='mb-8 text-4xl'>More stories</h2>
+          <NewsExplorer articles={rest} />
+        </div>
+      </section>
+
+      <section className='!pt-0'>
+        <div className='container'>
+          <div className='rounded-[2rem] bg-parchment px-8 py-12 text-center sm:px-12'>
+            <h2 className='text-4xl'>Share your testimony</h2>
+            <p className='mx-auto mt-3 max-w-xl text-muted-foreground'>
+              Has God touched your life through a retreat or ministry at DMRC? We would love to hear your story.
+            </p>
+            <Button asChild size='pill' className='mt-6'>
+              <a href={`mailto:${siteConfig.contact.email}?subject=My%20testimony`}>
+                <Mail className='mr-2 h-4 w-4' /> Send your story
+              </a>
+            </Button>
+          </div>
         </div>
       </section>
     </main>
   )
 }
-
-export default NewsPage

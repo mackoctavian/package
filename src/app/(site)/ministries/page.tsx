@@ -1,78 +1,116 @@
-import Image from 'next/image'
+import type { Metadata } from 'next'
 import Link from 'next/link'
-import { Metadata } from 'next'
+import { ArrowRight, HeartHandshake, Mail, Phone } from 'lucide-react'
 
-import { ministriesData } from '@/app/data/ministries'
+import PageHero from '@/app/components/site/PageHero'
+import SmartImage from '@/app/components/site/SmartImage'
+import SectionHeading from '@/app/components/site/SectionHeading'
+import { Button } from '@/app/components/ui/button'
+import { imagery, siteConfig } from '@/app/data/site'
+import { getMinistries } from '@/lib/ministries/queries'
+
+export const revalidate = 300
 
 export const metadata: Metadata = {
-  title: 'Ministries | Divine Mercy Retreat Center',
+  title: 'Ministries',
   description:
-    'Explore the ministries of Divine Mercy Retreat Center and find community, formation, and mission opportunities that match your calling.',
+    'Explore the ministries of the Divine Mercy Retreat Center and find community, formation and mission opportunities that match your calling.',
 }
 
-const MinistriesPage = () => {
+export default async function MinistriesPage() {
+  const ministries = await getMinistries()
+
   return (
     <main>
-      <section className='pt-32 pb-16 bg-primary/10'>
-        <div className='container mx-auto text-center space-y-4'>
-          <p className='text-sm font-semibold tracking-wide uppercase text-primary'>DMRC Ministries</p>
-          <h1 className='text-4xl sm:text-5xl font-bold text-gray-900'>Serve, Encounter, and Go Forth</h1>
-          <p className='text-base sm:text-lg text-gray-600'>
-            Discover the communities, outreach teams, and formation tracks that carry the mercy message across
-            parishes, families, and mission fields. Each ministry has dedicated coordinators ready to help you take
-            your next step.
-          </p>
-        </div>
-      </section>
+      <PageHero
+        eyebrow='Ministries'
+        title='Serve, encounter and go forth'
+        image={imagery.community}
+        description='Communities, outreach teams and formation tracks that carry the message of mercy to parishes, families and mission fields.'
+        aside={
+          <div className='flex gap-8 text-white'>
+            <div>
+              <p className='font-display text-5xl font-semibold'>{ministries.length}</p>
+              <p className='text-sm text-navy-200'>Active ministries</p>
+            </div>
+          </div>
+        }
+      />
 
-      <section className='py-16 sm:py-20 bg-gray-50'>
-        <div className='container mx-auto'>
-          <div className='grid gap-8 sm:grid-cols-2 xl:grid-cols-3'>
-            {ministriesData.map((ministry) => (
+      <section>
+        <div className='container'>
+          <SectionHeading
+            eyebrow='Find your place'
+            title='Every gift has a home here'
+            description='Each ministry has coordinators ready to welcome you and help you take your next step.'
+          />
+          <div className='mt-12 grid gap-6 sm:grid-cols-2 xl:grid-cols-3'>
+            {ministries.map((ministry) => (
               <article
                 key={ministry.id}
-                className='group flex h-full flex-col overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-[0_24px_60px_rgba(15,23,42,0.06)] transition hover:-translate-y-2 hover:shadow-[0_28px_80px_rgba(15,23,42,0.1)]'>
-                <div className='relative h-56 w-full overflow-hidden bg-slate-100'>
-                  <Image
+                className='group relative flex flex-col overflow-hidden rounded-3xl border border-border bg-white shadow-soft transition-all duration-300 hover:-translate-y-1 hover:shadow-lift'
+              >
+                <div className='relative aspect-[16/10] overflow-hidden'>
+                  <SmartImage
                     src={ministry.heroImage}
-                    alt={ministry.title}
+                    alt=''
                     fill
-                    className='object-cover object-center transition duration-500 group-hover:scale-105'
-                    sizes='(min-width: 1280px) 400px, (min-width: 768px) 50vw, 100vw'
-                    priority={false}
+                    sizes='(min-width: 1280px) 33vw, (min-width: 640px) 50vw, 100vw'
+                    className='object-cover transition-transform duration-700 group-hover:scale-105'
                   />
+                  <div className='absolute inset-0 bg-gradient-to-t from-navy-950/50 to-transparent' />
+                  {ministry.focusAreas?.length ? (
+                    <span className='absolute right-4 top-4 rounded-full bg-white/95 px-3 py-1 text-xs font-semibold text-navy-800'>
+                      {ministry.focusAreas.length} focus areas
+                    </span>
+                  ) : null}
                 </div>
-                <div className='flex flex-1 flex-col gap-4 p-8'>
-                  <div className='space-y-2'>
-                    <p className='text-xs font-semibold uppercase tracking-[0.35em] text-primary/80'>DMRC Ministry</p>
-                    <h2 className='text-2xl font-semibold text-slate-900'>{ministry.title}</h2>
-                  </div>
-                  <p className='text-sm leading-6 text-slate-600 flex-1'>{ministry.shortDescription}</p>
-                  <div className='flex items-center justify-between pt-4'>
-                    <div className='flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.25em] text-primary'>
-                      <span>Focus Areas</span>
-                      <span className='rounded-full bg-primary/10 px-2 py-0.5 text-[10px] text-primary/90'>
-                        {ministry.focusAreas.length}
-                      </span>
-                    </div>
-                    <Link
-                      href={`/ministries/${ministry.slug}`}
-                      className='inline-flex items-center gap-1 text-sm font-semibold text-primary transition hover:text-primary/80'>
-                      View Ministry
-                      <span aria-hidden='true' className='transition-transform group-hover:translate-x-1'>
-                        →
-                      </span>
+                <div className='flex flex-1 flex-col p-6'>
+                  <h2 className='font-display text-2xl font-semibold leading-snug text-navy-900'>
+                    <Link href={`/ministries/${ministry.slug}`} className='after:absolute after:inset-0 focus-visible:outline-none'>
+                      {ministry.title}
                     </Link>
-                  </div>
+                  </h2>
+                  <p className='mt-3 line-clamp-3 flex-1 text-sm leading-relaxed text-muted-foreground'>{ministry.shortDescription}</p>
+                  {ministry.gatherings?.[0] && (
+                    <p className='mt-4 rounded-xl bg-parchment px-3 py-2 text-xs text-navy-700'>
+                      <span className='font-semibold'>{ministry.gatherings[0].day}</span> · {ministry.gatherings[0].time}
+                    </p>
+                  )}
+                  <span className='mt-5 inline-flex items-center gap-1.5 text-sm font-semibold text-navy-900'>
+                    Explore ministry <ArrowRight className='h-4 w-4 transition-transform group-hover:translate-x-1' />
+                  </span>
                 </div>
               </article>
             ))}
           </div>
         </div>
       </section>
+
+      <section className='!pt-0'>
+        <div className='container'>
+          <div className='relative isolate overflow-hidden rounded-[2rem] bg-navy-900 px-8 py-12 text-white sm:px-12 lg:flex lg:items-center lg:justify-between lg:gap-10'>
+            <SmartImage src={imagery.candles} alt='' fill sizes='100vw' className='-z-10 object-cover opacity-20' />
+            <div className='max-w-xl'>
+              <HeartHandshake className='h-9 w-9 text-gold-400' />
+              <h2 className='mt-4 text-4xl text-white'>Not sure where to serve?</h2>
+              <p className='mt-3 text-navy-100'>Talk to our pastoral office. We will help you discern the ministry that fits your gifts and season of life.</p>
+            </div>
+            <div className='mt-8 flex flex-wrap gap-3 lg:mt-0'>
+              <Button asChild variant='gold' size='pill'>
+                <a href={siteConfig.contact.phoneHref}>
+                  <Phone className='mr-2 h-4 w-4' /> {siteConfig.contact.phone}
+                </a>
+              </Button>
+              <Button asChild variant='outline-light' size='pill'>
+                <a href={`mailto:${siteConfig.contact.email}`}>
+                  <Mail className='mr-2 h-4 w-4' /> Email us
+                </a>
+              </Button>
+            </div>
+          </div>
+        </div>
+      </section>
     </main>
   )
 }
-
-export default MinistriesPage
-

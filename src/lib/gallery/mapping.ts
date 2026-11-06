@@ -1,18 +1,15 @@
-'use client'
-
-import { useEffect, useMemo, useState } from 'react'
-
-import { galleryHighlights, galleryCollections, galleryVideos, galleryAudio, galleryCDs } from '@/app/data/gallery'
 import type { GalleryMedia, GalleryMediaType } from '@/app/types/gallery'
 
-type GalleryBuckets = {
+/** Maps published gallery content items (Admin → Gallery) onto gallery media. */
+
+export type GalleryBuckets = {
   photos: GalleryMedia[]
   videos: GalleryMedia[]
   audio: GalleryMedia[]
   cds: GalleryMedia[]
 }
 
-type GalleryApiItem = {
+export type GalleryApiItem = {
   id: string
   title: string
   summary?: string | null
@@ -22,13 +19,6 @@ type GalleryApiItem = {
   mediaUrl?: string | null
   publishDate?: string | null
   metadata?: Record<string, unknown> | null
-}
-
-const fallbackBuckets: GalleryBuckets = {
-  photos: [...galleryHighlights, ...galleryCollections.flatMap((collection) => collection.items)],
-  videos: galleryVideos,
-  audio: galleryAudio,
-  cds: galleryCDs,
 }
 
 const orientationValues = new Set(['landscape', 'portrait', 'square'])
@@ -98,7 +88,7 @@ const mapItemToMedia = (item: GalleryApiItem): GalleryMedia | null => {
   return base
 }
 
-const mapResponseToBuckets = (items: GalleryApiItem[]): GalleryBuckets => {
+export const mapResponseToBuckets = (items: GalleryApiItem[]): GalleryBuckets => {
   const buckets: GalleryBuckets = { photos: [], videos: [], audio: [], cds: [] }
 
   items
@@ -124,49 +114,3 @@ const mapResponseToBuckets = (items: GalleryApiItem[]): GalleryBuckets => {
 
   return buckets
 }
-
-export const useGalleryContent = () => {
-  const [buckets, setBuckets] = useState<GalleryBuckets>(fallbackBuckets)
-  const [isLoading, setIsLoading] = useState(true)
-
-  useEffect(() => {
-    let isMounted = true
-
-    const loadGallery = async () => {
-      try {
-        const response = await fetch('/api/content/gallery', { cache: 'no-store' })
-        if (!response.ok) {
-          throw new Error('Unable to load gallery content')
-        }
-        const json = await response.json()
-        if (!isMounted) return
-        const mapped = mapResponseToBuckets(json.data ?? [])
-        setBuckets(mapped)
-      } catch (error) {
-        console.warn('[useGalleryContent] falling back to static data', error)
-      } finally {
-        if (isMounted) {
-          setIsLoading(false)
-        }
-      }
-    }
-
-    loadGallery()
-    return () => {
-      isMounted = false
-    }
-  }, [])
-
-  return useMemo(
-    () => ({
-      photos: buckets.photos,
-      videos: buckets.videos,
-      audio: buckets.audio,
-      cds: buckets.cds,
-      isLoading,
-    }),
-    [buckets, isLoading],
-  )
-}
-
-

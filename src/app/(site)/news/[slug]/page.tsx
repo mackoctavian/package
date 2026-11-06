@@ -1,349 +1,168 @@
-import Image from 'next/image'
+import type { Metadata } from 'next'
 import Link from 'next/link'
-import { Metadata } from 'next'
 import { notFound } from 'next/navigation'
-import type { ContentItem } from '@prisma/client'
+import { ArrowLeft, ArrowRight, CalendarDays, Quote } from 'lucide-react'
 
-import prisma from '@/lib/prisma'
-import { eventHighlights, newsItems } from '@/app/data/news'
+import ArticleCard from '@/app/components/news/ArticleCard'
+import SmartImage from '@/app/components/site/SmartImage'
+import { Button } from '@/app/components/ui/button'
+import { siteConfig } from '@/app/data/site'
+import { formatArticleDate, getArticleBySlug, getArticles } from '@/lib/news/queries'
+import { getAllRetreats } from '@/lib/retreats/queries'
+import { formatRetreatMonthDay, getUpcomingRetreats } from '@/lib/retreats/dates'
 
-type NewsRouteProps = {
-  params: Promise<{
-    slug: string
-  }>
-}
+export const revalidate = 300
 
-type ArticleDetail = {
-  id: string
-  slug: string
-  title: string
-  summary: string
-  heroImage: string
-  tag?: string
-  publishedOn?: string
-  readingTime?: string
-  author?: string
-  body?: string
-  sections?: {
-    heading?: string
-    paragraphs: string[]
-  }[]
-  featuredQuote?: string
-  featuredScripture?: string
-  gallery: string[]
-}
+type NewsRouteProps = { params: Promise<{ slug: string }> }
 
-type ArticleSummary = {
-  id: string
-  slug: string
-  title: string
-  tag?: string
-  publishedOn?: string
-}
-
-const fallbackImage = '/images/dmrc/gallery/IMG_0299.JPG'
-
-const formatDate = (isoDate?: string) =>
-  isoDate
-    ? new Intl.DateTimeFormat('en-US', {
-        month: 'long',
-        day: 'numeric',
-        year: 'numeric',
-      }).format(new Date(isoDate))
-    : ''
-
-const getArticle = async (slug: string): Promise<ArticleDetail | null> => {
-  try {
-    const record = await prisma.contentItem.findFirst({
-      where: { type: 'news', status: 'published', slug },
-    })
-    if (record) {
-      return mapRecordToDetail(record)
-    }
-  } catch (error) {
-    console.error('[news-detail] failed to load entry:', error)
-  }
-
-  const fallback = newsItems.find((item) => item.slug === slug)
-  return fallback ? mapStaticToDetail(fallback) : null
-}
-
-const getOtherArticles = async (slug: string): Promise<ArticleSummary[]> => {
-  try {
-    const records = await prisma.contentItem.findMany({
-      where: { type: 'news', status: 'published', slug: { not: slug } },
-      orderBy: [{ publishDate: 'desc' }, { updatedAt: 'desc' }],
-      take: 3,
-    })
-    if (records.length) {
-      return records.map(mapRecordToSummary)
-    }
-  } catch (error) {
-    console.error('[news-detail] failed to load related entries:', error)
-  }
-
-  return newsItems
-    .filter((item) => item.slug !== slug)
-    .slice(0, 3)
-    .map(mapStaticToSummary)
-}
-
-const mapRecordToDetail = (record: ContentItem): ArticleDetail => {
-  const metadata = (record.metadata ?? {}) as Record<string, unknown>
-  const gallery = Array.isArray(metadata.gallery)
-    ? metadata.gallery.filter((item): item is string => typeof item === 'string')
-    : []
-
-  return {
-    id: record.id,
-    slug: record.slug,
-    title: record.title,
-    summary: record.summary ?? '',
-    heroImage: record.mediaUrl || fallbackImage,
-    tag: record.category ?? undefined,
-    publishedOn: (record.publishDate ?? record.createdAt).toISOString(),
-    readingTime: typeof metadata.readingTime === 'string' ? metadata.readingTime : undefined,
-    author: typeof metadata.author === 'string' ? metadata.author : undefined,
-    body: record.body ?? '',
-    featuredQuote: typeof metadata.featuredQuote === 'string' ? metadata.featuredQuote : undefined,
-    featuredScripture:
-      typeof metadata.featuredScripture === 'string' ? metadata.featuredScripture : undefined,
-    gallery,
-  }
-}
-
-const mapStaticToDetail = (item: (typeof newsItems)[number]): ArticleDetail => ({
-  id: item.id,
-  slug: item.slug,
-  title: item.title,
-  summary: item.summary,
-  heroImage: item.heroImage,
-  tag: item.tag,
-  publishedOn: item.publishedOn,
-  readingTime: item.readingTime,
-  author: item.author,
-  sections: item.content,
-  featuredQuote: item.featuredQuote,
-  featuredScripture: item.featuredScripture,
-  gallery: [],
-})
-
-const mapRecordToSummary = (record: ContentItem): ArticleSummary => ({
-  id: record.id,
-  slug: record.slug,
-  title: record.title,
-  tag: record.category ?? undefined,
-  publishedOn: (record.publishDate ?? record.createdAt).toISOString(),
-})
-
-const mapStaticToSummary = (item: (typeof newsItems)[number]): ArticleSummary => ({
-  id: item.id,
-  slug: item.slug,
-  title: item.title,
-  tag: item.tag,
-  publishedOn: item.publishedOn,
-})
-
-export const generateMetadata = async ({ params }: NewsRouteProps): Promise<Metadata> => {
+export async function generateMetadata({ params }: NewsRouteProps): Promise<Metadata> {
   const { slug } = await params
-  const article = await getArticle(slug)
-
-  if (!article) {
-    return {
-      title: 'News Story Not Found | DMRC',
-    }
-  }
-
+  const article = await getArticleBySlug(slug)
+  if (!article) return { title: 'Story not found' }
   return {
-    title: `${article.title} | Divine Mercy Retreat Center`,
+    title: article.title,
     description: article.summary,
+    openGraph: { title: article.title, description: article.summary, images: [article.heroImage], type: 'article', publishedTime: article.publishedOn },
   }
 }
 
-const NewsDetailPage = async ({ params }: NewsRouteProps) => {
+export default async function NewsDetailPage({ params }: NewsRouteProps) {
   const { slug } = await params
-  const article = await getArticle(slug)
+  const article = await getArticleBySlug(slug)
+  if (!article) notFound()
 
-  if (!article) {
-    notFound()
+  const [articles, { retreats }] = await Promise.all([getArticles(), getAllRetreats()])
+  const related = articles.filter((item) => item.slug !== slug).slice(0, 3)
+  const upcoming = getUpcomingRetreats(retreats.filter((r) => r.status !== 'Closed')).slice(0, 3)
+
+  const jsonLd = {
+    '@context': 'https://schema.org',
+    '@type': 'NewsArticle',
+    headline: article.title,
+    description: article.summary,
+    image: [article.heroImage],
+    datePublished: article.publishedOn,
+    author: { '@type': 'Organization', name: article.author || siteConfig.name },
+    publisher: { '@type': 'Organization', name: siteConfig.name },
   }
-
-  const otherArticles = await getOtherArticles(slug)
-  const metaLine = [
-    article.publishedOn ? formatDate(article.publishedOn) : null,
-    article.readingTime,
-    article.author ? `By ${article.author}` : null,
-  ]
-    .filter(Boolean)
-    .join(' · ')
-
-  const bodyParagraphs =
-    article.sections?.length || !article.body
-      ? []
-      : article.body
-          .split(/\n{2,}/)
-          .map((paragraph) => paragraph.trim())
-          .filter(Boolean)
 
   return (
     <main>
-      <section className='relative overflow-hidden bg-slate-950 py-32 text-white'>
-        <div className='pointer-events-none absolute inset-0'>
-          <Image
-            src={article.heroImage}
-            alt={article.title}
-            fill
-            className='object-cover object-center opacity-40'
-            priority
-          />
-          <div className='absolute inset-0 bg-gradient-to-br from-slate-950 via-slate-900/95 to-slate-950' />
-          <div className='absolute inset-0 bg-[radial-gradient(circle_at_top,_rgba(255,255,255,0.12),_transparent_55%)]' />
+      <script type='application/ld+json' dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }} />
+
+      <section className='bg-ivory !pb-10'>
+        <div className='container max-w-4xl'>
+          <Link href='/news' className='inline-flex items-center gap-2 text-sm font-medium text-gold-700 hover:text-gold-600'>
+            <ArrowLeft className='h-4 w-4' /> All stories
+          </Link>
+          {article.tag && <p className='eyebrow mt-8'>{article.tag}</p>}
+          <h1 className='mt-3 text-5xl leading-[1.05] sm:text-6xl'>{article.title}</h1>
+          {article.summary && <p className='mt-5 text-xl leading-relaxed text-muted-foreground'>{article.summary}</p>}
+          <p className='mt-6 text-sm text-navy-700'>
+            {[article.author || 'DMRC Communications', formatArticleDate(article.publishedOn), article.readingTime].filter(Boolean).join(' · ')}
+          </p>
         </div>
-        <div className='relative container mx-auto max-w-3xl px-4 space-y-6 text-center'>
-          {article.tag ? (
-            <span className='inline-flex items-center justify-center rounded-full border border-white/20 bg-white/10 px-5 py-2 text-xs font-semibold uppercase tracking-[0.3em] text-white/80'>
-              {article.tag}
-            </span>
-          ) : null}
-          <h1 className='text-4xl font-semibold sm:text-5xl'>{article.title}</h1>
-          {metaLine ? (
-            <p className='text-sm font-semibold uppercase tracking-[0.3em] text-primary/70'>{metaLine}</p>
-          ) : null}
-          {article.summary ? <p className='text-base text-white/80 sm:text-lg'>{article.summary}</p> : null}
+        <div className='container mt-10 max-w-6xl'>
+          <div className='relative aspect-[21/9] overflow-hidden rounded-[2rem]'>
+            <SmartImage src={article.heroImage} alt='' fill priority sizes='100vw' className='object-cover' />
+          </div>
         </div>
       </section>
 
-      <section className='bg-gray-50 py-16 sm:py-20'>
-        <div className='container mx-auto max-w-6xl px-4 grid gap-12 lg:grid-cols-[2.1fr_0.9fr]'>
-          <article className='space-y-10'>
-            {article.featuredScripture ? (
-              <blockquote className='rounded-3xl border border-primary/20 bg-white p-8 text-center text-base italic text-primary shadow-[0_18px_44px_rgba(59,130,246,0.12)]'>
-                {article.featuredScripture}
-              </blockquote>
-            ) : null}
+      <section className='!pt-6'>
+        <div className='container grid max-w-6xl gap-12 lg:grid-cols-12'>
+          <article className='lg:col-span-8'>
+            {article.featuredScripture && (
+              <p className='mb-8 border-l-4 border-gold-400 pl-5 font-display text-2xl italic leading-snug text-navy-800'>{article.featuredScripture}</p>
+            )}
+            <div className='space-y-10 text-lg leading-relaxed text-navy-800'>
+              {article.sections.map((section, index) => (
+                <div key={`${section.heading ?? 'section'}-${index}`} className='space-y-5'>
+                  {section.heading && <h2 className='text-3xl'>{section.heading}</h2>}
+                  {section.paragraphs.map((paragraph, i) => (
+                    <p key={i}>{paragraph}</p>
+                  ))}
+                  {index === 0 && article.featuredQuote && (
+                    <figure className='my-8 rounded-[2rem] bg-navy-900 p-8 text-white'>
+                      <Quote className='h-7 w-7 text-gold-400' />
+                      <blockquote className='mt-3 font-display text-2xl leading-snug'>{article.featuredQuote}</blockquote>
+                    </figure>
+                  )}
+                </div>
+              ))}
+            </div>
 
-            {article.featuredQuote ? (
-              <blockquote className='rounded-3xl border-l-4 border-primary bg-white p-6 text-lg italic text-slate-700 shadow-[0_18px_44px_rgba(15,23,42,0.08)]'>
-                {article.featuredQuote}
-              </blockquote>
-            ) : null}
-
-            {article.sections?.length
-              ? article.sections.map((section, index) => (
-                  <section key={`${section.heading ?? 'section'}-${index}`} className='space-y-4'>
-                    {section.heading ? (
-                      <h2 className='text-2xl font-semibold text-slate-900'>{section.heading}</h2>
-                    ) : null}
-                    <div className='space-y-4 text-base leading-7 text-slate-700'>
-                      {section.paragraphs.map((paragraph, paragraphIndex) => (
-                        <p key={paragraphIndex}>{paragraph}</p>
-                      ))}
-                    </div>
-                  </section>
-                ))
-              : null}
-
-            {bodyParagraphs.length > 0 ? (
-              <div className='space-y-4 text-base leading-7 text-slate-700'>
-                {bodyParagraphs.map((paragraph, index) => (
-                  <p key={index}>{paragraph}</p>
-                ))}
-              </div>
-            ) : null}
-
-            {article.gallery.length > 0 ? (
-              <div className='grid gap-4 sm:grid-cols-2'>
+            {article.gallery.length > 0 && (
+              <div className='mt-10 grid gap-4 sm:grid-cols-2'>
                 {article.gallery.map((image, index) => (
-                  <div
-                    key={`${image}-${index}`}
-                    className='relative h-48 overflow-hidden rounded-2xl border border-slate-200 bg-white'>
-                    <Image src={image} alt='' fill className='object-cover' sizes='(max-width: 768px) 100vw, 50vw' />
+                  <div key={`${image}-${index}`} className='relative aspect-[4/3] overflow-hidden rounded-2xl'>
+                    <SmartImage src={image} alt='' fill sizes='(min-width: 640px) 50vw, 100vw' className='object-cover' />
                   </div>
                 ))}
               </div>
-            ) : null}
-
-            <div className='flex flex-wrap items-center gap-3 pt-6'>
-              <Link
-                href='/news'
-                className='inline-flex items-center gap-2 rounded-full bg-primary px-6 py-3 text-sm font-semibold uppercase tracking-[0.2em] text-white transition hover:bg-primary/90'>
-                Back to News
-                <span aria-hidden>→</span>
-              </Link>
-              <Link
-                href='/events'
-                className='inline-flex items-center gap-2 rounded-full border border-primary/30 bg-primary/10 px-6 py-3 text-sm font-semibold uppercase tracking-[0.2em] text-primary transition hover:border-primary hover:bg-primary/20'>
-                Upcoming Events
-              </Link>
-            </div>
+            )}
           </article>
 
-          <aside className='space-y-10'>
-            <div className='rounded-3xl border border-primary/20 bg-white p-8 shadow-[0_18px_44px_rgba(59,130,246,0.12)]'>
-              <h3 className='text-xl font-semibold text-slate-900'>Upcoming Events</h3>
-              <div className='mt-5 space-y-5'>
-                {eventHighlights.slice(0, 2).map((event) => (
-                  <div key={event.id} className='rounded-2xl border border-primary/10 bg-primary/5 p-5'>
-                    <p className='text-xs font-semibold uppercase tracking-[0.3em] text-primary/70'>DMRC Event</p>
-                    <h4 className='mt-2 text-lg font-semibold text-slate-900'>{event.title}</h4>
-                    <p className='text-sm font-medium text-primary'>{event.dateRange}</p>
-                    <p className='text-sm text-slate-600'>{event.location}</p>
-                    <Link
-                      href={event.ctaHref}
-                      className='mt-3 inline-flex items-center gap-2 text-sm font-semibold uppercase tracking-[0.2em] text-primary transition hover:text-primary/80'>
-                      {event.ctaLabel}
-                      <span aria-hidden>→</span>
-                    </Link>
-                  </div>
-                ))}
-              </div>
-            </div>
-
-            <div className='space-y-5 rounded-3xl border border-slate-200 bg-white p-8 shadow-[0_20px_55px_rgba(15,23,42,0.1)]'>
-              <h3 className='text-xl font-semibold text-slate-900'>More Stories</h3>
-              <div className='space-y-4'>
-                {otherArticles.length === 0 ? (
-                  <p className='text-xs text-slate-500'>Once more stories are published, they’ll appear here.</p>
-                ) : (
-                  otherArticles.map((item) => (
-                    <Link
-                      key={item.id}
-                      href={`/news/${item.slug}`}
-                      className='block rounded-2xl border border-slate-200 bg-slate-100/60 p-4 transition hover:border-primary hover:bg-primary/10'>
-                      {item.tag ? (
-                        <p className='text-xs font-semibold uppercase tracking-[0.3em] text-primary/70'>{item.tag}</p>
-                      ) : null}
-                      <p className='mt-2 text-sm font-semibold text-slate-900'>{item.title}</p>
-                      {item.publishedOn ? (
-                        <p className='text-xs text-slate-500'>{formatDate(item.publishedOn)}</p>
-                      ) : null}
-                    </Link>
-                  ))
-                )}
+          <aside className='lg:col-span-4'>
+            <div className='space-y-6 lg:sticky lg:top-28'>
+              {upcoming.length > 0 && (
+                <div className='rounded-[2rem] border border-border bg-white p-7'>
+                  <h2 className='flex items-center gap-2 font-display text-2xl font-semibold text-navy-900'>
+                    <CalendarDays className='h-5 w-5 text-gold-500' /> Coming up at DMRC
+                  </h2>
+                  <ul className='mt-5 space-y-4'>
+                    {upcoming.map(({ retreat, dates }) => {
+                      const date = formatRetreatMonthDay(dates.start)
+                      return (
+                        <li key={retreat.id}>
+                          <Link href={retreat.detailHref || `/events/${retreat.slug}`} className='group flex gap-4'>
+                            <span className='flex h-14 w-14 shrink-0 flex-col items-center justify-center rounded-xl bg-parchment'>
+                              <span className='text-[10px] font-semibold tracking-widest text-gold-600'>{date?.month ?? 'TBA'}</span>
+                              <span className='font-display text-xl font-bold leading-none text-navy-900'>{date?.day ?? ''}</span>
+                            </span>
+                            <span>
+                              <span className='block font-semibold leading-snug text-navy-900 group-hover:underline'>{retreat.title}</span>
+                              <span className='text-xs text-muted-foreground'>{retreat.dateRange}</span>
+                            </span>
+                          </Link>
+                        </li>
+                      )
+                    })}
+                  </ul>
+                  <Button asChild variant='outline' size='pill' className='mt-6 w-full'>
+                    <Link href='/retreats'>All retreats</Link>
+                  </Button>
+                </div>
+              )}
+              <div className='rounded-[2rem] bg-parchment p-7'>
+                <h2 className='font-display text-2xl font-semibold text-navy-900'>Support this work</h2>
+                <p className='mt-2 text-sm text-muted-foreground'>Stories like this are made possible by benefactors who keep the doors of DMRC open.</p>
+                <Button asChild variant='gold' size='pill' className='mt-5 w-full'>
+                  <Link href='/donation'>Give online</Link>
+                </Button>
               </div>
             </div>
           </aside>
         </div>
       </section>
 
-      <section className='bg-primary/10 py-16 sm:py-20'>
-        <div className='container mx-auto max-w-5xl px-4 text-center space-y-6'>
-          <h2 className='text-3xl font-semibold text-slate-900'>Share a Testimony or Story Idea</h2>
-          <p className='text-base text-slate-600'>
-            We would love to hear how Divine Mercy Retreat Center has impacted you. Submit testimonies, event updates,
-            or mission stories to our communications team.
-          </p>
-          <a
-            href='mailto:communications@dmrc.org'
-            className='inline-flex items-center gap-2 rounded-full bg-primary px-6 py-3 text-sm font-semibold uppercase tracking-[0.2em] text-white transition hover:bg-primary/90'>
-            Email Communications
-            <span aria-hidden>→</span>
-          </a>
-        </div>
-      </section>
+      {related.length > 0 && (
+        <section className='bg-parchment/60'>
+          <div className='container'>
+            <div className='flex items-end justify-between gap-6'>
+              <h2 className='text-4xl'>More stories</h2>
+              <Link href='/news' className='hidden items-center gap-1.5 text-sm font-semibold text-navy-900 sm:inline-flex'>
+                View all <ArrowRight className='h-4 w-4' />
+              </Link>
+            </div>
+            <div className='mt-8 grid gap-6 md:grid-cols-3'>
+              {related.map((item) => (
+                <ArticleCard key={item.id} article={item} />
+              ))}
+            </div>
+          </div>
+        </section>
+      )}
     </main>
   )
 }
-
-export default NewsDetailPage
-
