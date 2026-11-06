@@ -14,10 +14,10 @@ const palette = {
   slate500: '#64748b',
   slate600: '#475569',
   slate900: '#0f172a',
-  blue500: '#3b82f6',
-  blue600: '#2563eb',
-  indigo600: '#4f46e5',
-  purple600: '#7c3aed',
+  blue500: '#b98a36',
+  blue600: '#172a4a',
+  indigo600: '#20365b',
+  purple600: '#0f1e38',
   emerald50: '#ecfdf5',
   emerald600: '#059669',
 }
@@ -165,7 +165,7 @@ export default function RetreatTicket({ booking, retreat, ticketUrl }: RetreatTi
             className='flex items-center justify-center gap-2 py-3 rounded-xl'
             style={{ backgroundColor: palette.emerald50, color: palette.emerald600 }}>
             <CheckCircle2 className='h-5 w-5' />
-            <span className='font-semibold'>Booking Confirmed</span>
+            <span className='font-semibold'>{['approved', 'confirmed', 'checked-in'].includes(booking.status) ? 'Booking confirmed' : 'Registration received'}</span>
           </div>
         </div>
 

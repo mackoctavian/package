@@ -4,10 +4,11 @@ import { ArrowRight, MapPin, Mic2, Users } from 'lucide-react'
 import SmartImage from '@/app/components/site/SmartImage'
 import type { RetreatType } from '@/app/types/retreat'
 import { formatRetreatMonthDay } from '@/lib/retreats/dates'
+import { categoryLabel } from '@/lib/retreats/categories'
 import { cn } from '@/lib/utils'
 
 type RetreatCardProps = {
-  retreat: RetreatType & { startDate?: string | null }
+  retreat: RetreatType & { startDate?: string | null; endDate?: string | null }
   className?: string
 }
 
@@ -25,7 +26,8 @@ const statusStyles: Record<string, string> = {
 export default function RetreatCard({ retreat, className }: RetreatCardProps) {
   const date = formatRetreatMonthDay(retreat.startDate ? new Date(retreat.startDate) : null)
   const seats = retreat.availability?.total ?? 0
-  const closed = retreat.status === 'Closed'
+  const ended = retreat.endDate ? new Date(retreat.endDate).getTime() < new Date().setHours(0, 0, 0, 0) : false
+  const closed = retreat.status === 'Closed' || ended
   const href = retreat.detailHref || `/events/${retreat.slug}`
 
   return (
@@ -53,15 +55,20 @@ export default function RetreatCard({ retreat, className }: RetreatCardProps) {
         <span
           className={cn(
             'absolute right-4 top-4 rounded-full px-3 py-1 text-xs font-semibold ring-1 ring-inset',
-            statusStyles[retreat.status] ?? statusStyles['Registration Open'],
+            ended ? statusStyles.Closed : statusStyles[retreat.status] ?? statusStyles['Registration Open'],
           )}
         >
-          {retreat.status}
+          {ended ? 'Completed' : retreat.status}
         </span>
       </Link>
 
       <div className='flex flex-1 flex-col p-6'>
-        <p className='text-sm font-medium text-gold-600'>{retreat.dateRange}</p>
+        <p className='flex items-center justify-between gap-3 text-sm font-medium text-gold-600'>
+          <span>{retreat.dateRange}</span>
+          {retreat.category && (
+            <span className='rounded-full bg-parchment px-2.5 py-0.5 text-xs font-medium text-navy-700'>{categoryLabel(retreat.category)}</span>
+          )}
+        </p>
         <h3 className='mt-2 font-display text-2xl font-semibold leading-snug text-navy-900'>
           <Link href={href} className='focus-visible:outline-none'>
             <span className='bg-gradient-to-r from-gold-300 to-gold-300 bg-[length:0%_2px] bg-left-bottom bg-no-repeat transition-all duration-500 group-hover:bg-[length:100%_2px]'>
@@ -88,7 +95,9 @@ export default function RetreatCard({ retreat, className }: RetreatCardProps) {
             <p className='font-semibold text-navy-900'>{formatPrice(retreat)}</p>
           </div>
           {closed ? (
-            <span className='text-sm font-medium text-muted-foreground'>Registration closed</span>
+            <Link href={href} className='text-sm font-medium text-navy-700 hover:underline'>
+              {ended ? 'View details' : 'Registration closed'}
+            </Link>
           ) : (
             <Link
               href={retreat.ctaHref || `${href}#booking`}

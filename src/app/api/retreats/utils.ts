@@ -24,7 +24,7 @@ export const mapPrismaRetreat = (retreat: PrismaRetreatWithRelations): RetreatTy
     female: retreat.availabilityFemale ?? 0,
   },
   status: (retreat.status as RetreatType['status']) ?? 'Registration Open',
-  imageSrc: retreat.imageSrc ?? '/images/courses/coursesOne.svg',
+  imageSrc: retreat.imageSrc || '/images/dmrc/gallery/IMG_0299.JPG',
   category: (retreat.category as RetreatType['category']) ?? 'mission',
   detailHref: retreat.detailHref ?? `/events/${retreat.slug}`,
   ctaHref: retreat.ctaHref ?? `/events/${retreat.slug}#booking`,

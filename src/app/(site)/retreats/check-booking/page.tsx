@@ -3,560 +3,339 @@
 import { Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import Link from 'next/link'
 import { useSearchParams } from 'next/navigation'
-import { motion, AnimatePresence } from 'framer-motion'
-import { 
-  Search, Calendar, User, Phone, Hash, 
-  CheckCircle2, XCircle, AlertCircle, RefreshCw,
-  ArrowRight, Sparkles, Clock, CreditCard
-} from 'lucide-react'
+import { AlertCircle, CalendarDays, CheckCircle2, Clock, Loader2, MapPin, RefreshCw, Search, Ticket, XCircle } from 'lucide-react'
 
+import RetreatTicket from '@/app/components/Retreats/RetreatTicket'
+import { Button } from '@/app/components/ui/button'
 import type { RetreatBooking } from '@/app/types/retreat-booking'
 import type { RetreatType } from '@/app/types/retreat'
+import { getUpcomingRetreats } from '@/lib/retreats/dates'
+import { cn } from '@/lib/utils'
 
-type FormState = {
-  bookingId: string
+type Message = { type: 'success' | 'error'; text: string } | null
+
+const statusConfig: Record<string, { label: string; className: string; icon: typeof Clock }> = {
+  pending: { label: 'Awaiting approval', className: 'bg-amber-50 text-amber-800 ring-amber-600/20', icon: Clock },
+  approved: { label: 'Approved', className: 'bg-emerald-50 text-emerald-700 ring-emerald-600/20', icon: CheckCircle2 },
+  confirmed: { label: 'Confirmed', className: 'bg-emerald-50 text-emerald-700 ring-emerald-600/20', icon: CheckCircle2 },
+  cancelled: { label: 'Cancelled', className: 'bg-red-50 text-red-700 ring-red-600/20', icon: XCircle },
+  rescheduled: { label: 'Rescheduled', className: 'bg-sky-50 text-sky-700 ring-sky-600/20', icon: RefreshCw },
 }
 
-type MessageState = { type: 'success' | 'error'; text: string } | null
-
-const initialForm: FormState = { bookingId: '' }
-
-const statusConfig = {
-  pending: { color: 'bg-amber-100 text-amber-700 border-amber-200', icon: Clock, label: 'Pending' },
-  confirmed: { color: 'bg-emerald-100 text-emerald-700 border-emerald-200', icon: CheckCircle2, label: 'Confirmed' },
-  cancelled: { color: 'bg-red-100 text-red-700 border-red-200', icon: XCircle, label: 'Cancelled' },
-  rescheduled: { color: 'bg-blue-100 text-blue-700 border-blue-200', icon: RefreshCw, label: 'Rescheduled' },
-}
-
-const paymentStatusConfig = {
-  pending: { color: 'text-amber-600', label: 'Payment Pending' },
-  paid: { color: 'text-emerald-600', label: 'Paid' },
-  partial: { color: 'text-blue-600', label: 'Partial Payment' },
-  refunded: { color: 'text-slate-600', label: 'Refunded' },
+const paymentLabels: Record<string, string> = {
+  pending: 'Contribution pending',
+  paid: 'Contribution received',
+  partial: 'Partially paid',
+  refunded: 'Refunded',
+  waived: 'No payment needed',
 }
 
 function CheckBookingContent() {
-  const [form, setForm] = useState<FormState>(initialForm)
+  const searchParams = useSearchParams()
+  const [code, setCode] = useState('')
   const [booking, setBooking] = useState<RetreatBooking | null>(null)
   const [retreats, setRetreats] = useState<RetreatType[]>([])
-  const [lookupLoading, setLookupLoading] = useState(false)
-  const [actionLoading, setActionLoading] = useState<'cancel' | 'reschedule' | null>(null)
-  const [message, setMessage] = useState<MessageState>(null)
+  const [loading, setLoading] = useState(false)
+  const [action, setAction] = useState<'cancel' | 'reschedule' | null>(null)
+  const [confirmCancel, setConfirmCancel] = useState(false)
   const [rescheduleTo, setRescheduleTo] = useState('')
-  const searchParams = useSearchParams()
-  const autoLookupRef = useRef<string | null>(null)
+  const [message, setMessage] = useState<Message>(null)
+  const autoLookup = useRef<string | null>(null)
 
-  const lookupByBookingId = useCallback(
-    async (rawValue: string) => {
-      const bookingId = rawValue.trim()
-      if (!bookingId) {
-        setMessage({ type: 'error', text: 'Please enter your booking ID.' })
-        return
-      }
-      setMessage(null)
-      setLookupLoading(true)
-      try {
-        const response = await fetch('/api/retreats/bookings/lookup', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ bookingId }),
-        })
-
-        if (!response.ok) {
-          const error = await response.json().catch(() => ({}))
-          throw new Error(error?.error ?? 'Booking not found.')
-        }
-
-        const data = await response.json()
-        setBooking(data.data as RetreatBooking)
-        setMessage({ type: 'success', text: 'Booking found! You can manage it below.' })
-      } catch (error) {
-        setBooking(null)
-        setMessage({ type: 'error', text: error instanceof Error ? error.message : 'Booking lookup failed.' })
-      } finally {
-        setLookupLoading(false)
-      }
-    },
-    [],
-  )
-
-  useEffect(() => {
-    const loadRetreats = async () => {
-      try {
-        const response = await fetch('/api/retreats')
-        const payload = await response.json()
-        setRetreats(payload.data ?? [])
-      } catch (error) {
-        console.error('[check-booking] failed to load retreat catalog', error)
-      }
+  const lookup = useCallback(async (raw: string) => {
+    const value = raw.trim()
+    if (!value) {
+      setMessage({ type: 'error', text: 'Please enter the ticket code from your confirmation email.' })
+      return
     }
-
-    loadRetreats()
+    setLoading(true)
+    setMessage(null)
+    try {
+      const response = await fetch('/api/retreats/bookings/lookup', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ bookingId: value }),
+      })
+      const payload = await response.json().catch(() => ({}))
+      if (!response.ok) throw new Error(payload?.error ?? 'We could not find that booking.')
+      setBooking(payload.data as RetreatBooking)
+      setConfirmCancel(false)
+      setRescheduleTo('')
+    } catch (error) {
+      setBooking(null)
+      setMessage({ type: 'error', text: error instanceof Error ? error.message : 'We could not find that booking.' })
+    } finally {
+      setLoading(false)
+    }
   }, [])
 
   useEffect(() => {
-    if (booking) {
-      setRescheduleTo('')
-      setMessage(null)
-    }
-  }, [booking])
+    fetch('/api/retreats')
+      .then((res) => res.json())
+      .then((payload) => setRetreats(payload.data ?? []))
+      .catch(() => setRetreats([]))
+  }, [])
 
   useEffect(() => {
-    const codeParam = searchParams.get('code')
-    if (!codeParam || autoLookupRef.current === codeParam) return
-    autoLookupRef.current = codeParam
-    setForm({ bookingId: codeParam })
-    lookupByBookingId(codeParam)
-  }, [searchParams, lookupByBookingId])
+    const param = searchParams.get('code')
+    if (!param || autoLookup.current === param) return
+    autoLookup.current = param
+    setCode(param)
+    lookup(param)
+  }, [searchParams, lookup])
 
-  const eligibleRetreats = useMemo(() => {
+  const retreat = useMemo(() => retreats.find((item) => item.id === booking?.retreatId), [retreats, booking])
+
+  const rescheduleOptions = useMemo(() => {
     if (!booking) return []
-    const available = retreats.filter(
-      (retreat) => retreat.id !== booking.retreatId && retreat.status === 'Registration Open',
-    )
-    return available.slice(0, 3)
+    return getUpcomingRetreats(retreats)
+      .map(({ retreat: item }) => item)
+      .filter((item) => item.id !== booking.retreatId && item.status === 'Registration Open')
+      .slice(0, 6)
   }, [booking, retreats])
 
-  const canCancel = Boolean(booking && booking.status !== 'cancelled')
-  const canReschedule = Boolean(booking && eligibleRetreats.length > 0)
-
-  const handleInputChange = (value: string) => {
-    setForm({ bookingId: value })
-  }
-
-  const handleLookup = async (event: React.FormEvent<HTMLFormElement>) => {
-    event.preventDefault()
-    await lookupByBookingId(form.bookingId)
-  }
-
-  const handleCancel = async () => {
+  const patchBooking = async (body: Record<string, unknown>, kind: 'cancel' | 'reschedule') => {
     if (!booking) return
-    setActionLoading('cancel')
+    setAction(kind)
     setMessage(null)
     try {
       const response = await fetch(`/api/retreats/bookings/${booking.id}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ status: 'cancelled' }),
+        body: JSON.stringify(body),
       })
-
-      if (!response.ok) {
-        const error = await response.json()
-        throw new Error(error?.error ?? 'Unable to cancel booking.')
-      }
-
-      const data = await response.json()
-      setBooking(data.data as RetreatBooking)
+      const payload = await response.json().catch(() => ({}))
+      if (!response.ok) throw new Error(payload?.error ?? 'Something went wrong. Please try again.')
+      setBooking(payload.data as RetreatBooking)
+      setConfirmCancel(false)
+      setRescheduleTo('')
       setMessage({
         type: 'success',
-        text: 'Your booking has been cancelled. Please note refunds are not issued, but you can reschedule anytime.',
+        text: kind === 'cancel' ? 'Your booking has been cancelled.' : 'Your booking has been moved. A new confirmation is on its way.',
       })
     } catch (error) {
-      setMessage({ type: 'error', text: error instanceof Error ? error.message : 'Cancellation failed.' })
+      setMessage({ type: 'error', text: error instanceof Error ? error.message : 'Something went wrong. Please try again.' })
     } finally {
-      setActionLoading(null)
+      setAction(null)
     }
   }
 
-  const handleReschedule = async () => {
-    if (!booking || !rescheduleTo) {
-      setMessage({ type: 'error', text: 'Please select a retreat to reschedule into.' })
-      return
-    }
-
-    const targetRetreat = eligibleRetreats.find((retreat) => retreat.id === rescheduleTo)
-    if (!targetRetreat) {
-      setMessage({ type: 'error', text: 'That retreat is no longer available.' })
-      return
-    }
-
-    setActionLoading('reschedule')
-    setMessage(null)
-    try {
-      const response = await fetch(`/api/retreats/bookings/${booking.id}`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          retreatId: targetRetreat.id,
-          retreatTitle: targetRetreat.title,
-          status: 'rescheduled',
-        }),
-      })
-
-      if (!response.ok) {
-        const error = await response.json()
-        throw new Error(error?.error ?? 'Unable to reschedule booking.')
-      }
-
-      const data = await response.json()
-      setBooking(data.data as RetreatBooking)
-      setMessage({
-        type: 'success',
-        text: `Successfully rescheduled to ${targetRetreat.title}. Your confirmation will be updated shortly.`,
-      })
-    } catch (error) {
-      setMessage({ type: 'error', text: error instanceof Error ? error.message : 'Reschedule failed.' })
-    } finally {
-      setActionLoading(null)
-    }
-  }
-
-  const currentStatus = booking ? statusConfig[booking.status as keyof typeof statusConfig] || statusConfig.pending : null
-  const currentPaymentStatus = booking ? paymentStatusConfig[booking.paymentStatus as keyof typeof paymentStatusConfig] || paymentStatusConfig.pending : null
+  const status = booking ? statusConfig[booking.status] ?? statusConfig.pending : null
+  const cancelled = booking?.status === 'cancelled'
+  const ticketUrl =
+    booking?.ticketCode && typeof window !== 'undefined'
+      ? `${window.location.origin}/retreats/check-booking?code=${encodeURIComponent(booking.ticketCode)}`
+      : undefined
 
   return (
-    <main className='min-h-screen bg-gradient-to-b from-slate-50 to-white'>
-      {/* Hero Section */}
-      <section className='pt-32 pb-16 bg-gradient-to-br from-slate-900 via-indigo-950 to-purple-950 relative overflow-hidden'>
-        <div className='absolute inset-0 bg-[url("/images/banner/Stars.svg")] opacity-10' />
-        <div className='absolute top-0 left-1/2 -translate-x-1/2 w-[800px] h-[400px] bg-indigo-500/20 rounded-full blur-3xl' />
-        
-        <div className='container mx-auto max-w-4xl px-4 relative'>
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.6 }}
-            className='text-center'
+    <main>
+      <section className='bg-navy-950 !py-0'>
+        <div className='container py-16 text-center sm:py-20'>
+          <p className='eyebrow justify-center text-gold-300'>Manage booking</p>
+          <h1 className='mt-4 text-5xl text-white sm:text-6xl'>Find your retreat booking</h1>
+          <p className='mx-auto mt-4 max-w-xl text-lg text-navy-100'>
+            Enter the ticket code from your confirmation email to view your ticket, move to another date or cancel.
+          </p>
+          <form
+            onSubmit={(e) => {
+              e.preventDefault()
+              lookup(code)
+            }}
+            className='mx-auto mt-10 flex max-w-xl flex-col gap-3 sm:flex-row'
           >
-            <span className='inline-flex items-center gap-2 px-4 py-2 bg-white/10 backdrop-blur-sm rounded-full text-white/90 text-sm font-medium mb-6 border border-white/20'>
-              <Search className='w-4 h-4' />
-              Booking Management
-            </span>
-            <h1 className='text-4xl sm:text-5xl lg:text-6xl font-bold text-white mb-6 leading-tight'>
-              Check Your Booking
-            </h1>
-            <p className='text-lg text-white/70 max-w-2xl mx-auto leading-relaxed'>
-              Find your retreat booking to view details, reschedule to another date, or cancel if needed.
-            </p>
-          </motion.div>
+            <label className='relative flex-1'>
+              <span className='sr-only'>Ticket code</span>
+              <Ticket className='pointer-events-none absolute left-4 top-1/2 h-5 w-5 -translate-y-1/2 text-navy-400' />
+              <input
+                value={code}
+                onChange={(e) => setCode(e.target.value)}
+                placeholder='e.g. DMRC-7KQ2X9PA'
+                autoCapitalize='characters'
+                className='h-14 w-full rounded-full border-0 bg-white pl-12 pr-5 font-mono text-navy-900 placeholder:font-sans placeholder:text-navy-300 focus:outline-none focus:ring-4 focus:ring-gold-300/50'
+              />
+            </label>
+            <Button type='submit' variant='gold' size='xl' className='h-14' disabled={loading}>
+              {loading ? <Loader2 className='mr-2 h-4 w-4 animate-spin' /> : <Search className='mr-2 h-4 w-4' />}
+              Find booking
+            </Button>
+          </form>
         </div>
       </section>
 
-      {/* Main Content */}
-      <section className='py-12 -mt-8'>
-        <div className='container mx-auto max-w-5xl px-4'>
-          <div className='grid lg:grid-cols-5 gap-8'>
-            {/* Search Form */}
-            <motion.div
-              initial={{ opacity: 0, x: -20 }}
-              animate={{ opacity: 1, x: 0 }}
-              transition={{ duration: 0.5, delay: 0.2 }}
-              className='lg:col-span-2'
+      <section className='py-12 sm:py-16'>
+        <div className='container max-w-5xl'>
+          {message && (
+            <div
+              role={message.type === 'error' ? 'alert' : 'status'}
+              className={cn(
+                'mb-8 flex items-start gap-3 rounded-2xl px-5 py-4 text-sm',
+                message.type === 'error' ? 'bg-red-50 text-red-700' : 'bg-emerald-50 text-emerald-800',
+              )}
             >
-              <div className='bg-white rounded-3xl shadow-xl shadow-slate-200/50 border border-slate-100 p-8 sticky top-32'>
-                <div className='flex items-center gap-3 mb-6'>
-                  <div className='w-12 h-12 rounded-2xl bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center'>
-                    <Search className='w-6 h-6 text-white' />
-                  </div>
-                  <div>
-                    <h2 className='text-xl font-bold text-slate-900'>Find Booking</h2>
-                    <p className='text-sm text-slate-500'>Enter your booking details</p>
-                  </div>
-                </div>
+              {message.type === 'error' ? <AlertCircle className='h-5 w-5 shrink-0' /> : <CheckCircle2 className='h-5 w-5 shrink-0' />}
+              {message.text}
+            </div>
+          )}
 
-                <form onSubmit={handleLookup} className='space-y-4'>
-                  <div>
-                        <label className='block text-sm font-semibold text-slate-700 mb-2'>
-                          Booking ID
-                        </label>
-                        <div className='relative'>
-                          <Hash className='absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400' />
-                          <input
-                            type='text'
-                            className='w-full pl-12 pr-4 py-3.5 bg-slate-50 border border-slate-200 rounded-xl text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all'
-                        placeholder='Enter your booking ID or ticket code'
-                            value={form.bookingId}
-                        onChange={(e) => handleInputChange(e.target.value)}
-                          />
-                        </div>
-                        <p className='mt-2 text-xs text-slate-500'>
-                      This appears in your confirmation email and on your ticket.
-                    </p>
-                        </div>
-                  <button
-                    type='submit'
-                    disabled={lookupLoading}
-                    className='w-full py-4 bg-gradient-to-r from-indigo-600 to-purple-600 text-white rounded-xl font-semibold hover:shadow-lg hover:shadow-indigo-500/30 transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2'
-                  >
-                    {lookupLoading ? (
+          {!booking ? (
+            <div className='grid gap-6 sm:grid-cols-3'>
+              {[
+                { title: 'Where is my code?', text: 'It starts with DMRC- and is in the confirmation email we sent after you registered.' },
+                { title: 'Lost your email?', text: 'Call the retreat office on +255 765 572 679 and we will resend your ticket.' },
+                { title: 'Not booked yet?', text: 'Browse upcoming retreats and reserve your place in a few minutes.', href: '/retreats' },
+              ].map((item) => (
+                <div key={item.title} className='rounded-3xl border border-border bg-white p-6'>
+                  <h2 className='font-display text-2xl font-semibold text-navy-900'>{item.title}</h2>
+                  <p className='mt-2 text-muted-foreground'>{item.text}</p>
+                  {item.href && (
+                    <Link href={item.href} className='mt-4 inline-block text-sm font-medium text-gold-700 hover:underline'>
+                      See retreats →
+                    </Link>
+                  )}
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div className='grid gap-8 lg:grid-cols-5'>
+              <div className='space-y-6 lg:col-span-3'>
+                <div className='rounded-[2rem] border border-border bg-white p-6 shadow-soft sm:p-8'>
+                  <div className='flex flex-wrap items-start justify-between gap-4'>
+                    <div>
+                      <p className='text-sm text-muted-foreground'>Booking for</p>
+                      <h2 className='font-display text-3xl font-semibold text-navy-900'>{booking.fullName}</h2>
+                    </div>
+                    {status && (
+                      <span className={cn('inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-sm font-medium ring-1 ring-inset', status.className)}>
+                        <status.icon className='h-4 w-4' /> {status.label}
+                      </span>
+                    )}
+                  </div>
+                  <dl className='mt-6 grid gap-4 sm:grid-cols-2'>
+                    <div className='rounded-2xl bg-parchment p-4'>
+                      <dt className='text-xs uppercase tracking-wider text-muted-foreground'>Retreat</dt>
+                      <dd className='mt-1 font-medium text-navy-900'>{booking.retreatTitle}</dd>
+                    </div>
+                    <div className='rounded-2xl bg-parchment p-4'>
+                      <dt className='text-xs uppercase tracking-wider text-muted-foreground'>Payment</dt>
+                      <dd className='mt-1 font-medium text-navy-900'>{paymentLabels[booking.paymentStatus] ?? booking.paymentStatus}</dd>
+                    </div>
+                    {retreat && (
                       <>
-                        <RefreshCw className='w-5 h-5 animate-spin' />
-                        Searching...
-                      </>
-                    ) : (
-                      <>
-                        <Search className='w-5 h-5' />
-                        Find Booking
+                        <div className='flex gap-3 rounded-2xl bg-parchment p-4'>
+                          <CalendarDays className='mt-0.5 h-5 w-5 text-gold-500' />
+                          <div>
+                            <dt className='text-xs uppercase tracking-wider text-muted-foreground'>Dates</dt>
+                            <dd className='mt-1 text-navy-900'>{retreat.dateRange}</dd>
+                          </div>
+                        </div>
+                        <div className='flex gap-3 rounded-2xl bg-parchment p-4'>
+                          <MapPin className='mt-0.5 h-5 w-5 text-gold-500' />
+                          <div>
+                            <dt className='text-xs uppercase tracking-wider text-muted-foreground'>Location</dt>
+                            <dd className='mt-1 text-navy-900'>{retreat.location}</dd>
+                          </div>
+                        </div>
                       </>
                     )}
-                  </button>
-                </form>
-
-                {/* Message */}
-                <AnimatePresence>
-                  {message && (
-                    <motion.div
-                      initial={{ opacity: 0, y: 10 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      exit={{ opacity: 0, y: -10 }}
-                      className={`mt-4 p-4 rounded-xl flex items-start gap-3 ${
-                        message.type === 'success'
-                          ? 'bg-emerald-50 border border-emerald-200'
-                          : 'bg-red-50 border border-red-200'
-                      }`}
-                    >
-                      {message.type === 'success' ? (
-                        <CheckCircle2 className='w-5 h-5 text-emerald-600 flex-shrink-0 mt-0.5' />
-                      ) : (
-                        <AlertCircle className='w-5 h-5 text-red-600 flex-shrink-0 mt-0.5' />
-                      )}
-                      <p className={`text-sm ${message.type === 'success' ? 'text-emerald-800' : 'text-red-800'}`}>
-                        {message.text}
-                      </p>
-                    </motion.div>
-                  )}
-                </AnimatePresence>
-
-                {/* Help Link */}
-                <div className='mt-6 pt-6 border-t border-slate-100 text-center'>
-                  <Link
-                    href='/retreats'
-                    className='text-sm text-indigo-600 hover:text-indigo-700 font-medium inline-flex items-center gap-1'
-                  >
-                    Need to make a new booking?
-                    <ArrowRight className='w-4 h-4' />
-                  </Link>
+                  </dl>
                 </div>
-              </div>
-            </motion.div>
 
-            {/* Booking Details */}
-            <motion.div
-              initial={{ opacity: 0, x: 20 }}
-              animate={{ opacity: 1, x: 0 }}
-              transition={{ duration: 0.5, delay: 0.3 }}
-              className='lg:col-span-3'
-            >
-              <AnimatePresence mode='wait'>
-                {booking ? (
-                  <motion.div
-                    key='booking-found'
-                    initial={{ opacity: 0, scale: 0.98 }}
-                    animate={{ opacity: 1, scale: 1 }}
-                    exit={{ opacity: 0, scale: 0.98 }}
-                    className='space-y-6'
-                  >
-                    {/* Booking Card */}
-                    <div className='bg-white rounded-3xl shadow-xl shadow-slate-200/50 border border-slate-100 overflow-hidden'>
-                      {/* Header */}
-                      <div className='bg-gradient-to-r from-indigo-600 to-purple-600 px-8 py-6'>
-                        <div className='flex items-start justify-between'>
-                          <div>
-                            <p className='text-indigo-200 text-sm font-medium mb-1'>Retreat Booking</p>
-                            <h3 className='text-2xl font-bold text-white'>{booking.retreatTitle}</h3>
-                          </div>
-                          {currentStatus && (
-                            <span className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold border ${currentStatus.color}`}>
-                              <currentStatus.icon className='w-3.5 h-3.5' />
-                              {currentStatus.label}
-                            </span>
-                          )}
+                {!cancelled && (
+                  <div className='rounded-[2rem] border border-border bg-white p-6 sm:p-8'>
+                    <h3 className='font-display text-2xl font-semibold text-navy-900'>Change of plans?</h3>
+                    {rescheduleOptions.length > 0 && (
+                      <div className='mt-5'>
+                        <p className='text-sm font-medium text-navy-800'>Move to another date</p>
+                        <div className='mt-3 grid gap-2'>
+                          {rescheduleOptions.map((option) => (
+                            <label
+                              key={option.id}
+                              className={cn(
+                                'flex cursor-pointer items-center justify-between gap-4 rounded-2xl border px-4 py-3 transition',
+                                rescheduleTo === option.id ? 'border-navy-900 bg-navy-50' : 'border-border hover:border-navy-200',
+                              )}
+                            >
+                              <span>
+                                <span className='block font-medium text-navy-900'>{option.title}</span>
+                                <span className='block text-sm text-muted-foreground'>{option.dateRange}</span>
+                              </span>
+                              <input
+                                type='radio'
+                                name='reschedule'
+                                className='h-4 w-4 accent-navy-900'
+                                checked={rescheduleTo === option.id}
+                                onChange={() => setRescheduleTo(option.id)}
+                              />
+                            </label>
+                          ))}
                         </div>
-                      </div>
-
-                      {/* Content */}
-                      <div className='p-8'>
-                        <div className='grid sm:grid-cols-2 gap-6 mb-8'>
-                          <div className='space-y-4'>
-                            <div className='flex items-center gap-3'>
-                              <div className='w-10 h-10 rounded-xl bg-slate-100 flex items-center justify-center'>
-                                <Hash className='w-5 h-5 text-slate-600' />
-                              </div>
-                              <div>
-                                <p className='text-xs text-slate-500 uppercase tracking-wider'>Reference</p>
-                                <p className='font-semibold text-slate-900'>{booking.id}</p>
-                              </div>
-                            </div>
-                            <div className='flex items-center gap-3'>
-                              <div className='w-10 h-10 rounded-xl bg-slate-100 flex items-center justify-center'>
-                                <User className='w-5 h-5 text-slate-600' />
-                              </div>
-                              <div>
-                                <p className='text-xs text-slate-500 uppercase tracking-wider'>Booked By</p>
-                                <p className='font-semibold text-slate-900'>{booking.fullName}</p>
-                              </div>
-                            </div>
-                          </div>
-                          <div className='space-y-4'>
-                            <div className='flex items-center gap-3'>
-                              <div className='w-10 h-10 rounded-xl bg-slate-100 flex items-center justify-center'>
-                                <Phone className='w-5 h-5 text-slate-600' />
-                              </div>
-                              <div>
-                                <p className='text-xs text-slate-500 uppercase tracking-wider'>Phone</p>
-                                <p className='font-semibold text-slate-900'>{booking.phone}</p>
-                              </div>
-                            </div>
-                            <div className='flex items-center gap-3'>
-                              <div className='w-10 h-10 rounded-xl bg-slate-100 flex items-center justify-center'>
-                                <CreditCard className='w-5 h-5 text-slate-600' />
-                              </div>
-                              <div>
-                                <p className='text-xs text-slate-500 uppercase tracking-wider'>Payment</p>
-                                <p className={`font-semibold ${currentPaymentStatus?.color}`}>
-                                  {currentPaymentStatus?.label}
-                                </p>
-                              </div>
-                            </div>
-                          </div>
-                        </div>
-
-                        {/* Rescheduled Info */}
-                        {booking.rescheduledToRetreatTitle && (
-                          <div className='p-4 bg-blue-50 border border-blue-100 rounded-2xl mb-6'>
-                            <div className='flex items-center gap-2 text-blue-700 mb-1'>
-                              <RefreshCw className='w-4 h-4' />
-                              <span className='text-sm font-semibold'>Rescheduled To</span>
-                            </div>
-                            <p className='text-blue-900 font-medium'>{booking.rescheduledToRetreatTitle}</p>
-                            {booking.rescheduledAt && (
-                              <p className='text-blue-600 text-sm mt-1'>
-                                on {new Date(booking.rescheduledAt).toLocaleDateString('en-GB', {
-                                  day: 'numeric',
-                                  month: 'long',
-                                  year: 'numeric'
-                                })}
-                              </p>
-                            )}
-                          </div>
-                        )}
-
-                        {/* Actions */}
-                        <div className='space-y-4 pt-6 border-t border-slate-100'>
-                          {/* Cancel Button */}
-                          <button
-                            onClick={handleCancel}
-                            disabled={actionLoading === 'cancel' || !canCancel}
-                            className='w-full py-3.5 rounded-xl border-2 border-red-200 bg-red-50 text-red-700 font-semibold hover:bg-red-100 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2'
-                          >
-                            {actionLoading === 'cancel' ? (
-                              <>
-                                <RefreshCw className='w-5 h-5 animate-spin' />
-                                Cancelling...
-                              </>
-                            ) : canCancel ? (
-                              <>
-                                <XCircle className='w-5 h-5' />
-                                Cancel Booking (No Refund)
-                              </>
-                            ) : (
-                              <>
-                                <XCircle className='w-5 h-5' />
-                                Already Cancelled
-                              </>
-                            )}
-                          </button>
-
-                          {/* Reschedule Section */}
-                          <div className='bg-slate-50 rounded-2xl p-5'>
-                            <div className='flex items-center gap-2 mb-4'>
-                              <Calendar className='w-5 h-5 text-indigo-600' />
-                              <span className='font-semibold text-slate-900'>Reschedule Instead</span>
-                            </div>
-                            
-                            {canReschedule ? (
-                              <>
-                                <select
-                                  className='w-full px-4 py-3 bg-white border border-slate-200 rounded-xl text-slate-900 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent mb-3 cursor-pointer'
-                                  value={rescheduleTo}
-                                  onChange={(e) => setRescheduleTo(e.target.value)}
-                                >
-                                  <option value=''>Select another retreat...</option>
-                                  {eligibleRetreats.map((retreat) => (
-                                    <option key={retreat.id} value={retreat.id}>
-                                      {retreat.title} · {retreat.dateRange}
-                                    </option>
-                                  ))}
-                                </select>
-                                  <p className='text-xs text-slate-500 mb-3'>
-                                    Showing the next three bookable retreats only.
-                                  </p>
-                                <button
-                                  onClick={handleReschedule}
-                                  disabled={actionLoading === 'reschedule' || !rescheduleTo}
-                                  className='w-full py-3.5 bg-slate-900 text-white rounded-xl font-semibold hover:bg-slate-800 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2'
-                                >
-                                  {actionLoading === 'reschedule' ? (
-                                    <>
-                                      <RefreshCw className='w-5 h-5 animate-spin' />
-                                      Rescheduling...
-                                    </>
-                                  ) : (
-                                    <>
-                                      <RefreshCw className='w-5 h-5' />
-                                      Confirm Reschedule
-                                    </>
-                                  )}
-                                </button>
-                              </>
-                            ) : (
-                              <p className='text-sm text-slate-500'>
-                                No alternate retreats available for rescheduling at this time.
-                              </p>
-                            )}
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-
-                    {/* Warning Note */}
-                    <div className='bg-amber-50 border border-amber-200 rounded-2xl p-5 flex items-start gap-4'>
-                      <AlertCircle className='w-6 h-6 text-amber-600 flex-shrink-0' />
-                      <div>
-                        <h4 className='font-semibold text-amber-900 mb-1'>Important Notice</h4>
-                        <p className='text-sm text-amber-800'>
-                          Cancellations are final and refunds are not issued. However, you can reschedule to any available retreat at no additional cost.
-                        </p>
-                      </div>
-                    </div>
-                  </motion.div>
-                ) : (
-                  <motion.div
-                    key='no-booking'
-                    initial={{ opacity: 0 }}
-                    animate={{ opacity: 1 }}
-                    exit={{ opacity: 0 }}
-                    className='h-full'
-                  >
-                    <div className='bg-white rounded-3xl shadow-xl shadow-slate-200/50 border border-slate-100 h-full min-h-[500px] flex flex-col items-center justify-center p-12 text-center'>
-                      <div className='w-20 h-20 rounded-full bg-gradient-to-br from-indigo-100 to-purple-100 flex items-center justify-center mb-6'>
-                        <Search className='w-10 h-10 text-indigo-500' />
-                      </div>
-                      <h3 className='text-2xl font-bold text-slate-900 mb-3'>Find Your Booking</h3>
-                      <p className='text-slate-500 max-w-sm mb-8'>
-                        Enter your booking ID in the search form to view and manage your retreat booking.
-                      </p>
-                      <div className='flex flex-wrap items-center justify-center gap-4'>
-                        <Link
-                          href='/retreats'
-                          className='inline-flex items-center gap-2 px-6 py-3 bg-indigo-600 text-white rounded-xl font-semibold hover:bg-indigo-700 transition-colors'
+                        <Button
+                          className='mt-4'
+                          size='pill'
+                          disabled={!rescheduleTo || action !== null}
+                          onClick={() => patchBooking({ retreatId: rescheduleTo, status: 'rescheduled' }, 'reschedule')}
                         >
-                          <Sparkles className='w-5 h-5' />
-                          Book a Retreat
-                        </Link>
-                        <Link
-                          href='/'
-                          className='inline-flex items-center gap-2 px-6 py-3 border border-slate-200 text-slate-700 rounded-xl font-semibold hover:bg-slate-50 transition-colors'
-                        >
-                          Back to Home
-                        </Link>
+                          {action === 'reschedule' && <Loader2 className='mr-2 h-4 w-4 animate-spin' />}
+                          Move my booking
+                        </Button>
                       </div>
+                    )}
+                    <div className='mt-6 border-t border-border pt-6'>
+                      {confirmCancel ? (
+                        <div className='rounded-2xl bg-red-50 p-4'>
+                          <p className='text-sm text-red-800'>Cancel this booking? Refunds follow our cancellation policy.</p>
+                          <div className='mt-3 flex gap-2'>
+                            <Button
+                              variant='destructive'
+                              size='pill'
+                              disabled={action !== null}
+                              onClick={() => patchBooking({ status: 'cancelled' }, 'cancel')}
+                            >
+                              {action === 'cancel' && <Loader2 className='mr-2 h-4 w-4 animate-spin' />}
+                              Yes, cancel booking
+                            </Button>
+                            <Button variant='ghost' size='pill' onClick={() => setConfirmCancel(false)}>
+                              Keep it
+                            </Button>
+                          </div>
+                        </div>
+                      ) : (
+                        <button type='button' onClick={() => setConfirmCancel(true)} className='text-sm font-medium text-red-700 hover:underline'>
+                          Cancel my booking
+                        </button>
+                      )}
                     </div>
-                  </motion.div>
+                  </div>
                 )}
-              </AnimatePresence>
-            </motion.div>
-          </div>
+              </div>
+
+              <div className='lg:col-span-2'>
+                {booking.ticketCode && !cancelled ? (
+                  <RetreatTicket
+                    booking={{
+                      id: booking.id,
+                      fullName: booking.fullName,
+                      email: booking.email,
+                      phone: booking.phone,
+                      ticketCode: booking.ticketCode,
+                      status: booking.status,
+                    }}
+                    retreat={{
+                      title: booking.retreatTitle,
+                      dateRange: retreat?.dateRange ?? '',
+                      timeRange: retreat?.timeRange,
+                      location: retreat?.location ?? 'Divine Mercy Retreat Center, Vikindu',
+                    }}
+                    ticketUrl={ticketUrl}
+                  />
+                ) : (
+                  <div className='rounded-[2rem] border border-dashed border-border p-8 text-center text-muted-foreground'>
+                    {cancelled ? 'This booking was cancelled, so its ticket is no longer valid.' : 'No ticket is attached to this booking yet.'}
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
         </div>
       </section>
     </main>
@@ -565,13 +344,7 @@ function CheckBookingContent() {
 
 export default function CheckBookingPage() {
   return (
-    <Suspense
-      fallback={
-        <div className='min-h-screen bg-gradient-to-b from-slate-50 to-white flex items-center justify-center'>
-          <div className='text-sm text-slate-500'>Loading booking tools…</div>
-        </div>
-      }
-    >
+    <Suspense>
       <CheckBookingContent />
     </Suspense>
   )
