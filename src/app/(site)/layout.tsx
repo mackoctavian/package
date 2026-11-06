@@ -1,9 +1,7 @@
-import Header from '@/app/components/Layout/Header'
-import Footer from '@/app/components/Layout/Footer'
+import SiteHeader from '@/app/components/site/SiteHeader'
+import SiteFooter from '@/app/components/site/SiteFooter'
 import ScrollToTop from '@/app/components/ScrollToTop'
 import Aoscompo from '@/utils/aos'
-import RightSidebar from '@/app/components/Layout/RightSidebar'
-import FloatingSocialButtons from '@/app/components/Common/FloatingSocialButtons'
 
 export default function SiteLayout({
   children,
@@ -12,17 +10,13 @@ export default function SiteLayout({
 }>) {
   return (
     <Aoscompo>
-      <div className='relative min-h-screen bg-slate-50'>
-        <Header />
-        <div className='w-full flex gap-8 px-2 sm:px-4 lg:px-6 pt-40 lg:pt-36'>
-          <main className='w-full lg:w-[70%]'>{children}</main>
-          <aside className='hidden w-[30%] lg:block pt-4'>
-            <RightSidebar />
-          </aside>
+      <div className='relative flex min-h-screen flex-col bg-ivory text-navy-900'>
+        <SiteHeader />
+        <div id='main-content' className='flex-1'>
+          {children}
         </div>
-        <Footer />
+        <SiteFooter />
         <ScrollToTop />
-        <FloatingSocialButtons />
       </div>
     </Aoscompo>
   )

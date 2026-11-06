@@ -1,28 +1,46 @@
-import React from 'react'
-import Hero from '@/app/components/Home/Hero'
-import UpcomingRetreats from '@/app/components/Home/UpcomingRetreats'
-import ImageCardMenu from '@/app/components/Home/ImageCardMenu'
-import Mentor from '@/app/components/Home/Mentor'
-import Gallery from '@/app/components/Home/Gallery'
-import Testimonial from '@/app/components/Home/Testimonial'
-import { Metadata } from 'next'
-import ContactForm from '@/app/components/Contact/Form'
+import type { Metadata } from 'next'
+
+import HeroSection from '@/app/components/site/home/HeroSection'
+import ContactSection from '@/app/components/site/home/ContactSection'
+import {
+  BookingStepsSection,
+  GalleryPreviewSection,
+  MassAndGivingSection,
+  PatronsSection,
+  RetreatsSection,
+  TestimonialsSection,
+  WelcomeSection,
+} from '@/app/components/site/home/HomeSections'
+import { getGalleryPreview, getHeroSlides, getHomepageRetreats, getPatrons, getTestimonials } from '@/lib/site/homepage'
+import { siteConfig } from '@/app/data/site'
+
+export const revalidate = 60
 
 export const metadata: Metadata = {
-  title: 'Divine Mercy Retreat Center | DMRC',
-  description: 'Divine Mercy Retreat Center (DMRC) Vikindu - A sanctuary of peace and prayer in Tanzania, East Africa.',
+  title: { absolute: `${siteConfig.name} | Retreats, Mass intentions & giving` },
+  description: siteConfig.description,
 }
 
-export default function Home() {
+export default async function Home() {
+  const [slides, retreats, patrons, testimonials, gallery] = await Promise.all([
+    getHeroSlides(),
+    getHomepageRetreats(3),
+    getPatrons(),
+    getTestimonials(),
+    getGalleryPreview(5),
+  ])
+
   return (
-    <>
-      <Hero />
-      <ImageCardMenu />
-      <UpcomingRetreats />
-      <Mentor />
-      <Gallery />
-      <Testimonial />
-      <ContactForm />
-    </>
+    <main>
+      <HeroSection slides={slides} />
+      <WelcomeSection />
+      <RetreatsSection retreats={retreats} />
+      <BookingStepsSection />
+      <MassAndGivingSection />
+      <PatronsSection patrons={patrons} />
+      <TestimonialsSection testimonials={testimonials} />
+      <GalleryPreviewSection items={gallery} />
+      <ContactSection />
+    </main>
   )
 }
