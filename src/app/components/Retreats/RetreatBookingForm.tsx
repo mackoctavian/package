@@ -307,6 +307,9 @@ const RetreatBookingForm = ({ retreat }: RetreatBookingFormProps) => {
   }
 
   const submitBooking = async () => {
+    // Card details are only for the (simulated) payment step and must never be sent or stored.
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    const { cardName, cardNumber, cardExpiry, cardCvc, ...safeForm } = form
     const response = await fetch('/api/retreats/bookings', {
       method: 'POST',
       headers: {
@@ -315,8 +318,7 @@ const RetreatBookingForm = ({ retreat }: RetreatBookingFormProps) => {
       body: JSON.stringify({
         retreatId: retreat.id,
         retreatTitle: retreat.title,
-        paymentStatus: retreat.isPaid === false ? 'waived' : 'paid',
-        form,
+        form: safeForm,
       }),
     })
 

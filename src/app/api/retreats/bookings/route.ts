@@ -9,6 +9,15 @@ import { guardAdminApi, isAdminRequest } from '@/lib/auth/api-guard'
 
 const normalizePhone = (value?: string | null) => value?.replace(/\s+/g, '') ?? undefined
 
+// Never persist payment card details, even if an older client sends them.
+const SENSITIVE_FORM_FIELDS = ['cardName', 'cardNumber', 'cardExpiry', 'cardCvc', 'cvc', 'cvv'] as const
+
+const stripSensitiveFields = <T extends Record<string, unknown>>(form: T) => {
+  const copy: Record<string, unknown> = { ...form }
+  for (const key of SENSITIVE_FORM_FIELDS) delete copy[key]
+  return copy as T
+}
+
 const generateTicketCode = () => `DMRC-${nanoid(8).toUpperCase()}`
 
 export const GET = async () => {
@@ -34,7 +43,8 @@ export const POST = async (request: Request) => {
     return NextResponse.json({ error: parsed.error.flatten() }, { status: 400 })
   }
 
-  const { retreatId, form, note } = parsed.data
+  const { retreatId, note } = parsed.data
+  const form = stripSensitiveFields(parsed.data.form)
 
   try {
     const retreat = await prisma.retreat.findUnique({
