@@ -25,6 +25,7 @@ export default function Home() {
         data.can.intentions && data.stats.newIntentions > 0 && { label: 'Mass intentions to schedule', count: data.stats.newIntentions, icon: 'flame', href: { pathname: '/giving', params: { tab: 'mass-intentions' } } },
         data.can.donations && data.stats.newDonations > 0 && { label: 'New gifts to acknowledge', count: data.stats.newDonations, icon: 'heart', href: { pathname: '/giving', params: { tab: 'donations' } } },
         data.can.inbox && data.stats.unreadMessages > 0 && { label: 'Unread messages', count: data.stats.unreadMessages, icon: 'mail-unread', href: '/inbox' },
+        data.can.leave && (data.stats.pendingLeave ?? 0) > 0 && { label: 'Leave to approve', count: data.stats.pendingLeave ?? 0, icon: 'airplane', href: '/leave' },
       ].filter(Boolean) as { label: string; count: number; icon: IconName; href: Href }[])
     : [];
 
@@ -34,6 +35,8 @@ export default function Home() {
     can(user, 'publications') && { label: 'Publications', icon: 'book-outline', href: { pathname: '/content/[type]', params: { type: 'publications' } } },
     can(user, 'feedback') && { label: 'Inbox', icon: 'mail-outline', href: '/inbox' },
     can(user, 'news') && { label: 'News', icon: 'newspaper-outline', href: { pathname: '/content/[type]', params: { type: 'news' } } },
+    can(user, 'members') && { label: 'Members', icon: 'people-circle-outline', href: '/members' },
+    can(user, 'leave') && { label: 'Leave', icon: 'airplane-outline', href: '/leave' },
     can(user, 'team') && { label: 'Team', icon: 'people-outline', href: '/team' },
   ].filter(Boolean) as { label: string; icon: IconName; href: Href }[];
 
@@ -145,6 +148,9 @@ export default function Home() {
                 />
               ) : null}
               {data.can.team ? <StatTile label="Team" hint="Active members" value={data.stats.teamSize} icon="people-outline" onPress={() => router.push('/team')} /> : null}
+              {data.can.leave && data.stats.awayToday !== undefined ? (
+                <StatTile label="Away today" hint="On approved leave" value={data.stats.awayToday} icon="airplane-outline" onPress={() => router.push('/leave')} />
+              ) : null}
             </View>
 
             {data.can.donations && data.givingMonths.length ? (
