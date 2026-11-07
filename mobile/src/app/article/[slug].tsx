@@ -9,11 +9,14 @@ import { ParallaxScreen, RoundButton, ScreenHeader } from '@/components/headers'
 import { Badge, Divider, Img, Text } from '@/components/ui';
 import { useNews } from '@/lib/api';
 import { API_URL } from '@/lib/config';
-import { formatDate } from '@/lib/format';
+import { useFormat, useT } from '@/i18n';
+import { readingTimeLabel } from '@/lib/format';
 import { colors, radius, space } from '@/theme';
 
 export default function ArticleScreen() {
   const { slug } = useLocalSearchParams<{ slug: string }>();
+  const t = useT();
+  const { date } = useFormat();
   const { data } = useNews();
   const articles = data?.data ?? [];
   const article = articles.find((item) => item.slug === slug);
@@ -21,8 +24,8 @@ export default function ArticleScreen() {
   if (!article) {
     return (
       <View style={{ flex: 1 }}>
-        <ScreenHeader title="News" />
-        <EmptyState icon="newspaper-outline" title="Story not found" action="All news" onAction={() => router.replace('/news')} />
+        <ScreenHeader title={t('news.title')} />
+        <EmptyState icon="newspaper-outline" title={t('news.notFound')} action={t('news.allNews')} onAction={() => router.replace('/news')} />
       </View>
     );
   }
@@ -35,7 +38,13 @@ export default function ArticleScreen() {
       <ParallaxScreen
         image={article.heroImage}
         title={article.title}
-        right={<RoundButton icon="share-outline" label="Share" onPress={() => Share.share({ message: `${article.title}\n${API_URL}/news/${article.slug}` })} />}
+        right={
+          <RoundButton
+            icon="share-outline"
+            label={t('common.share')}
+            onPress={() => Share.share({ message: `${article.title}\n${API_URL}${t.locale === 'sw' ? '/sw' : ''}/news/${article.slug}` })}
+          />
+        }
         hero={
           <View style={{ gap: 8 }}>
             {article.tag ? <Badge label={article.tag} tone="light" /> : null}
@@ -43,7 +52,7 @@ export default function ArticleScreen() {
               {article.title}
             </Text>
             <Text variant="small" color={colors.navy100}>
-              {[article.author, formatDate(article.publishedOn), article.readingTime].filter(Boolean).join(' · ')}
+              {[article.author, date(article.publishedOn), readingTimeLabel(article.readingTime, t)].filter(Boolean).join(' · ')}
             </Text>
           </View>
         }>
@@ -77,7 +86,7 @@ export default function ArticleScreen() {
           {more.length ? (
             <>
               <Divider style={{ marginVertical: space.lg }} />
-              <Text variant="caption">More from DMRC</Text>
+              <Text variant="caption">{t('news.more')}</Text>
               {more.map((item) => (
                 <ArticleRow key={item.id} article={item} />
               ))}

@@ -1,11 +1,13 @@
 'use client'
 
 import { useMemo, useState } from 'react'
-import { usePathname, useRouter, useSearchParams } from 'next/navigation'
+import { useSearchParams } from 'next/navigation'
 import { CalendarSearch, Search, X } from 'lucide-react'
 
 import RetreatCard from '@/app/components/site/RetreatCard'
-import { categoryLabel, normalizeCategory, retreatCategories } from '@/lib/retreats/categories'
+import { normalizeCategory, retreatCategories, translatedCategoryLabel } from '@/lib/retreats/categories'
+import { useT } from '@/i18n/client'
+import { useLocalizedRouter, usePathnameWithoutLocale } from '@/i18n/link'
 import type { RetreatListItem } from '@/lib/retreats/queries'
 import { cn } from '@/lib/utils'
 
@@ -18,8 +20,9 @@ const startOfToday = () => {
 }
 
 export default function RetreatExplorer({ retreats }: Props) {
-  const router = useRouter()
-  const pathname = usePathname()
+  const t = useT()
+  const router = useLocalizedRouter()
+  const pathname = usePathnameWithoutLocale()
   const params = useSearchParams()
   const [query, setQuery] = useState(params.get('q') ?? '')
   const category = normalizeCategory(params.get('category'))
@@ -35,8 +38,8 @@ export default function RetreatExplorer({ retreats }: Props) {
   const categories = useMemo(() => {
     const present = new Set(retreats.map((r) => normalizeCategory(r.category)).filter(Boolean))
     const known = retreatCategories.map((c) => c.value as string)
-    return [...known, ...[...present].filter((c) => !known.includes(c))].map((value) => ({ value, label: categoryLabel(value) }))
-  }, [retreats])
+    return [...known, ...[...present].filter((c) => !known.includes(c))].map((value) => ({ value, label: translatedCategoryLabel(t, value) }))
+  }, [retreats, t])
 
   const filtered = useMemo(() => {
     const today = startOfToday()
@@ -72,7 +75,7 @@ export default function RetreatExplorer({ retreats }: Props) {
         <div className='flex flex-col gap-4 xl:flex-row xl:items-center xl:justify-between'>
           <div className='scrollbar-hide -mx-1 flex gap-2 overflow-x-auto px-1'>
             <button type='button' className={chip(!category)} onClick={() => setParam('category', null)}>
-              All retreats
+              {t('retreats.explorer.all')}
             </button>
             {categories.map((c) => (
               <button key={c.value} type='button' className={chip(category === c.value)} onClick={() => setParam('category', c.value)}>
@@ -82,19 +85,19 @@ export default function RetreatExplorer({ retreats }: Props) {
           </div>
           <div className='flex items-center gap-3'>
             <label className='relative flex-1 xl:w-72'>
-              <span className='sr-only'>Search retreats</span>
+              <span className='sr-only'>{t('retreats.explorer.searchLabel')}</span>
               <Search className='pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-navy-400' />
               <input
                 value={query}
                 onChange={(e) => setQuery(e.target.value)}
                 onBlur={() => setParam('q', query.trim() || null)}
-                placeholder='Search by title, preacher or place'
+                placeholder={t('retreats.explorer.searchPlaceholder')}
                 className='w-full rounded-full border border-border bg-white py-2.5 pl-10 pr-9 text-sm text-navy-900 placeholder:text-navy-300 focus:border-gold-400 focus:outline-none focus:ring-4 focus:ring-gold-200/50'
               />
               {query && (
                 <button
                   type='button'
-                  aria-label='Clear search'
+                  aria-label={t('retreats.explorer.clearSearch')}
                   onClick={() => {
                     setQuery('')
                     setParam('q', null)
@@ -106,15 +109,15 @@ export default function RetreatExplorer({ retreats }: Props) {
               )}
             </label>
             <button type='button' className={chip(showPast)} onClick={() => setParam('past', showPast ? null : '1')}>
-              Past retreats
+              {t('retreats.explorer.past')}
             </button>
           </div>
         </div>
       </div>
 
       <p className='mt-8 text-sm text-muted-foreground' aria-live='polite'>
-        {filtered.length} {showPast ? 'past' : 'upcoming'} retreat{filtered.length === 1 ? '' : 's'}
-        {category && ` in ${categoryLabel(category)}`}
+        {t(showPast ? 'retreats.explorer.countPast' : 'retreats.explorer.countUpcoming', { count: filtered.length })}
+        {category && t('retreats.explorer.inCategory', { category: translatedCategoryLabel(t, category) })}
       </p>
 
       {filtered.length ? (
@@ -126,10 +129,8 @@ export default function RetreatExplorer({ retreats }: Props) {
       ) : (
         <div className='mt-6 rounded-[2rem] border border-dashed border-gold-300 bg-white/60 px-6 py-16 text-center'>
           <CalendarSearch className='mx-auto h-10 w-10 text-gold-500' />
-          <h3 className='mt-4 font-display text-3xl text-navy-900'>No retreats match your search</h3>
-          <p className='mx-auto mt-2 max-w-md text-muted-foreground'>
-            Try another category, clear your search, or call the office and we will help you find a date.
-          </p>
+          <h3 className='mt-4 font-display text-3xl text-navy-900'>{t('retreats.explorer.emptyTitle')}</h3>
+          <p className='mx-auto mt-2 max-w-md text-muted-foreground'>{t('retreats.explorer.emptyText')}</p>
           <button
             type='button'
             onClick={() => {
@@ -138,7 +139,7 @@ export default function RetreatExplorer({ retreats }: Props) {
             }}
             className='mt-6 rounded-full bg-navy-900 px-5 py-2.5 text-sm font-medium text-white hover:bg-navy-700'
           >
-            Reset filters
+            {t('retreats.explorer.reset')}
           </button>
         </div>
       )}

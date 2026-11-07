@@ -11,16 +11,18 @@ import { Badge, Button, Card, Icon, InfoRow, Text } from '@/components/ui';
 import { retreatTerms } from '@/data/content';
 import { useRetreats } from '@/lib/api';
 import { API_URL } from '@/lib/config';
+import { useFormat, useT } from '@/i18n';
 import { retreatContribution } from '@/lib/format';
 import { colors, radius, space } from '@/theme';
 
 function SeatBar({ label, value, total, color }: { label: string; value: number; total: number; color: string }) {
+  const t = useT();
   const pct = total > 0 ? Math.max(4, Math.min(100, (value / total) * 100)) : 0;
   return (
     <View style={{ gap: 6 }}>
       <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
         <Text variant="label">{label}</Text>
-        <Text variant="smallStrong">{value} places</Text>
+        <Text variant="smallStrong">{t('retreats.places', { count: value })}</Text>
       </View>
       <View style={styles.track}>
         <Animated.View entering={FadeIn.delay(300)} style={[styles.fill, { width: `${pct}%`, backgroundColor: color }]} />
@@ -31,6 +33,8 @@ function SeatBar({ label, value, total, color }: { label: string; value: number;
 
 export default function RetreatDetail() {
   const { slug } = useLocalSearchParams<{ slug: string }>();
+  const t = useT();
+  const { money } = useFormat();
   const { data } = useRetreats();
   const retreat = data?.data.find((item) => item.slug === slug);
   const [termsOpen, setTermsOpen] = useState(false);
@@ -38,14 +42,22 @@ export default function RetreatDetail() {
   if (!retreat) {
     return (
       <View style={{ flex: 1 }}>
-        <ScreenHeader title="Retreat" />
-        <EmptyState icon="leaf-outline" title="Retreat not found" body="It may have been removed or renamed." action="Browse retreats" onAction={() => router.replace('/retreats')} />
+        <ScreenHeader title={t('retreats.detailTitle')} />
+        <EmptyState icon="leaf-outline" title={t('retreats.notFound')} body={t('retreats.notFoundText')} action={t('retreats.browse')} onAction={() => router.replace('/retreats')} />
       </View>
     );
   }
 
   const closed = retreat.ended || retreat.status === 'Closed';
-  const cta = retreat.ended ? 'This retreat has ended' : retreat.status === 'Closed' ? 'Registration closed' : retreat.status === 'Waitlist' ? 'Join the waitlist' : 'Reserve a place';
+  const cta = retreat.ended
+    ? t('retreats.ctaEnded')
+    : retreat.status === 'Closed'
+      ? t('retreats.ctaClosed')
+      : retreat.status === 'Waitlist'
+        ? t('retreats.ctaWaitlist')
+        : t('retreats.ctaReserve');
+  const dates = retreat.dateLabel ?? retreat.dateRange;
+  const webBase = t.locale === 'sw' ? `${API_URL}/sw` : API_URL;
 
   return (
     <>
@@ -56,15 +68,15 @@ export default function RetreatDetail() {
         right={
           <RoundButton
             icon="share-outline"
-            label="Share"
-            onPress={() => Share.share({ message: `${retreat.title} · ${retreat.dateRange}\n${API_URL}/retreats/${retreat.slug}` })}
+            label={t('common.share')}
+            onPress={() => Share.share({ message: `${retreat.title} · ${dates}\n${webBase}/events/${retreat.slug}` })}
           />
         }
         hero={
           <View style={{ gap: 8 }}>
             <View style={{ flexDirection: 'row', gap: 8 }}>
               <Badge label={retreat.categoryLabel} tone="light" />
-              <Badge label={retreatStatusLabel(retreat)} tone={retreatStatusTone(retreat)} />
+              <Badge label={retreatStatusLabel(retreat, t)} tone={retreatStatusTone(retreat)} />
             </View>
             <Text variant="hero" color={colors.white}>
               {retreat.title}
@@ -79,8 +91,8 @@ export default function RetreatDetail() {
         footer={
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: space.lg }}>
             <View>
-              <Text variant="small">Contribution</Text>
-              <Text variant="subtitle">{retreatContribution(retreat)}</Text>
+              <Text variant="small">{t('retreats.contribution')}</Text>
+              <Text variant="subtitle">{retreatContribution(retreat, t, money)}</Text>
             </View>
             <Button
               label={cta}
@@ -95,16 +107,16 @@ export default function RetreatDetail() {
         <View style={{ paddingHorizontal: space.xl, gap: space.xl }}>
           <Animated.View entering={FadeInDown.springify()}>
             <Card style={{ gap: space.lg }}>
-              <InfoRow icon="calendar-outline" label="Dates" value={retreat.dateRange} />
-              <InfoRow icon="time-outline" label="Schedule" value={retreat.timeRange} />
-              <InfoRow icon="location-outline" label="Venue" value={retreat.location} />
-              <InfoRow icon="mic-outline" label="Preacher" value={retreat.speaker} />
-              {retreat.conductor && retreat.conductor !== retreat.speaker ? <InfoRow icon="person-outline" label="Conducted by" value={retreat.conductor} /> : null}
+              <InfoRow icon="calendar-outline" label={t('retreats.dates')} value={dates} />
+              <InfoRow icon="time-outline" label={t('retreats.schedule')} value={retreat.timeRange} />
+              <InfoRow icon="location-outline" label={t('retreats.venue')} value={retreat.location} />
+              <InfoRow icon="mic-outline" label={t('retreats.preacher')} value={retreat.speaker} />
+              {retreat.conductor && retreat.conductor !== retreat.speaker ? <InfoRow icon="person-outline" label={t('retreats.conductedBy')} value={retreat.conductor} /> : null}
             </Card>
           </Animated.View>
 
           <Animated.View entering={FadeInDown.delay(80).springify()} style={{ gap: space.sm }}>
-            <Text variant="caption">About this retreat</Text>
+            <Text variant="caption">{t('retreats.about')}</Text>
             <Text variant="body" style={{ fontSize: 16, lineHeight: 26 }}>
               {retreat.description}
             </Text>
@@ -114,13 +126,13 @@ export default function RetreatDetail() {
             <Animated.View entering={FadeInDown.delay(140).springify()}>
               <Card style={{ gap: space.lg }}>
                 <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'baseline' }}>
-                  <Text variant="heading">Availability</Text>
+                  <Text variant="heading">{t('retreats.availability')}</Text>
                   <Text variant="smallStrong" color={colors.gold700}>
-                    {retreat.availability.total} total
+                    {t('retreats.totalPlaces', { count: retreat.availability.total })}
                   </Text>
                 </View>
-                <SeatBar label="Men" value={retreat.availability.male} total={retreat.availability.total} color={colors.navy700} />
-                <SeatBar label="Women" value={retreat.availability.female} total={retreat.availability.total} color={colors.gold400} />
+                <SeatBar label={t('retreats.men')} value={retreat.availability.male} total={retreat.availability.total} color={colors.navy700} />
+                <SeatBar label={t('retreats.women')} value={retreat.availability.female} total={retreat.availability.total} color={colors.gold400} />
               </Card>
             </Animated.View>
           ) : null}
@@ -130,16 +142,16 @@ export default function RetreatDetail() {
               <Pressable onPress={() => setTermsOpen((open) => !open)} style={styles.termsHeader} accessibilityRole="button" accessibilityState={{ expanded: termsOpen }}>
                 <Icon name="document-text-outline" size={20} color={colors.gold600} />
                 <Text variant="subtitle" style={{ flex: 1 }}>
-                  Retreat terms
+                  {t('retreats.terms')}
                 </Text>
                 <Icon name={termsOpen ? 'chevron-up' : 'chevron-down'} size={18} color={colors.muted} />
               </Pressable>
               {termsOpen ? (
                 <Animated.View entering={FadeIn} style={{ paddingHorizontal: space.lg, paddingBottom: space.lg, gap: space.md }}>
                   {retreatTerms.map((term) => (
-                    <View key={term.title} style={{ gap: 2 }}>
-                      <Text variant="smallStrong">{term.title}</Text>
-                      <Text variant="small">{term.body}</Text>
+                    <View key={term} style={{ gap: 2 }}>
+                      <Text variant="smallStrong">{t(`content.terms.${term}.title`)}</Text>
+                      <Text variant="small">{t(`content.terms.${term}.body`)}</Text>
                     </View>
                   ))}
                 </Animated.View>

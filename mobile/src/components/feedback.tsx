@@ -13,6 +13,7 @@ import Animated, {
   ZoomIn,
 } from 'react-native-reanimated';
 
+import { useT } from '@/i18n';
 import { colors, radius, space } from '@/theme';
 import { Button, Icon, type IconName, Text } from './ui';
 
@@ -57,23 +58,25 @@ export function EmptyState({
 }
 
 export function OfflineNotice({ visible, style }: { visible?: boolean; style?: StyleProp<ViewStyle> }) {
+  const t = useT();
   if (!visible) return null;
   return (
     <Animated.View entering={FadeIn} style={[styles.notice, style]}>
       <Icon name="cloud-offline-outline" size={16} color={colors.warning} />
       <Text variant="small" color={colors.warning} style={{ flex: 1 }}>
-        You are offline or DMRC could not be reached. Showing saved content.
+        {t('common.offline')}
       </Text>
     </Animated.View>
   );
 }
 
 export function DemoBanner({ text, style }: { text?: string; style?: StyleProp<ViewStyle> }) {
+  const t = useT();
   return (
     <View style={[styles.demo, style]} accessibilityRole="alert">
       <Icon name="information-circle" size={18} color={colors.warning} />
       <Text variant="small" color={colors.warning} style={{ flex: 1 }}>
-        {text ?? 'Demo payment: DMRC has not connected a payment provider yet. No money is taken and no card details are stored.'}
+        {text ?? t('common.demoPayment')}
       </Text>
     </View>
   );

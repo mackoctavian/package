@@ -6,6 +6,9 @@ import { galleryHighlights } from '@/app/data/gallery'
 import { imagery } from '@/app/data/site'
 import type { RetreatType } from '@/app/types/retreat'
 import { getUpcomingRetreats } from '@/lib/retreats/dates'
+import { localizeRecords } from '@/lib/i18n/content'
+import { DEFAULT_LOCALE, type Locale } from '@/i18n/config'
+import { DEFAULT_MESSAGES } from '@/i18n/messages'
 
 /**
  * Server-side loaders for the homepage. Every loader falls back to bundled
@@ -30,22 +33,26 @@ export type HeroSlideView = {
   linkText?: string | null
 }
 
-export const getHeroSlides = () =>
+export const getHeroSlides = (locale: Locale = DEFAULT_LOCALE) =>
   safely<HeroSlideView[]>(
     'hero slides',
-    () =>
-      prisma.heroSlide.findMany({
-        where: { isActive: true },
-        orderBy: { order: 'asc' },
-        select: { id: true, imageUrl: true, title: true, subtitle: true, linkUrl: true, linkText: true },
-      }),
+    async () =>
+      localizeRecords(
+        'hero_slide',
+        await prisma.heroSlide.findMany({
+          where: { isActive: true },
+          orderBy: { order: 'asc' },
+          select: { id: true, imageUrl: true, title: true, subtitle: true, linkUrl: true, linkText: true },
+        }),
+        locale,
+      ),
     [],
   ).then((slides) => (slides.length ? slides : [{ id: 'default', imageUrl: imagery.heroChapel }]))
 
-export const getHomepageRetreats = async (limit = 3) => {
+export const getHomepageRetreats = async (locale: Locale = DEFAULT_LOCALE, limit = 3) => {
   const retreats = await safely<RetreatType[]>(
     'retreats',
-    async () => (await prisma.retreat.findMany()).map(mapPrismaRetreat),
+    async () => (await localizeRecords('retreat', await prisma.retreat.findMany(), locale)).map(mapPrismaRetreat),
     retreatData,
   )
   return getUpcomingRetreats(retreats)
@@ -57,69 +64,84 @@ export type HomepageRetreat = Awaited<ReturnType<typeof getHomepageRetreats>>[nu
 
 export type PatronView = { id: string; name: string; title: string; role?: string | null; imageUrl: string }
 
-export const getPatrons = () =>
+export const getPatrons = (locale: Locale = DEFAULT_LOCALE) =>
   safely<PatronView[]>(
     'patrons',
-    () =>
-      prisma.patron.findMany({
-        where: { isActive: true },
-        orderBy: { order: 'asc' },
-        select: { id: true, name: true, title: true, role: true, imageUrl: true },
-      }),
+    async () =>
+      localizeRecords(
+        'patron',
+        await prisma.patron.findMany({
+          where: { isActive: true },
+          orderBy: { order: 'asc' },
+          select: { id: true, name: true, title: true, role: true, imageUrl: true },
+        }),
+        locale,
+      ),
     [],
   )
 
 export type TestimonialView = { id: string; name: string; role: string; imageUrl: string; quote: string }
 
-const FALLBACK_TESTIMONIALS: TestimonialView[] = [
-  {
-    id: 't1',
-    name: 'Maria Josephat',
-    role: 'Youth retreat participant',
-    imageUrl: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&w=200&q=80',
-    quote:
-      'The peaceful environment and spiritual guidance helped me reconnect with my faith in ways I never thought possible.',
-  },
-  {
-    id: 't2',
-    name: 'Fr. Thomas Mwangi',
-    role: 'Clergy retreat',
-    imageUrl: 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?auto=format&fit=crop&w=200&q=80',
-    quote: 'DMRC is a true sanctuary for deep prayer and renewal. I recommend it to all my brother priests.',
-  },
-  {
-    id: 't3',
-    name: 'Sarah & John Kimani',
-    role: 'Family retreat',
-    imageUrl: 'https://images.unsplash.com/photo-1529156069898-49953e39b3ac?auto=format&fit=crop&w=200&q=80',
-    quote: 'Our family left renewed and united in faith. The programmes for children and adults were thoughtfully prepared.',
-  },
-]
+/** Shown until real testimonies are added in the admin. Text comes from `messages/content.ts`. */
+const fallbackTestimonials = (locale: Locale): TestimonialView[] => {
+  const text = DEFAULT_MESSAGES[locale].content.testimonials
+  return [
+    {
+      id: 't1',
+      name: 'Maria Josephat',
+      role: text.t1.role,
+      imageUrl: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&w=200&q=80',
+      quote: text.t1.quote,
+    },
+    {
+      id: 't2',
+      name: 'Fr. Thomas Mwangi',
+      role: text.t2.role,
+      imageUrl: 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?auto=format&fit=crop&w=200&q=80',
+      quote: text.t2.quote,
+    },
+    {
+      id: 't3',
+      name: 'Sarah & John Kimani',
+      role: text.t3.role,
+      imageUrl: 'https://images.unsplash.com/photo-1529156069898-49953e39b3ac?auto=format&fit=crop&w=200&q=80',
+      quote: text.t3.quote,
+    },
+  ]
+}
 
-export const getTestimonials = () =>
+export const getTestimonials = (locale: Locale = DEFAULT_LOCALE) =>
   safely<TestimonialView[]>(
     'testimonials',
-    () =>
-      prisma.testimonial.findMany({
-        where: { isActive: true },
-        orderBy: { order: 'asc' },
-        select: { id: true, name: true, role: true, imageUrl: true, quote: true },
-      }),
+    async () =>
+      localizeRecords(
+        'testimonial',
+        await prisma.testimonial.findMany({
+          where: { isActive: true },
+          orderBy: { order: 'asc' },
+          select: { id: true, name: true, role: true, imageUrl: true, quote: true },
+        }),
+        locale,
+      ),
     [],
-  ).then((items) => (items.length ? items : FALLBACK_TESTIMONIALS))
+  ).then((items) => (items.length ? items : fallbackTestimonials(locale)))
 
 export type GalleryPreviewItem = { id: string; src: string; title: string }
 
-export const getGalleryPreview = async (limit = 5) => {
+export const getGalleryPreview = async (locale: Locale = DEFAULT_LOCALE, limit = 5) => {
   const items = await safely<GalleryPreviewItem[]>(
     'gallery',
     async () => {
-      const rows = await prisma.contentItem.findMany({
-        where: { type: 'gallery', status: 'published', mediaUrl: { not: null } },
-        orderBy: [{ publishDate: 'desc' }, { createdAt: 'desc' }],
-        take: 30,
-        select: { id: true, title: true, mediaUrl: true, metadata: true },
-      })
+      const rows = await localizeRecords(
+        'content',
+        await prisma.contentItem.findMany({
+          where: { type: 'gallery', status: 'published', mediaUrl: { not: null } },
+          orderBy: [{ publishDate: 'desc' }, { createdAt: 'desc' }],
+          take: 30,
+          select: { id: true, title: true, mediaUrl: true, metadata: true },
+        }),
+        locale,
+      )
       return rows
         .filter((row) => {
           const type = (row.metadata as Record<string, unknown> | null)?.mediaType

@@ -6,21 +6,24 @@ import { ArticleFeature, ArticleRow } from '@/components/cards';
 import { EmptyState, OfflineNotice } from '@/components/feedback';
 import { ScreenHeader } from '@/components/headers';
 import { Chip } from '@/components/ui';
+import { useT } from '@/i18n';
 import { useNews } from '@/lib/api';
 import { colors, space } from '@/theme';
 
 export default function NewsScreen() {
   const { width } = useWindowDimensions();
+  const t = useT();
   const { data } = useNews();
-  const [tag, setTag] = useState('All');
+  const ALL = '__all__';
+  const [tag, setTag] = useState(ALL);
   const articles = useMemo(() => data?.data ?? [], [data]);
-  const tags = useMemo(() => ['All', ...new Set(articles.map((a) => a.tag).filter((t): t is string => Boolean(t)))], [articles]);
-  const filtered = tag === 'All' ? articles : articles.filter((a) => a.tag === tag);
+  const tags = useMemo(() => [ALL, ...new Set(articles.map((a) => a.tag).filter((value): value is string => Boolean(value)))], [articles]);
+  const filtered = tag === ALL ? articles : articles.filter((a) => a.tag === tag);
   const [lead, ...rest] = filtered;
 
   return (
     <View style={{ flex: 1, backgroundColor: colors.ivory }}>
-      <ScreenHeader title="News & stories" />
+      <ScreenHeader title={t('news.title')} />
       <FlatList
         data={rest}
         keyExtractor={(item) => item.id}
@@ -29,7 +32,7 @@ export default function NewsScreen() {
           <View style={{ gap: space.lg }}>
             <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: space.sm }}>
               {tags.map((value) => (
-                <Chip key={value} label={value} active={tag === value} onPress={() => setTag(value)} />
+                <Chip key={value} label={value === ALL ? t('news.all') : value} active={tag === value} onPress={() => setTag(value)} />
               ))}
             </ScrollView>
             <OfflineNotice visible={data?.offline} />
@@ -45,7 +48,7 @@ export default function NewsScreen() {
             <ArticleRow article={item} />
           </Animated.View>
         )}
-        ListEmptyComponent={lead ? undefined : <EmptyState icon="newspaper-outline" title="No stories yet" />}
+        ListEmptyComponent={lead ? undefined : <EmptyState icon="newspaper-outline" title={t('news.empty')} />}
       />
     </View>
   );

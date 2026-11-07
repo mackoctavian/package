@@ -13,6 +13,7 @@ import { StatusBar } from 'expo-status-bar';
 import { useEffect } from 'react';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 
+import { useSyncTranslations } from '@/i18n';
 import { hydrateStore, useAppStore } from '@/lib/store';
 import { colors } from '@/theme';
 
@@ -41,6 +42,7 @@ export default function RootLayout() {
     Inter_700Bold,
   });
   const hydrated = useAppStore((s) => s.hydrated);
+  useSyncTranslations();
 
   useEffect(() => {
     hydrateStore();

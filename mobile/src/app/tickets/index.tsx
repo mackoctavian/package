@@ -8,13 +8,15 @@ import { TextField } from '@/components/form';
 import { ScreenHeader } from '@/components/headers';
 import { Button, Card, CrossMark, Icon, PressableScale, Text } from '@/components/ui';
 import { lookupBooking } from '@/lib/api';
-import { formatDate } from '@/lib/format';
+import { useFormat, useT } from '@/i18n';
 import { haptic } from '@/lib/haptics';
 import { actions, useAppStore } from '@/lib/store';
 import { colors, radius, space } from '@/theme';
 
 export default function TicketsScreen() {
   const tickets = useAppStore((s) => s.tickets);
+  const t = useT();
+  const { date } = useFormat();
   const [code, setCode] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -22,7 +24,7 @@ export default function TicketsScreen() {
   const find = async () => {
     const value = code.trim();
     if (!value) {
-      setError('Enter the ticket code from your confirmation, e.g. DMRC-AB12CD34.');
+      setError(t('tickets.enterCode'));
       return;
     }
     setLoading(true);
@@ -42,7 +44,7 @@ export default function TicketsScreen() {
       router.push({ pathname: '/ticket/[code]', params: { code: ticketCode } });
     } catch (err) {
       haptic.error();
-      setError(err instanceof Error ? err.message : 'We could not find that booking.');
+      setError(err instanceof Error ? err.message : t('tickets.notFound'));
     } finally {
       setLoading(false);
     }
@@ -50,7 +52,7 @@ export default function TicketsScreen() {
 
   return (
     <View style={{ flex: 1, backgroundColor: colors.ivory }}>
-      <ScreenHeader title="My tickets" />
+      <ScreenHeader title={t('tickets.title')} />
       <FlatList
         data={tickets}
         keyExtractor={(item) => item.code}
@@ -58,10 +60,10 @@ export default function TicketsScreen() {
         contentContainerStyle={{ padding: space.xl, gap: space.md, paddingBottom: 60 }}
         ListHeaderComponent={
           <Card style={{ gap: space.md, marginBottom: space.lg }}>
-            <Text variant="subtitle">Find a booking</Text>
-            <Text variant="small">Booked on the website or another phone? Enter your ticket code to add it here.</Text>
+            <Text variant="subtitle">{t('tickets.findTitle')}</Text>
+            <Text variant="small">{t('tickets.findText')}</Text>
             <TextField
-              label="Ticket code"
+              label={t('tickets.code')}
               icon="ticket-outline"
               autoCapitalize="characters"
               value={code}
@@ -71,7 +73,7 @@ export default function TicketsScreen() {
               onSubmitEditing={find}
             />
             <ErrorBanner message={error} />
-            <Button label="Find my booking" icon="search" size="md" loading={loading} onPress={find} />
+            <Button label={t('tickets.find')} icon="search" size="md" loading={loading} onPress={find} />
           </Card>
         }
         renderItem={({ item, index }) => (
@@ -84,7 +86,7 @@ export default function TicketsScreen() {
                 <Text variant="bodyStrong" numberOfLines={1}>
                   {item.retreatTitle}
                 </Text>
-                <Text variant="small">{item.dateRange || `Saved ${formatDate(item.savedAt, { day: 'numeric', month: 'short' })}`}</Text>
+                <Text variant="small">{item.dateRange || t('tickets.saved', { date: date(item.savedAt, { day: 'numeric', month: 'short' }) })}</Text>
                 <Text variant="smallStrong" color={colors.gold700} style={{ letterSpacing: 1 }}>
                   {item.code}
                 </Text>
@@ -94,7 +96,7 @@ export default function TicketsScreen() {
           </Animated.View>
         )}
         ListEmptyComponent={
-          <EmptyState icon="ticket-outline" title="No tickets yet" body="When you book a retreat, your ticket with its QR code is kept here, ready for check-in." action="Browse retreats" onAction={() => router.push('/retreats')} />
+          <EmptyState icon="ticket-outline" title={t('tickets.emptyTitle')} body={t('tickets.emptyText')} action={t('retreats.browse')} onAction={() => router.push('/retreats')} />
         }
       />
     </View>

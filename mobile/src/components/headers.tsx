@@ -11,6 +11,7 @@ import Animated, {
 } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { useT } from '@/i18n';
 import { colors, space } from '@/theme';
 import { Icon, type IconName, Img, ScrimGradient, Text } from './ui';
 
@@ -51,10 +52,11 @@ const goBack = () => (router.canGoBack() ? router.back() : router.replace('/'));
 /** Plain stack screen header on ivory, with back button and optional right action. */
 export function ScreenHeader({ title, right, subtitle, onBack }: { title: string; subtitle?: string; right?: ReactNode; onBack?: () => void }) {
   const insets = useSafeAreaInsets();
+  const t = useT();
   return (
     <View style={[styles.plainHeader, { paddingTop: insets.top + 6 }]}>
       <View style={styles.plainRow}>
-        <RoundButton icon="chevron-back" label="Back" tone="solid" onPress={onBack ?? goBack} />
+        <RoundButton icon="chevron-back" label={t('common.back')} tone="solid" onPress={onBack ?? goBack} />
         <View style={{ flex: 1, alignItems: 'center' }}>
           <Text variant="subtitle" numberOfLines={1}>
             {title}
@@ -95,6 +97,7 @@ export function ParallaxScreen({
   heroHeight?: number;
 }) {
   const insets = useSafeAreaInsets();
+  const t = useT();
   const scrollY = useSharedValue(0);
   const onScroll = useAnimatedScrollHandler((event) => {
     scrollY.set(event.contentOffset.y);
@@ -150,7 +153,7 @@ export function ParallaxScreen({
       </Animated.View>
 
       <View style={[styles.floating, { top: insets.top + 8 }]}>
-        <RoundButton icon="chevron-back" label="Back" onPress={goBack} />
+        <RoundButton icon="chevron-back" label={t('common.back')} onPress={goBack} />
         <View style={{ flexDirection: 'row', gap: space.sm }}>{right}</View>
       </View>
 

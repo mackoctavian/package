@@ -6,6 +6,8 @@ import { publicationsData } from '@/app/data/publications'
 import { imagery } from '@/app/data/site'
 import type { PublicationCategory, PublicationFormat } from '@/app/types/publication'
 import { toSlug, type Publication } from './format'
+import { localizeRecords } from '@/lib/i18n/content'
+import { DEFAULT_LOCALE, type Locale } from '@/i18n/config'
 
 /** Publications shop catalogue: published admin items first, bundled catalogue as a fallback. */
 
@@ -33,12 +35,16 @@ const fromRecord = (item: ContentItem): Publication => {
   }
 }
 
-export const getPublications = cache(async (): Promise<Publication[]> => {
+export const getPublications = cache(async (locale: Locale = DEFAULT_LOCALE): Promise<Publication[]> => {
   try {
-    const records = await prisma.contentItem.findMany({
-      where: { type: 'publications', status: 'published' },
-      orderBy: [{ publishDate: 'desc' }, { createdAt: 'desc' }],
-    })
+    const records = await localizeRecords(
+      'content',
+      await prisma.contentItem.findMany({
+        where: { type: 'publications', status: 'published' },
+        orderBy: [{ publishDate: 'desc' }, { createdAt: 'desc' }],
+      }),
+      locale,
+    )
     if (records.length) return records.map(fromRecord)
   } catch (error) {
     console.error('[publications] database unavailable, using static data', error instanceof Error ? error.message : error)
@@ -46,8 +52,8 @@ export const getPublications = cache(async (): Promise<Publication[]> => {
   return publicationsData.map((item) => ({ ...item, slug: toSlug(item.title) }))
 })
 
-export const getPublicationBySlug = cache(async (slug: string) => {
-  const all = await getPublications()
+export const getPublicationBySlug = cache(async (slug: string, locale: Locale = DEFAULT_LOCALE) => {
+  const all = await getPublications(locale)
   const publication = all.find((item) => item.slug === slug)
   if (!publication) return undefined
   const related = all.filter((item) => item.id !== publication.id && item.category === publication.category).slice(0, 4)

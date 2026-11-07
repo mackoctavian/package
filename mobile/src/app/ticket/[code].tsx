@@ -10,7 +10,7 @@ import { ScreenHeader } from '@/components/headers';
 import { TicketCard } from '@/components/TicketCard';
 import { Button, Card, Icon, Text } from '@/components/ui';
 import { cancelBooking, lookupBooking, rescheduleBooking, useRetreats } from '@/lib/api';
-import { formatDate } from '@/lib/format';
+import { useFormat, useT } from '@/i18n';
 import { haptic } from '@/lib/haptics';
 import { actions, useAppStore } from '@/lib/store';
 import { colors, radius, space } from '@/theme';
@@ -18,6 +18,8 @@ import { colors, radius, space } from '@/theme';
 export default function TicketDetail() {
   const { code } = useLocalSearchParams<{ code: string }>();
   const insets = useSafeAreaInsets();
+  const t = useT();
+  const { date } = useFormat();
   const saved = useAppStore((s) => s.tickets.find((ticket) => ticket.code === code));
   const queryClient = useQueryClient();
   const { data: retreats } = useRetreats();
@@ -37,14 +39,15 @@ export default function TicketDetail() {
 
   const refresh = (updated: NonNullable<typeof booking>) => {
     queryClient.setQueryData(['booking', code], updated);
-    actions.updateTicket(code, { retreatTitle: updated.retreatTitle, dateRange: retreats?.data.find((r) => r.id === updated.retreatId)?.dateRange });
+    const moved = retreats?.data.find((r) => r.id === updated.retreatId);
+    actions.updateTicket(code, { retreatTitle: updated.retreatTitle, dateRange: moved?.dateLabel ?? moved?.dateRange });
   };
 
   const cancel = () => {
-    Alert.alert('Cancel this booking?', 'Your place will be released. Cancellations within 7 days of the retreat may not be refunded.', [
-      { text: 'Keep booking', style: 'cancel' },
+    Alert.alert(t('tickets.cancelTitle'), t('tickets.cancelText'), [
+      { text: t('tickets.keep'), style: 'cancel' },
       {
-        text: 'Cancel booking',
+        text: t('tickets.cancel'),
         style: 'destructive',
         onPress: async () => {
           if (!booking) return;
@@ -54,7 +57,7 @@ export default function TicketDetail() {
             refresh((await cancelBooking(booking.id)).data);
             haptic.success();
           } catch (err) {
-            setError(err instanceof Error ? err.message : 'Could not cancel the booking.');
+            setError(err instanceof Error ? err.message : t('tickets.cancelError'));
             haptic.error();
           } finally {
             setBusy(false);
@@ -73,7 +76,7 @@ export default function TicketDetail() {
       refresh((await rescheduleBooking(booking.id, retreatId)).data);
       haptic.success();
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Could not move the booking.');
+      setError(err instanceof Error ? err.message : t('tickets.moveError'));
       haptic.error();
     } finally {
       setBusy(false);
@@ -82,7 +85,7 @@ export default function TicketDetail() {
 
   return (
     <View style={{ flex: 1, backgroundColor: colors.ivory }}>
-      <ScreenHeader title="Ticket" subtitle={code} />
+      <ScreenHeader title={t('tickets.detailTitle')} subtitle={code} />
       <ScrollView
         contentContainerStyle={{ padding: space.xl, gap: space.lg, paddingBottom: insets.bottom + 40 }}
         refreshControl={<RefreshControl refreshing={query.isRefetching} onRefresh={() => { query.refetch(); }} tintColor={colors.gold500} />}>
@@ -91,9 +94,9 @@ export default function TicketDetail() {
         ) : !booking ? (
           <EmptyState
             icon="cloud-offline-outline"
-            title="Could not load this ticket"
-            body={query.error instanceof Error ? query.error.message : 'Check your connection and try again.'}
-            action="Try again"
+            title={t('tickets.loadError')}
+            body={query.error instanceof Error ? query.error.message : t('tickets.loadErrorText')}
+            action={t('common.tryAgain')}
             onAction={() => query.refetch()}
           />
         ) : (
@@ -102,7 +105,7 @@ export default function TicketDetail() {
               <TicketCard
                 code={booking.ticketCode ?? code}
                 retreatTitle={booking.retreatTitle}
-                dateRange={retreat?.dateRange ?? saved?.dateRange}
+                dateRange={retreat?.dateLabel ?? retreat?.dateRange ?? saved?.dateRange}
                 fullName={booking.fullName}
                 status={booking.status}
                 paymentStatus={booking.paymentStatus}
@@ -111,13 +114,13 @@ export default function TicketDetail() {
             </Animated.View>
 
             <Card style={{ gap: space.md }}>
-              <Text variant="subtitle">Booking timeline</Text>
+              <Text variant="subtitle">{t('tickets.timeline')}</Text>
               {[
-                { label: 'Booked', date: booking.createdAt, done: true },
-                { label: booking.status === 'approved' ? 'Approved by the office' : 'Awaiting approval', date: undefined, done: booking.status === 'approved' },
-                booking.rescheduledAt ? { label: 'Moved to another retreat', date: booking.rescheduledAt, done: true } : null,
-                booking.cancelledAt ? { label: 'Cancelled', date: booking.cancelledAt, done: true } : null,
-                { label: booking.attended ? 'Checked in' : 'Check in at reception', date: booking.checkedInAt, done: booking.attended },
+                { label: t('tickets.booked'), date: booking.createdAt, done: true },
+                { label: booking.status === 'approved' ? t('tickets.approved') : t('tickets.awaiting'), date: undefined, done: booking.status === 'approved' },
+                booking.rescheduledAt ? { label: t('tickets.moved'), date: booking.rescheduledAt, done: true } : null,
+                booking.cancelledAt ? { label: t('tickets.cancelled'), date: booking.cancelledAt, done: true } : null,
+                { label: booking.attended ? t('tickets.checkedIn') : t('tickets.checkIn'), date: booking.checkedInAt, done: booking.attended },
               ]
                 .filter((item): item is { label: string; date: string | undefined; done: boolean } => Boolean(item))
                 .map((item) => (
@@ -126,7 +129,7 @@ export default function TicketDetail() {
                     <Text variant="body" style={{ flex: 1 }}>
                       {item.label}
                     </Text>
-                    {item.date ? <Text variant="small">{formatDate(item.date, { day: 'numeric', month: 'short' })}</Text> : null}
+                    {item.date ? <Text variant="small">{date(item.date, { day: 'numeric', month: 'short' })}</Text> : null}
                   </View>
                 ))}
             </Card>
@@ -135,8 +138,8 @@ export default function TicketDetail() {
 
             {active && !booking.attended ? (
               <View style={{ gap: space.sm }}>
-                {options.length ? <Button label="Move to another retreat" icon="swap-horizontal" variant="secondary" loading={busy} onPress={() => setPicker(true)} /> : null}
-                <Button label="Cancel booking" icon="close-circle-outline" variant="danger" disabled={busy} onPress={cancel} />
+                {options.length ? <Button label={t('tickets.move')} icon="swap-horizontal" variant="secondary" loading={busy} onPress={() => setPicker(true)} /> : null}
+                <Button label={t('tickets.cancel')} icon="close-circle-outline" variant="danger" disabled={busy} onPress={cancel} />
               </View>
             ) : null}
           </>
@@ -147,15 +150,15 @@ export default function TicketDetail() {
             router.back();
           }}
           style={{ alignSelf: 'center', padding: space.md }}>
-          <Text variant="small">Remove from this phone</Text>
+          <Text variant="small">{t('tickets.remove')}</Text>
         </Pressable>
       </ScrollView>
 
       <Modal visible={picker} animationType="slide" presentationStyle="pageSheet" onRequestClose={() => setPicker(false)}>
         <View style={{ flex: 1, backgroundColor: colors.ivory, padding: space.xl, gap: space.lg }}>
           <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
-            <Text variant="title">Choose a retreat</Text>
-            <Pressable onPress={() => setPicker(false)} hitSlop={10} accessibilityLabel="Close">
+            <Text variant="title">{t('tickets.choose')}</Text>
+            <Pressable onPress={() => setPicker(false)} hitSlop={10} accessibilityLabel={t('common.close')}>
               <Icon name="close" size={24} />
             </Pressable>
           </View>
@@ -166,7 +169,7 @@ export default function TicketDetail() {
                   <View style={{ flex: 1 }}>
                     <Text variant="bodyStrong">{item.title}</Text>
                     <Text variant="small">
-                      {item.dateRange} · {item.location}
+                      {item.dateLabel ?? item.dateRange} · {item.location}
                     </Text>
                   </View>
                   <Icon name="arrow-forward" size={18} color={colors.gold600} />

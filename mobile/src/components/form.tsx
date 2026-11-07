@@ -2,6 +2,7 @@ import { type ReactNode, useState } from 'react';
 import { Pressable, StyleSheet, TextInput, type TextInputProps, View } from 'react-native';
 import Animated, { FadeIn, FadeOut } from 'react-native-reanimated';
 
+import { useT } from '@/i18n';
 import { haptic } from '@/lib/haptics';
 import { colors, fonts, radius, space } from '@/theme';
 import { Icon, type IconName, Text } from './ui';
@@ -62,7 +63,18 @@ export function TextField({
   );
 }
 
-export function Segmented<T extends string>({ options, value, onChange }: { options: readonly T[]; value: T; onChange: (value: T) => void }) {
+export function Segmented<T extends string>({
+  options,
+  value,
+  onChange,
+  labelFor,
+}: {
+  options: readonly T[];
+  value: T;
+  onChange: (value: T) => void;
+  /** Display text for an option; the value itself (often stored English) stays unchanged. */
+  labelFor?: (option: T) => string;
+}) {
   return (
     <View style={styles.segmented}>
       {options.map((option) => {
@@ -78,7 +90,7 @@ export function Segmented<T extends string>({ options, value, onChange }: { opti
             accessibilityState={{ selected: active }}
             style={[styles.segment, active && styles.segmentActive]}>
             <Text variant="smallStrong" color={active ? colors.white : colors.navy700}>
-              {option}
+              {labelFor ? labelFor(option) : option}
             </Text>
           </Pressable>
         );
@@ -113,6 +125,7 @@ export function Checkbox({ checked, onChange, label, error }: { checked: boolean
 }
 
 export function QuantityStepper({ value, onChange, min = 1, max = 99, compact }: { value: number; onChange: (value: number) => void; min?: number; max?: number; compact?: boolean }) {
+  const t = useT();
   const size = compact ? 32 : 44;
   const button = (icon: IconName, next: number, disabled: boolean, label: string) => (
     <Pressable
@@ -129,11 +142,11 @@ export function QuantityStepper({ value, onChange, min = 1, max = 99, compact }:
   );
   return (
     <View style={styles.stepper}>
-      {button('remove', value - 1, value <= min, 'Decrease')}
+      {button('remove', value - 1, value <= min, t('common.decrease'))}
       <Text variant="subtitle" style={{ minWidth: compact ? 24 : 36, textAlign: 'center' }}>
         {value}
       </Text>
-      {button('add', value + 1, value >= max, 'Increase')}
+      {button('add', value + 1, value >= max, t('common.increase'))}
     </View>
   );
 }

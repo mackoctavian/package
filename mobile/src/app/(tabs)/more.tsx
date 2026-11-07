@@ -7,8 +7,10 @@ import { Alert, Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import Animated, { FadeIn } from 'react-native-reanimated';
 
 import { TextField } from '@/components/form';
+import { LanguagePicker } from '@/components/LanguagePicker';
 import { TabHeader } from '@/components/TabHeader';
 import { Button, Card, Divider, Icon, type IconName, Text } from '@/components/ui';
+import { useT } from '@/i18n';
 import { useHome } from '@/lib/api';
 import { API_URL } from '@/lib/config';
 import { haptic } from '@/lib/haptics';
@@ -48,6 +50,7 @@ const socialIcons: Record<string, IconName> = { facebook: 'logo-facebook', insta
 
 export default function MoreScreen() {
   const { data } = useHome();
+  const t = useT();
   const site = data?.data.site;
   const profile = useAppStore((s) => s.profile);
   const tickets = useAppStore((s) => s.tickets.length);
@@ -64,7 +67,7 @@ export default function MoreScreen() {
 
   return (
     <ScrollView style={{ flex: 1, backgroundColor: colors.ivory }} contentContainerStyle={{ paddingBottom: TAB_BAR_SPACE }} showsVerticalScrollIndicator={false}>
-      <TabHeader eyebrow="Divine Mercy Retreat Center" title="More" />
+      <TabHeader eyebrow={t('more.eyebrow')} title={t('more.title')} />
       <View style={{ paddingHorizontal: space.xl, gap: space.xl }}>
         <Card style={{ gap: space.lg }}>
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: space.md }}>
@@ -78,9 +81,9 @@ export default function MoreScreen() {
               )}
             </View>
             <View style={{ flex: 1 }}>
-              <Text variant="subtitle">{profile.fullName || 'Welcome, friend'}</Text>
+              <Text variant="subtitle">{profile.fullName || t('more.welcome')}</Text>
               <Text variant="small" numberOfLines={1}>
-                {profile.email || 'Save your details to fill forms faster'}
+                {profile.email || t('more.saveHint')}
               </Text>
             </View>
             <Pressable
@@ -90,17 +93,17 @@ export default function MoreScreen() {
               }}
               hitSlop={10}>
               <Text variant="smallStrong" color={colors.gold600}>
-                {editing ? 'Close' : 'Edit'}
+                {editing ? t('common.close') : t('common.edit')}
               </Text>
             </Pressable>
           </View>
           {editing ? (
             <Animated.View entering={FadeIn} style={{ gap: space.md }}>
-              <TextField label="Full name" value={draft.fullName} onChangeText={(v) => setDraft((d) => ({ ...d, fullName: v }))} />
-              <TextField label="Email" keyboardType="email-address" autoCapitalize="none" value={draft.email} onChangeText={(v) => setDraft((d) => ({ ...d, email: v }))} />
-              <TextField label="Phone" keyboardType="phone-pad" value={draft.phone} onChangeText={(v) => setDraft((d) => ({ ...d, phone: v }))} />
+              <TextField label={t('common.fields.fullName')} value={draft.fullName} onChangeText={(v) => setDraft((d) => ({ ...d, fullName: v }))} />
+              <TextField label={t('common.fields.email')} keyboardType="email-address" autoCapitalize="none" value={draft.email} onChangeText={(v) => setDraft((d) => ({ ...d, email: v }))} />
+              <TextField label={t('common.fields.phone')} keyboardType="phone-pad" value={draft.phone} onChangeText={(v) => setDraft((d) => ({ ...d, phone: v }))} />
               <Button
-                label="Save details"
+                label={t('more.saveDetails')}
                 size="md"
                 onPress={() => {
                   actions.saveProfile(draft);
@@ -108,36 +111,45 @@ export default function MoreScreen() {
                   setEditing(false);
                 }}
               />
-              <Text variant="small">Kept only on this phone and used to pre-fill bookings and gifts.</Text>
+              <Text variant="small">{t('more.keptHere')}</Text>
             </Animated.View>
           ) : null}
         </Card>
 
+        <View style={{ gap: space.sm }}>
+          <Text variant="caption" style={{ marginLeft: space.xs }}>
+            {t('language.title')}
+          </Text>
+          <Card>
+            <LanguagePicker />
+          </Card>
+        </View>
+
         <Group
-          title="My activity"
+          title={t('more.activity')}
           items={[
-            { label: 'My retreat tickets', icon: 'ticket-outline', onPress: go('/tickets'), value: tickets ? String(tickets) : undefined },
-            { label: 'Cart', icon: 'bag-outline', onPress: go('/cart'), value: cart ? String(cart) : undefined },
-            { label: 'Giving history', icon: 'receipt-outline', onPress: go('/give') },
+            { label: t('more.tickets'), icon: 'ticket-outline', onPress: go('/tickets'), value: tickets ? String(tickets) : undefined },
+            { label: t('more.cart'), icon: 'bag-outline', onPress: go('/cart'), value: cart ? String(cart) : undefined },
+            { label: t('more.history'), icon: 'receipt-outline', onPress: go('/give') },
           ]}
         />
         <Group
-          title="Explore"
+          title={t('more.explore')}
           items={[
-            { label: 'Gallery', icon: 'images-outline', onPress: go('/gallery') },
-            { label: 'News & stories', icon: 'newspaper-outline', onPress: go('/news') },
-            { label: 'Ministries', icon: 'people-outline', onPress: go('/ministries') },
-            { label: 'About DMRC', icon: 'information-circle-outline', onPress: go('/about') },
-            { label: 'Visit the website', icon: 'globe-outline', onPress: () => WebBrowser.openBrowserAsync(API_URL).catch(() => undefined) },
+            { label: t('more.gallery'), icon: 'images-outline', onPress: go('/gallery') },
+            { label: t('more.news'), icon: 'newspaper-outline', onPress: go('/news') },
+            { label: t('more.ministries'), icon: 'people-outline', onPress: go('/ministries') },
+            { label: t('more.about'), icon: 'information-circle-outline', onPress: go('/about') },
+            { label: t('more.website'), icon: 'globe-outline', onPress: () => WebBrowser.openBrowserAsync(t.locale === 'sw' ? `${API_URL}/sw` : API_URL).catch(() => undefined) },
           ]}
         />
         {site ? (
           <Group
-            title="Contact"
+            title={t('more.contact')}
             items={[
-              { label: 'Call the office', icon: 'call-outline', value: site.contact.phone, onPress: () => Linking.openURL(site.contact.phoneHref) },
-              { label: 'Email us', icon: 'mail-outline', onPress: () => Linking.openURL(`mailto:${site.contact.email}`) },
-              { label: 'Get directions', icon: 'navigate-outline', onPress: () => Linking.openURL(site.contact.mapsHref) },
+              { label: t('more.callOffice'), icon: 'call-outline', value: site.contact.phone, onPress: () => Linking.openURL(site.contact.phoneHref) },
+              { label: t('more.emailUs'), icon: 'mail-outline', onPress: () => Linking.openURL(`mailto:${site.contact.email}`) },
+              { label: t('more.directions'), icon: 'navigate-outline', onPress: () => Linking.openURL(site.contact.mapsHref) },
             ]}
           />
         ) : null}
@@ -157,26 +169,26 @@ export default function MoreScreen() {
         ) : null}
 
         <Group
-          title="App"
+          title={t('more.app')}
           items={[
-            { label: 'Replay the welcome tour', icon: 'play-circle-outline', onPress: () => {
+            { label: t('more.tour'), icon: 'play-circle-outline', onPress: () => {
                 actions.resetOnboarding();
                 router.replace('/onboarding');
               },
             },
             {
-              label: 'Clear data on this phone',
+              label: t('more.clear'),
               icon: 'trash-outline',
               onPress: () =>
-                Alert.alert('Clear saved data?', 'This removes saved tickets, cart, receipts and your details from this phone. Your bookings stay with DMRC.', [
-                  { text: 'Cancel', style: 'cancel' },
-                  { text: 'Clear', style: 'destructive', onPress: () => actions.clearAll() },
+                Alert.alert(t('more.clearTitle'), t('more.clearText'), [
+                  { text: t('common.cancel'), style: 'cancel' },
+                  { text: t('more.clearConfirm'), style: 'destructive', onPress: () => actions.clearAll() },
                 ]),
             },
           ]}
         />
         <Text variant="small" center>
-          DMRC · version {Constants.expoConfig?.version ?? '1.0.0'}
+          {t('more.version', { version: Constants.expoConfig?.version ?? '1.0.0' })}
         </Text>
       </View>
     </ScrollView>

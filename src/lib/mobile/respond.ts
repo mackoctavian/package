@@ -1,5 +1,8 @@
 import { NextResponse } from 'next/server'
 
+import { LOCALE_HEADER, type Locale } from '@/i18n/config'
+import { localeFromRequest } from '@/i18n/request'
+
 /**
  * Helpers for the read-only JSON API used by the DMRC mobile app (`/api/mobile/*`).
  *
@@ -29,16 +32,26 @@ const absolutize = (value: unknown, origin: string): unknown => {
 const CORS_HEADERS = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Methods': 'GET, OPTIONS',
-  'Access-Control-Allow-Headers': 'Content-Type',
+  'Access-Control-Allow-Headers': `Content-Type, Accept-Language, ${LOCALE_HEADER}`,
 }
 
-export const mobileJson = (request: Request, data: unknown) =>
+/**
+ * The language the app asked for: `?locale=sw`, the `x-dmrc-locale` header, or
+ * the phone's `Accept-Language`. Content is returned in that language where a
+ * translation exists, English otherwise.
+ */
+export const mobileLocale = (request: Request): Locale => localeFromRequest(request, { acceptLanguage: true })
+
+export const mobileJson = (request: Request, data: unknown, locale: Locale = mobileLocale(request)) =>
   NextResponse.json(
-    { data: absolutize(data, siteOrigin(request)), generatedAt: new Date().toISOString() },
+    { data: absolutize(data, siteOrigin(request)), locale, generatedAt: new Date().toISOString() },
     {
       headers: {
         ...CORS_HEADERS,
         'Cache-Control': 'public, s-maxage=60, stale-while-revalidate=300',
+        // The language can come from headers, so caches must keep one copy per language.
+        Vary: `Accept-Language, ${LOCALE_HEADER}`,
+        'Content-Language': locale,
       },
     },
   )

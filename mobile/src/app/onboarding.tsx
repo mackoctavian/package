@@ -18,7 +18,9 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { scheduleOnRN } from 'react-native-worklets';
 
 import { Button, CrossMark, Text } from '@/components/ui';
+import { LanguagePicker } from '@/components/LanguagePicker';
 import { onboardingSlides } from '@/data/content';
+import { useT } from '@/i18n';
 import { haptic } from '@/lib/haptics';
 import { actions } from '@/lib/store';
 import { colors, space } from '@/theme';
@@ -26,6 +28,7 @@ import { colors, space } from '@/theme';
 type Slide = (typeof onboardingSlides)[number];
 
 function SlideView({ slide, index, scrollX, width, height }: { slide: Slide; index: number; scrollX: SharedValue<number>; width: number; height: number }) {
+  const t = useT();
   const range = [(index - 1) * width, index * width, (index + 1) * width];
   const imageStyle = useAnimatedStyle(() => ({
     transform: [
@@ -49,13 +52,13 @@ function SlideView({ slide, index, scrollX, width, height }: { slide: Slide; ind
       />
       <Animated.View style={[styles.copy, textStyle]}>
         <Text variant="caption" color={colors.gold300}>
-          {slide.eyebrow}
+          {t(`onboarding.slides.${slide.key}.eyebrow`)}
         </Text>
         <Text variant="hero" color={colors.white} style={{ marginTop: 10 }}>
-          {slide.title}
+          {t(`onboarding.slides.${slide.key}.title`)}
         </Text>
         <Text variant="body" color={colors.navy100} style={{ marginTop: 12, fontSize: 16, lineHeight: 24 }}>
-          {slide.body}
+          {t(`onboarding.slides.${slide.key}.body`)}
         </Text>
       </Animated.View>
     </View>
@@ -76,6 +79,7 @@ function Dot({ index, scrollX, width }: { index: number; scrollX: SharedValue<nu
 
 export default function Onboarding() {
   const { width, height } = useWindowDimensions();
+  const t = useT();
   const insets = useSafeAreaInsets();
   const scrollX = useSharedValue(0);
   const listRef = useRef<Animated.ScrollView>(null);
@@ -135,13 +139,16 @@ export default function Onboarding() {
             DMRC
           </Text>
         </View>
-        {!last ? (
-          <Pressable onPress={finish} hitSlop={12} accessibilityRole="button">
-            <Text variant="smallStrong" color={colors.white}>
-              Skip
-            </Text>
-          </Pressable>
-        ) : null}
+        <View style={styles.topRight}>
+          <LanguagePicker tone="dark" compact />
+          {!last ? (
+            <Pressable onPress={finish} hitSlop={12} accessibilityRole="button">
+              <Text variant="smallStrong" color={colors.white}>
+                {t('onboarding.skip')}
+              </Text>
+            </Pressable>
+          ) : null}
+        </View>
       </Animated.View>
 
       <Animated.View entering={FadeInDown.delay(300).springify()} style={[styles.bottom, { paddingBottom: insets.bottom + 20 }]}>
@@ -150,7 +157,7 @@ export default function Onboarding() {
             <Dot key={slide.key} index={index} scrollX={scrollX} width={width} />
           ))}
         </View>
-        <Button label={last ? 'Get started' : 'Continue'} iconRight={last ? 'checkmark' : 'arrow-forward'} variant="gold" onPress={next} />
+        <Button label={last ? t('onboarding.getStarted') : t('common.continue')} iconRight={last ? 'checkmark' : 'arrow-forward'} variant="gold" onPress={next} />
       </Animated.View>
     </View>
   );
@@ -160,6 +167,7 @@ const styles = StyleSheet.create({
   copy: { position: 'absolute', left: space.xxl, right: space.xxl, bottom: 190 },
   top: { position: 'absolute', left: space.xxl, right: space.xxl, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
   brand: { flexDirection: 'row', alignItems: 'center', gap: 10 },
+  topRight: { flexDirection: 'row', alignItems: 'center', gap: space.lg },
   bottom: { position: 'absolute', left: space.xxl, right: space.xxl, bottom: 0, gap: space.xxl },
   dots: { flexDirection: 'row', gap: 6 },
   dot: { height: 8, borderRadius: 4, backgroundColor: colors.gold300 },

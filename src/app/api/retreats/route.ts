@@ -5,12 +5,19 @@ import prisma from '@/lib/prisma'
 import { mapPrismaRetreat } from './utils'
 import { retreatInputSchema } from '@/lib/validators/retreat'
 import { guardAdminApi } from '@/lib/auth/api-guard'
+import { localizeRecords } from '@/lib/i18n/content'
+import { localeFromRequest } from '@/i18n/request'
 
-export const GET = async () => {
+export const GET = async (request: Request) => {
   try {
-    const records = await prisma.retreat.findMany({
-      orderBy: { dateRange: 'asc' },
-    })
+    // `?locale=sw` returns Swahili text where it has been translated (used by the public site).
+    const records = await localizeRecords(
+      'retreat',
+      await prisma.retreat.findMany({
+        orderBy: { dateRange: 'asc' },
+      }),
+      localeFromRequest(request),
+    )
     const payload = records.map(mapPrismaRetreat)
 
     return NextResponse.json({ data: payload, source: 'prisma' })

@@ -5,10 +5,12 @@ import { useMemo, useState } from 'react'
 import ArticleCard from '@/app/components/news/ArticleCard'
 import type { Article } from '@/lib/news/format'
 import { cn } from '@/lib/utils'
+import { useT } from '@/i18n/client'
 
 const PAGE_SIZE = 9
 
 export default function NewsExplorer({ articles }: { articles: Article[] }) {
+  const t = useT()
   const tags = useMemo(() => Array.from(new Set(articles.map((a) => a.tag).filter(Boolean))) as string[], [articles])
   const [tag, setTag] = useState<string | null>(null)
   const [visible, setVisible] = useState(PAGE_SIZE)
@@ -16,13 +18,13 @@ export default function NewsExplorer({ articles }: { articles: Article[] }) {
   const filtered = tag ? articles.filter((a) => a.tag === tag) : articles
 
   if (!articles.length) {
-    return <p className='rounded-3xl border border-dashed border-border bg-white p-12 text-center text-muted-foreground'>More stories are on their way.</p>
+    return <p className='rounded-3xl border border-dashed border-border bg-white p-12 text-center text-muted-foreground'>{t('news.empty')}</p>
   }
 
   return (
     <div>
       {tags.length > 1 && (
-        <div className='flex flex-wrap gap-2' role='group' aria-label='Filter stories by topic'>
+        <div className='flex flex-wrap gap-2' role='group' aria-label={t('news.filterLabel')}>
           {[null, ...tags].map((value) => (
             <button
               key={value ?? 'all'}
@@ -37,7 +39,7 @@ export default function NewsExplorer({ articles }: { articles: Article[] }) {
                 tag === value ? 'border-navy-900 bg-navy-900 text-white' : 'border-border bg-white text-navy-800 hover:border-navy-300',
               )}
             >
-              {value ?? 'All stories'}
+              {value ?? t('news.allStories')}
             </button>
           ))}
         </div>
@@ -54,7 +56,7 @@ export default function NewsExplorer({ articles }: { articles: Article[] }) {
             onClick={() => setVisible((v) => v + PAGE_SIZE)}
             className='rounded-full border border-navy-900 px-6 py-3 text-sm font-semibold text-navy-900 transition hover:bg-navy-900 hover:text-white'
           >
-            Load more stories
+            {t('news.loadMore')}
           </button>
         </div>
       )}

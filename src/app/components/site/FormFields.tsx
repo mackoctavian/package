@@ -37,10 +37,12 @@ type ChoiceProps = {
   value: string
   options: readonly string[]
   onChange: (value: string) => void
+  /** Display text for each option; the stored value stays the same in every language. */
+  labelFor?: (option: string) => string
 }
 
 /** Segmented single-choice control rendered as accessible radio buttons. */
-export function Choice({ name, value, options, onChange }: ChoiceProps) {
+export function Choice({ name, value, options, onChange, labelFor }: ChoiceProps) {
   return (
     <div role='radiogroup' className='flex flex-wrap gap-2'>
       {options.map((option) => {
@@ -54,7 +56,7 @@ export function Choice({ name, value, options, onChange }: ChoiceProps) {
             )}
           >
             <input type='radio' name={name} value={option} checked={checked} onChange={() => onChange(option)} className='sr-only' />
-            {option}
+            {labelFor ? labelFor(option) : option}
           </label>
         )
       })}

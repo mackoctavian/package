@@ -20,3 +20,7 @@ export const categoryLabel = (value?: string | null) => {
   if (known) return known.label
   return normalized.replace(/-/g, ' ').replace(/\b\w/g, (char) => char.toUpperCase())
 }
+
+/** Translated label for a category, via the `retreats.categories.*` messages. */
+export const translatedCategoryLabel = (t: { maybe: (key: string) => string | undefined }, value?: string | null) =>
+  t.maybe(`retreats.categories.${normalizeCategory(value)}`) ?? categoryLabel(value)

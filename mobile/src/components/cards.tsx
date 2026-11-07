@@ -1,7 +1,8 @@
 import { router } from 'expo-router';
 import { StyleSheet, View } from 'react-native';
 
-import { formatDate, formatTZS, monthDay, retreatContribution } from '@/lib/format';
+import { type T, useFormat, useT } from '@/i18n';
+import { readingTimeLabel, retreatContribution } from '@/lib/format';
 import type { Article, Publication, Retreat } from '@/lib/types';
 import { colors, radius, shadow, space } from '@/theme';
 import { Badge, Icon, Img, PressableScale, ScrimGradient, Text } from './ui';
@@ -9,10 +10,10 @@ import { Badge, Icon, Img, PressableScale, ScrimGradient, Text } from './ui';
 export const retreatStatusTone = (retreat: Retreat) =>
   retreat.ended ? 'navy' : retreat.status === 'Registration Open' ? 'success' : retreat.status === 'Waitlist' ? 'warning' : 'danger';
 
-export const retreatStatusLabel = (retreat: Retreat) => (retreat.ended ? 'Ended' : retreat.status);
+export const retreatStatusLabel = (retreat: Retreat, t: T) => (retreat.ended ? t('retreats.ended') : (retreat.statusLabel ?? retreat.status));
 
 function DateTile({ iso, light }: { iso: string | null; light?: boolean }) {
-  const md = monthDay(iso);
+  const md = useFormat().monthDay(iso);
   if (!md) return null;
   return (
     <View style={[styles.dateTile, light && { backgroundColor: 'rgba(255,255,255,0.95)' }]}>
@@ -28,17 +29,19 @@ function DateTile({ iso, light }: { iso: string | null; light?: boolean }) {
 
 /** Large image card for carousels. */
 export function RetreatFeatureCard({ retreat, width }: { retreat: Retreat; width: number }) {
+  const t = useT();
+  const { money } = useFormat();
   return (
     <PressableScale
       onPress={() => router.push({ pathname: '/retreat/[slug]', params: { slug: retreat.slug } })}
       style={[styles.feature, { width }]}
       accessibilityRole="button"
-      accessibilityLabel={`${retreat.title}, ${retreat.dateRange}`}>
+      accessibilityLabel={`${retreat.title}, ${retreat.dateLabel ?? retreat.dateRange}`}>
       <Img uri={retreat.imageSrc} style={StyleSheet.absoluteFill} />
       <ScrimGradient />
       <View style={styles.featureTop}>
         <DateTile iso={retreat.startDate} light />
-        <Badge label={retreatStatusLabel(retreat)} tone="light" />
+        <Badge label={retreatStatusLabel(retreat, t)} tone="light" />
       </View>
       <View style={styles.featureBody}>
         <Text variant="caption" color={colors.gold300}>
@@ -56,7 +59,7 @@ export function RetreatFeatureCard({ retreat, width }: { retreat: Retreat; width
         <View style={styles.metaRow}>
           <Icon name="location-outline" size={14} color={colors.gold200} />
           <Text variant="small" color={colors.navy100} numberOfLines={1} style={{ flex: 1 }}>
-            {retreat.location} · {retreatContribution(retreat)}
+            {retreat.location} · {retreatContribution(retreat, t, money)}
           </Text>
         </View>
       </View>
@@ -66,12 +69,14 @@ export function RetreatFeatureCard({ retreat, width }: { retreat: Retreat; width
 
 /** Row card for lists. */
 export function RetreatListCard({ retreat }: { retreat: Retreat }) {
+  const t = useT();
+  const { money } = useFormat();
   return (
     <PressableScale
       onPress={() => router.push({ pathname: '/retreat/[slug]', params: { slug: retreat.slug } })}
       style={styles.listCard}
       accessibilityRole="button"
-      accessibilityLabel={`${retreat.title}, ${retreat.dateRange}`}>
+      accessibilityLabel={`${retreat.title}, ${retreat.dateLabel ?? retreat.dateRange}`}>
       <View>
         <Img uri={retreat.imageSrc} style={styles.listImage} />
         <View style={{ position: 'absolute', top: 10, left: 10 }}>
@@ -81,14 +86,14 @@ export function RetreatListCard({ retreat }: { retreat: Retreat }) {
       <View style={{ padding: space.lg, gap: 6 }}>
         <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
           <Text variant="caption">{retreat.categoryLabel}</Text>
-          <Badge label={retreatStatusLabel(retreat)} tone={retreatStatusTone(retreat)} />
+          <Badge label={retreatStatusLabel(retreat, t)} tone={retreatStatusTone(retreat)} />
         </View>
         <Text variant="heading" numberOfLines={2}>
           {retreat.title}
         </Text>
         <View style={styles.metaRowDark}>
           <Icon name="calendar-outline" size={14} color={colors.gold600} />
-          <Text variant="small">{retreat.dateRange}</Text>
+          <Text variant="small">{retreat.dateLabel ?? retreat.dateRange}</Text>
         </View>
         <View style={styles.metaRowDark}>
           <Icon name="person-outline" size={14} color={colors.gold600} />
@@ -97,10 +102,10 @@ export function RetreatListCard({ retreat }: { retreat: Retreat }) {
           </Text>
         </View>
         <View style={[styles.metaRowDark, { justifyContent: 'space-between', marginTop: 4 }]}>
-          <Text variant="smallStrong">{retreatContribution(retreat)}</Text>
+          <Text variant="smallStrong">{retreatContribution(retreat, t, money)}</Text>
           <View style={styles.metaRowDark}>
             <Text variant="smallStrong" color={colors.gold600}>
-              {retreat.ended ? 'View details' : 'Reserve'}
+              {retreat.ended ? t('retreats.viewDetails') : t('retreats.reserve')}
             </Text>
             <Icon name="arrow-forward" size={14} color={colors.gold600} />
           </View>
@@ -111,30 +116,32 @@ export function RetreatListCard({ retreat }: { retreat: Retreat }) {
 }
 
 export function PublicationCard({ item, width }: { item: Publication; width: number }) {
+  const t = useT();
+  const { money } = useFormat();
   return (
     <PressableScale
       onPress={() => router.push({ pathname: '/publication/[slug]', params: { slug: item.slug } })}
       style={{ width }}
       accessibilityRole="button"
-      accessibilityLabel={`${item.title}, ${formatTZS(item.price)}`}>
+      accessibilityLabel={`${item.title}, ${money(item.price)}`}>
       <View style={[styles.cover, { height: width * 1.32 }]}>
         <Img uri={item.coverImage} style={StyleSheet.absoluteFill} />
         {item.badge ? <Badge label={item.badge} style={{ position: 'absolute', top: 10, left: 10 }} /> : null}
-        {item.inStock === false ? <Badge label="Out of stock" tone="danger" style={{ position: 'absolute', bottom: 10, left: 10 }} /> : null}
+        {item.inStock === false ? <Badge label={t('shop.outOfStock')} tone="danger" style={{ position: 'absolute', bottom: 10, left: 10 }} /> : null}
       </View>
       <Text variant="small" numberOfLines={1} style={{ marginTop: 10 }}>
-        {item.category} · {item.format}
+        {item.categoryLabel ?? item.category} · {item.formatLabel ?? item.format}
       </Text>
       <Text variant="bodyStrong" numberOfLines={2} style={{ marginTop: 2 }}>
         {item.title}
       </Text>
       <View style={{ flexDirection: 'row', alignItems: 'baseline', gap: 6, marginTop: 4 }}>
         <Text variant="smallStrong" color={colors.gold700}>
-          {formatTZS(item.price)}
+          {money(item.price)}
         </Text>
         {item.originalPrice && item.originalPrice > item.price ? (
           <Text variant="small" style={{ textDecorationLine: 'line-through', fontSize: 12 }}>
-            {formatTZS(item.originalPrice)}
+            {money(item.originalPrice)}
           </Text>
         ) : null}
       </View>
@@ -143,6 +150,8 @@ export function PublicationCard({ item, width }: { item: Publication; width: num
 }
 
 export function ArticleRow({ article }: { article: Article }) {
+  const t = useT();
+  const { date } = useFormat();
   return (
     <PressableScale
       onPress={() => router.push({ pathname: '/article/[slug]', params: { slug: article.slug } })}
@@ -156,7 +165,7 @@ export function ArticleRow({ article }: { article: Article }) {
           {article.title}
         </Text>
         <Text variant="small" numberOfLines={1}>
-          {[formatDate(article.publishedOn, { day: 'numeric', month: 'short', year: 'numeric' }), article.readingTime].filter(Boolean).join(' · ')}
+          {[date(article.publishedOn, { day: 'numeric', month: 'short', year: 'numeric' }), readingTimeLabel(article.readingTime, t)].filter(Boolean).join(' · ')}
         </Text>
       </View>
     </PressableScale>

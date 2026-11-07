@@ -5,6 +5,8 @@ import prisma from '@/lib/prisma'
 import { newsItems } from '@/app/data/news'
 import { imagery } from '@/app/data/site'
 import type { Article, ArticleSection } from './format'
+import { localizeRecord, localizeRecords } from '@/lib/i18n/content'
+import { DEFAULT_LOCALE, type Locale } from '@/i18n/config'
 
 export type { Article, ArticleSection } from './format'
 export { formatArticleDate } from './format'
@@ -60,12 +62,16 @@ const fromStatic = (item: (typeof newsItems)[number]): Article => ({
 
 const byNewest = (a: Article, b: Article) => (b.publishedOn ?? '').localeCompare(a.publishedOn ?? '')
 
-export const getArticles = cache(async (): Promise<Article[]> => {
+export const getArticles = cache(async (locale: Locale = DEFAULT_LOCALE): Promise<Article[]> => {
   try {
-    const records = await prisma.contentItem.findMany({
-      where: { type: 'news', status: 'published' },
-      orderBy: [{ publishDate: 'desc' }, { updatedAt: 'desc' }],
-    })
+    const records = await localizeRecords(
+      'content',
+      await prisma.contentItem.findMany({
+        where: { type: 'news', status: 'published' },
+        orderBy: [{ publishDate: 'desc' }, { updatedAt: 'desc' }],
+      }),
+      locale,
+    )
     if (records.length) return records.map(fromRecord)
   } catch (error) {
     console.error('[news] database unavailable, using static data', error instanceof Error ? error.message : error)
@@ -73,9 +79,9 @@ export const getArticles = cache(async (): Promise<Article[]> => {
   return newsItems.map(fromStatic).sort(byNewest)
 })
 
-export const getArticleBySlug = cache(async (slug: string): Promise<Article | undefined> => {
+export const getArticleBySlug = cache(async (slug: string, locale: Locale = DEFAULT_LOCALE): Promise<Article | undefined> => {
   try {
-    const record = await prisma.contentItem.findFirst({ where: { type: 'news', status: 'published', slug } })
+    const record = await localizeRecord('content', await prisma.contentItem.findFirst({ where: { type: 'news', status: 'published', slug } }), locale)
     if (record) return fromRecord(record)
   } catch (error) {
     console.error('[news] lookup failed', error instanceof Error ? error.message : error)

@@ -6,35 +6,37 @@ import Animated, { FadeInDown } from 'react-native-reanimated';
 import { TabHeader } from '@/components/TabHeader';
 import { Card, Icon, Img, PressableScale, ScrimGradient, Text } from '@/components/ui';
 import { givingFunds, imagery } from '@/data/content';
-import { formatDate, formatTZS } from '@/lib/format';
+import { useFormat, useT } from '@/i18n';
 import { useAppStore } from '@/lib/store';
 import { colors, radius, shadow, space, TAB_BAR_SPACE } from '@/theme';
 
 export default function GiveScreen() {
   const receipts = useAppStore((s) => s.receipts);
+  const t = useT();
+  const { money, date } = useFormat();
 
   return (
     <ScrollView style={{ flex: 1, backgroundColor: colors.ivory }} contentContainerStyle={{ paddingBottom: TAB_BAR_SPACE }} showsVerticalScrollIndicator={false}>
-      <TabHeader eyebrow="Generosity is a prayer" title="Give & pray" />
+      <TabHeader eyebrow={t('give.eyebrow')} title={t('give.title')} />
 
       <View style={{ paddingHorizontal: space.xl, gap: space.lg }}>
         <Animated.View entering={FadeInDown.springify()}>
-          <PressableScale onPress={() => router.push('/donate')} style={styles.hero} accessibilityRole="button" accessibilityLabel="Give a gift">
+          <PressableScale onPress={() => router.push('/donate')} style={styles.hero} accessibilityRole="button" accessibilityLabel={t('give.heroA11y')}>
             <Img uri={imagery.prayerHands} style={StyleSheet.absoluteFill} />
             <ScrimGradient strength={0.95} />
             <View style={styles.heroBody}>
               <Text variant="caption" color={colors.gold300}>
-                Support the mission
+                {t('give.heroEyebrow')}
               </Text>
               <Text variant="display" color={colors.white} style={{ marginTop: 6 }}>
-                Give a gift of mercy
+                {t('give.heroTitle')}
               </Text>
               <Text variant="body" color={colors.navy100} style={{ marginTop: 6 }}>
-                Your gift keeps retreats open to all, cares for the sick and sustains the chapel.
+                {t('give.heroText')}
               </Text>
               <View style={styles.heroCta}>
                 <Text variant="bodyStrong" color={colors.navy950}>
-                  Give now
+                  {t('give.giveNow')}
                 </Text>
                 <Icon name="arrow-forward" size={16} color={colors.navy950} />
               </View>
@@ -43,17 +45,17 @@ export default function GiveScreen() {
         </Animated.View>
 
         <Animated.View entering={FadeInDown.delay(80).springify()}>
-          <PressableScale onPress={() => router.push('/mass-intention')} accessibilityRole="button" accessibilityLabel="Request a Mass intention">
+          <PressableScale onPress={() => router.push('/mass-intention')} accessibilityRole="button" accessibilityLabel={t('give.massTitle')}>
             <LinearGradient colors={[colors.navy800, colors.navy950]} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={styles.mass}>
               <View style={styles.massIcon}>
                 <Icon name="flame" size={26} color={colors.gold300} />
               </View>
               <View style={{ flex: 1, gap: 4 }}>
                 <Text variant="heading" color={colors.white}>
-                  Request a Mass intention
+                  {t('give.massTitle')}
                 </Text>
                 <Text variant="small" color={colors.navy200}>
-                  Thanksgiving, healing, the faithful departed or a special intention.
+                  {t('give.massText')}
                 </Text>
               </View>
               <Icon name="chevron-forward" size={20} color={colors.gold300} />
@@ -62,7 +64,7 @@ export default function GiveScreen() {
         </Animated.View>
 
         <Animated.View entering={FadeInDown.delay(140).springify()} style={{ gap: space.md, marginTop: space.md }}>
-          <Text variant="caption">Where your gift goes</Text>
+          <Text variant="caption">{t('give.where')}</Text>
           <View style={styles.funds}>
             {givingFunds.map((fund) => (
               <PressableScale
@@ -70,13 +72,13 @@ export default function GiveScreen() {
                 onPress={() => router.push({ pathname: '/donate', params: { fund: fund.id } })}
                 style={styles.fund}
                 accessibilityRole="button"
-                accessibilityLabel={`Give to ${fund.label}`}>
+                accessibilityLabel={t('give.giveTo', { fund: t(`content.funds.${fund.id}.label`) })}>
                 <Icon name={fund.icon} size={22} color={colors.gold600} />
                 <Text variant="bodyStrong" style={{ marginTop: space.sm }}>
-                  {fund.label}
+                  {t(`content.funds.${fund.id}.label`)}
                 </Text>
                 <Text variant="small" numberOfLines={3}>
-                  {fund.text}
+                  {t(`content.funds.${fund.id}.text`)}
                 </Text>
               </PressableScale>
             ))}
@@ -84,7 +86,7 @@ export default function GiveScreen() {
         </Animated.View>
 
         <Card style={{ gap: space.md, marginTop: space.md }}>
-          <Text variant="subtitle">Your giving history</Text>
+          <Text variant="subtitle">{t('give.history')}</Text>
           {receipts.length ? (
             receipts.slice(0, 8).map((receipt) => (
               <View key={receipt.reference + receipt.createdAt} style={styles.receipt}>
@@ -96,14 +98,14 @@ export default function GiveScreen() {
                     {receipt.title}
                   </Text>
                   <Text variant="small">
-                    {formatDate(receipt.createdAt, { day: 'numeric', month: 'short', year: 'numeric' })} · {receipt.reference}
+                    {date(receipt.createdAt, { day: 'numeric', month: 'short', year: 'numeric' })} · {receipt.reference}
                   </Text>
                 </View>
-                <Text variant="smallStrong">{formatTZS(receipt.amount)}</Text>
+                <Text variant="smallStrong">{money(receipt.amount)}</Text>
               </View>
             ))
           ) : (
-            <Text variant="small">Gifts, Mass offerings and orders you make in the app will appear here as receipts.</Text>
+            <Text variant="small">{t('give.historyEmpty')}</Text>
           )}
         </Card>
       </View>

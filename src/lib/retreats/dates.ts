@@ -66,10 +66,29 @@ export const getUpcomingRetreats = <T extends Pick<RetreatType, 'dateRange'>>(re
     .sort((a, b) => sortKey(a.dates) - sortKey(b.dates))
 }
 
-export const formatRetreatMonthDay = (date: Date | null) =>
+export const formatRetreatMonthDay = (date: Date | null, locale: 'en' | 'sw' = 'en') =>
   date
     ? {
-        month: date.toLocaleDateString('en-GB', { month: 'short' }).toUpperCase(),
+        month: date.toLocaleDateString(locale === 'sw' ? 'sw-TZ' : 'en-GB', { month: 'short' }).toUpperCase(),
         day: date.getDate().toString(),
       }
     : null
+
+/**
+ * Shows an admin-typed date range ("12 – 16 Jan 2026") in the visitor's
+ * language. English keeps the text as typed; other languages re-format the
+ * parsed dates, falling back to the original text when it cannot be parsed.
+ */
+export const localizeDateRange = (dateRange: string | null | undefined, locale: 'en' | 'sw' = 'en') => {
+  if (!dateRange || locale === 'en') return dateRange ?? ''
+  const { start, end } = parseRetreatDates(dateRange)
+  if (!start) return dateRange
+  const tag = locale === 'sw' ? 'sw-TZ' : 'en-GB'
+  const full = (date: Date) => date.toLocaleDateString(tag, { day: 'numeric', month: 'long', year: 'numeric' })
+  if (!end || end.getTime() === start.getTime()) return full(start)
+  if (start.getFullYear() === end.getFullYear() && start.getMonth() === end.getMonth()) {
+    return `${start.getDate()} – ${full(end)}`
+  }
+  const dayMonth = (date: Date) => date.toLocaleDateString(tag, { day: 'numeric', month: 'long' })
+  return start.getFullYear() === end.getFullYear() ? `${dayMonth(start)} – ${full(end)}` : `${full(start)} – ${full(end)}`
+}

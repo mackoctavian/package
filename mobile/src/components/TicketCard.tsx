@@ -3,6 +3,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { Pressable, StyleSheet, View } from 'react-native';
 import QRCode from 'react-native-qrcode-svg';
 
+import { useT } from '@/i18n';
 import { haptic } from '@/lib/haptics';
 import { colors, radius, shadow, space } from '@/theme';
 import { Badge, CrossMark, Icon, Text } from './ui';
@@ -10,8 +11,8 @@ import { Badge, CrossMark, Icon, Text } from './ui';
 export const bookingStatusTone = (status?: string) =>
   status === 'approved' ? 'success' : status === 'cancelled' ? 'danger' : status === 'rescheduled' ? 'navy' : 'warning';
 
-export const paymentLabel = (status?: string) =>
-  ({ paid: 'Paid', waived: 'No payment needed', refunded: 'Refunded', pending: 'Payment pending' })[status ?? 'pending'] ?? status ?? '';
+export const paymentLabel = (status: string | undefined, t: ReturnType<typeof useT>) =>
+  t.dynamic(`ticket.paymentStatus.${status ?? 'pending'}`, undefined, status ?? '');
 
 /** Boarding-pass style retreat ticket; the QR code holds the ticket code scanned at check-in. */
 export function TicketCard({
@@ -31,6 +32,7 @@ export function TicketCard({
   paymentStatus?: string;
   guests?: number;
 }) {
+  const t = useT();
   const cancelled = status === 'cancelled';
   return (
     <View style={[styles.ticket, shadow.lift]}>
@@ -39,10 +41,10 @@ export function TicketCard({
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
             <CrossMark size={24} />
             <Text variant="caption" color={colors.gold300}>
-              Retreat ticket
+              {t('ticket.retreatTicket')}
             </Text>
           </View>
-          {status ? <Badge label={status} tone={bookingStatusTone(status)} /> : null}
+          {status ? <Badge label={t.dynamic(`ticket.status.${status}`, undefined, status)} tone={bookingStatusTone(status)} /> : null}
         </View>
         <Text variant="title" color={colors.white} style={{ marginTop: space.md }}>
           {retreatTitle}
@@ -74,7 +76,7 @@ export function TicketCard({
           }}
           style={styles.code}
           accessibilityRole="button"
-          accessibilityLabel={`Ticket code ${code}. Tap to copy.`}>
+          accessibilityLabel={t('ticket.copy', { code })}>
           <Text variant="title" style={{ letterSpacing: 2, fontSize: 24 }}>
             {code}
           </Text>
@@ -82,24 +84,24 @@ export function TicketCard({
         </Pressable>
         <View style={styles.grid}>
           <View style={{ flex: 1 }}>
-            <Text variant="small">Retreatant</Text>
+            <Text variant="small">{t('ticket.retreatant')}</Text>
             <Text variant="smallStrong" numberOfLines={1}>
               {fullName}
             </Text>
           </View>
           <View style={{ flex: 1 }}>
-            <Text variant="small">Guests</Text>
-            <Text variant="smallStrong">{guests ? `+${guests}` : 'None'}</Text>
+            <Text variant="small">{t('ticket.guests')}</Text>
+            <Text variant="smallStrong">{guests ? `+${guests}` : t('common.none')}</Text>
           </View>
           {paymentStatus ? (
             <View style={{ flex: 1.2 }}>
-              <Text variant="small">Payment</Text>
-              <Text variant="smallStrong">{paymentLabel(paymentStatus)}</Text>
+              <Text variant="small">{t('ticket.payment')}</Text>
+              <Text variant="smallStrong">{paymentLabel(paymentStatus, t)}</Text>
             </View>
           ) : null}
         </View>
         <Text variant="small" center style={{ marginTop: space.md }}>
-          Show this code at the DMRC reception to check in.
+          {t('ticket.showAtReception')}
         </Text>
       </View>
     </View>

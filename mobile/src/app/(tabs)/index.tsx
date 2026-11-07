@@ -21,25 +21,27 @@ import { RoundButton } from '@/components/headers';
 import { Button, Card, CrossMark, Icon, type IconName, Img, PressableScale, ScrimGradient, SectionHeader, Text } from '@/components/ui';
 import { imagery, scriptureOfTheDay } from '@/data/content';
 import { useHome } from '@/lib/api';
+import { useT } from '@/i18n';
 import { greeting } from '@/lib/format';
 import { useAppStore } from '@/lib/store';
 import { colors, radius, shadow, space, TAB_BAR_SPACE } from '@/theme';
 
 const HERO = 430;
 
-const actionsGrid: { label: string; icon: IconName; href: Href }[] = [
-  { label: 'Book a retreat', icon: 'leaf-outline', href: '/retreats' },
-  { label: 'Give', icon: 'heart-outline', href: '/donate' },
-  { label: 'Mass intention', icon: 'flame-outline', href: '/mass-intention' },
-  { label: 'My tickets', icon: 'ticket-outline', href: '/tickets' },
-  { label: 'Bookshop', icon: 'book-outline', href: '/shop' },
-  { label: 'Gallery', icon: 'images-outline', href: '/gallery' },
-  { label: 'News', icon: 'newspaper-outline', href: '/news' },
-  { label: 'Ministries', icon: 'people-outline', href: '/ministries' },
+const actionsGrid: { id: 'book' | 'give' | 'mass' | 'tickets' | 'bookshop' | 'gallery' | 'news' | 'ministries'; icon: IconName; href: Href }[] = [
+  { id: 'book', icon: 'leaf-outline', href: '/retreats' },
+  { id: 'give', icon: 'heart-outline', href: '/donate' },
+  { id: 'mass', icon: 'flame-outline', href: '/mass-intention' },
+  { id: 'tickets', icon: 'ticket-outline', href: '/tickets' },
+  { id: 'bookshop', icon: 'book-outline', href: '/shop' },
+  { id: 'gallery', icon: 'images-outline', href: '/gallery' },
+  { id: 'news', icon: 'newspaper-outline', href: '/news' },
+  { id: 'ministries', icon: 'people-outline', href: '/ministries' },
 ];
 
 export default function HomeScreen() {
   const insets = useSafeAreaInsets();
+  const t = useT();
   const { width } = useWindowDimensions();
   const { data, refetch, isRefetching } = useHome();
   const name = useAppStore((s) => s.profile.fullName.split(' ')[0]);
@@ -96,19 +98,18 @@ export default function HomeScreen() {
                   DMRC
                 </Text>
                 <Text variant="small" color={colors.navy100} style={{ fontSize: 11, lineHeight: 13 }}>
-                  Vikindu · Tanzania
+                  {t('home.place')}
                 </Text>
               </View>
             </View>
-            <RoundButton icon="ticket-outline" label="My tickets" badge={ticketCount} onPress={() => router.push('/tickets')} />
+            <RoundButton icon="ticket-outline" label={t('home.actions.tickets')} badge={ticketCount} onPress={() => router.push('/tickets')} />
           </View>
           <Animated.View style={[styles.heroCopy, heroCopy]}>
             <Text variant="caption" color={colors.gold300}>
-              {greeting()}
-              {name ? `, ${name}` : ''}
+              {name ? t('home.greetingName', { greeting: t(`home.greeting.${greeting()}`), name }) : t(`home.greeting.${greeting()}`)}
             </Text>
             <Text variant="hero" color={colors.white} style={{ marginTop: 8 }}>
-              {home.heroSlides[0]?.title || 'A sanctuary of prayer, healing and renewal'}
+              {home.heroSlides[0]?.title || t('home.heroFallback')}
             </Text>
           </Animated.View>
         </View>
@@ -116,12 +117,12 @@ export default function HomeScreen() {
         {/* Quick actions */}
         <Animated.View entering={FadeInDown.delay(80).springify()} style={styles.actionsCard}>
           {actionsGrid.map((action) => (
-            <PressableScale key={action.label} onPress={() => router.push(action.href)} style={styles.action} accessibilityRole="button" accessibilityLabel={action.label}>
+            <PressableScale key={action.id} onPress={() => router.push(action.href)} style={styles.action} accessibilityRole="button" accessibilityLabel={t(`home.actions.${action.id}`)}>
               <View style={styles.actionIcon}>
                 <Icon name={action.icon} size={22} color={colors.navy800} />
               </View>
               <Text variant="small" color={colors.ink} center numberOfLines={2} style={{ fontSize: 11.5, lineHeight: 14 }}>
-                {action.label}
+                {t(`home.actions.${action.id}`)}
               </Text>
             </PressableScale>
           ))}
@@ -134,13 +135,13 @@ export default function HomeScreen() {
           <LinearGradient colors={[colors.navy800, colors.navy950]} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={styles.scripture}>
             <Icon name="sparkles" size={18} color={colors.gold300} />
             <Text variant="caption" color={colors.gold300} style={{ marginTop: 10 }}>
-              Word for today
+              {t('home.wordForToday')}
             </Text>
             <Text variant="quote" color={colors.white} style={{ marginTop: 8, fontSize: 22, lineHeight: 30 }}>
-              “{scripture.text}”
+              “{t(`content.scriptures.${scripture}.text`)}”
             </Text>
             <Text variant="small" color={colors.gold200} style={{ marginTop: 10 }}>
-              {scripture.ref}
+              {t(`content.scriptures.${scripture}.ref`)}
             </Text>
           </LinearGradient>
         </Animated.View>
@@ -148,9 +149,9 @@ export default function HomeScreen() {
         {/* Retreats */}
         <View style={{ marginTop: 36 }}>
           <SectionHeader
-            eyebrow={upcoming.length ? 'Upcoming' : 'Recent'}
-            title="Retreats"
-            action="See all"
+            eyebrow={upcoming.length ? t('home.retreatsUpcoming') : t('home.retreatsRecent')}
+            title={t('home.retreatsTitle')}
+            action={t('common.seeAll')}
             onAction={() => router.push('/retreats')}
           />
           {featured.length ? (
@@ -167,26 +168,26 @@ export default function HomeScreen() {
           ) : null}
           {!upcoming.length ? (
             <Text variant="small" style={{ paddingHorizontal: space.xl }}>
-              New retreat dates will appear here as soon as they are published.
+              {t('home.retreatsEmpty')}
             </Text>
           ) : null}
         </View>
 
         {/* Mass intention promo */}
         <View style={{ paddingHorizontal: space.xl, marginTop: 28 }}>
-          <PressableScale onPress={() => router.push('/mass-intention')} style={styles.promo} accessibilityRole="button" accessibilityLabel="Request a Mass intention">
+          <PressableScale onPress={() => router.push('/mass-intention')} style={styles.promo} accessibilityRole="button" accessibilityLabel={t('home.massA11y')}>
             <Img uri={imagery.candles} style={StyleSheet.absoluteFill} />
             <LinearGradient colors={['rgba(10,20,38,0.92)', 'rgba(10,20,38,0.35)']} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }} style={StyleSheet.absoluteFill} />
             <View style={{ padding: space.xl, gap: 8, maxWidth: '78%' }}>
               <Text variant="caption" color={colors.gold300}>
-                Mass intentions
+                {t('home.massEyebrow')}
               </Text>
               <Text variant="title" color={colors.white}>
-                Offer a Mass for someone you love
+                {t('home.massTitle')}
               </Text>
               <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 4 }}>
                 <Text variant="smallStrong" color={colors.gold200}>
-                  Request now
+                  {t('home.massCta')}
                 </Text>
                 <Icon name="arrow-forward" size={14} color={colors.gold200} />
               </View>
@@ -197,7 +198,7 @@ export default function HomeScreen() {
         {/* Bookshop */}
         {home.publications.length ? (
           <View style={{ marginTop: 36 }}>
-            <SectionHeader eyebrow="Bookshop" title="Bibles, books & music" action="Shop" onAction={() => router.push('/shop')} />
+            <SectionHeader eyebrow={t('home.bookshopEyebrow')} title={t('home.bookshopTitle')} action={t('home.bookshopAction')} onAction={() => router.push('/shop')} />
             <FlatList
               horizontal
               data={home.publications}
@@ -212,7 +213,7 @@ export default function HomeScreen() {
         {/* News */}
         {home.news.length ? (
           <View style={{ marginTop: 36 }}>
-            <SectionHeader eyebrow="From the centre" title="News & stories" action="All news" onAction={() => router.push('/news')} />
+            <SectionHeader eyebrow={t('home.newsEyebrow')} title={t('home.newsTitle')} action={t('home.newsAction')} onAction={() => router.push('/news')} />
             <View style={{ paddingHorizontal: space.xl, gap: space.lg }}>
               <ArticleFeature article={home.news[0]} width={width - space.xl * 2} />
               {home.news.slice(1, 4).map((article) => (
@@ -225,7 +226,7 @@ export default function HomeScreen() {
         {/* Gallery */}
         {home.gallery.length ? (
           <View style={{ marginTop: 36 }}>
-            <SectionHeader eyebrow="Gallery" title="Moments at DMRC" action="Open" onAction={() => router.push('/gallery')} />
+            <SectionHeader eyebrow={t('home.galleryEyebrow')} title={t('home.galleryTitle')} action={t('home.galleryAction')} onAction={() => router.push('/gallery')} />
             <FlatList
               horizontal
               data={home.gallery}
@@ -256,7 +257,7 @@ export default function HomeScreen() {
                   <Text variant="small">{quote.role}</Text>
                 </View>
                 {home.testimonials.length > 1 ? (
-                  <RoundButton icon="arrow-forward" tone="solid" label="Next testimonial" onPress={() => setTestimonial((value) => value + 1)} />
+                  <RoundButton icon="arrow-forward" tone="solid" label={t('home.nextTestimonial')} onPress={() => setTestimonial((value) => value + 1)} />
                 ) : null}
               </View>
             </Card>
@@ -266,14 +267,14 @@ export default function HomeScreen() {
         {/* Visit */}
         <View style={{ paddingHorizontal: space.xl, marginTop: 36 }}>
           <Card style={{ padding: space.xl, gap: space.md }}>
-            <Text variant="caption">Visit us</Text>
+            <Text variant="caption">{t('home.visit')}</Text>
             <Text variant="heading">{home.site.name}</Text>
             <Text variant="small">
               {home.site.contact.address} · {home.site.contact.postal}
             </Text>
             <View style={{ flexDirection: 'row', gap: space.sm, marginTop: space.sm }}>
-              <Button label="Directions" icon="navigate-outline" size="md" variant="primary" style={{ flex: 1 }} onPress={() => Linking.openURL(home.site.contact.mapsHref)} />
-              <Button label="Call" icon="call-outline" size="md" variant="secondary" style={{ flex: 1 }} onPress={() => Linking.openURL(home.site.contact.phoneHref)} />
+              <Button label={t('common.directions')} icon="navigate-outline" size="md" variant="primary" style={{ flex: 1 }} onPress={() => Linking.openURL(home.site.contact.mapsHref)} />
+              <Button label={t('common.call')} icon="call-outline" size="md" variant="secondary" style={{ flex: 1 }} onPress={() => Linking.openURL(home.site.contact.phoneHref)} />
             </View>
           </Card>
         </View>

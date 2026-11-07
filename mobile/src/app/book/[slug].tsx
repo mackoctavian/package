@@ -11,18 +11,20 @@ import { TicketCard } from '@/components/TicketCard';
 import { Button, Card, Divider, Icon, Text } from '@/components/ui';
 import { retreatTerms } from '@/data/content';
 import { type BookingForm, createBooking, useRetreats } from '@/lib/api';
-import { EMAIL_PATTERN, formatTZS, PHONE_PATTERN, retreatContribution } from '@/lib/format';
+import { type T, useFormat, useT } from '@/i18n';
+import { EMAIL_PATTERN, PHONE_PATTERN, retreatContribution } from '@/lib/format';
 import { haptic } from '@/lib/haptics';
 import { actions, getAppState } from '@/lib/store';
 import type { Booking } from '@/lib/types';
 import { colors, radius, space } from '@/theme';
 
-const steps = [
-  { id: 'about', title: 'About you' },
-  { id: 'contact', title: 'Contact & parish' },
-  { id: 'family', title: 'Family members' },
-  { id: 'review', title: 'Review & confirm' },
-] as const;
+const steps = [{ id: 'about' }, { id: 'contact' }, { id: 'family' }, { id: 'review' }] as const;
+
+/** Stored in English (the office reads them); shown translated via `booking.options.*`. */
+const GENDERS = ['Male', 'Female'] as const;
+const LIFE_STATUSES = ['Single', 'Married', 'Religious', 'Widowed'] as const;
+const CURRENT_STATUSES = ['Working', 'Studying', 'N/A'] as const;
+const INSTRUCTIONS = ['arrive', 'bring', 'silence', 'dress'] as const;
 
 type StepId = (typeof steps)[number]['id'];
 type Errors = Partial<Record<keyof BookingForm, string>>;
@@ -52,41 +54,44 @@ const maskDate = (raw: string) => {
   return [digits.slice(0, 2), digits.slice(2, 4), digits.slice(4, 8)].filter(Boolean).join('/');
 };
 
-const validate = (step: StepId, form: BookingForm, dobText: string): Errors => {
+const validate = (step: StepId, form: BookingForm, dobText: string, t: T): Errors => {
   const errors: Errors = {};
   const required = (field: keyof BookingForm, message: string) => {
     if (!String(form[field] ?? '').trim()) errors[field] = message;
   };
   if (step === 'about') {
-    required('fullName', 'Please enter your full name.');
-    required('occupation', 'Please tell us your occupation.');
-    if (!dobText) errors.dob = 'Please enter your date of birth.';
-    else if (!form.dob || !form.age) errors.dob = 'Use the format DD/MM/YYYY.';
+    required('fullName', t('booking.errors.fullName'));
+    required('occupation', t('booking.errors.occupation'));
+    if (!dobText) errors.dob = t('booking.errors.dob');
+    else if (!form.dob || !form.age) errors.dob = t('booking.errors.dobFormat');
   }
   if (step === 'contact') {
-    required('phone', 'Please enter a phone number.');
-    required('email', 'Please enter your email address.');
-    required('houseName', 'Please enter your house or street.');
-    required('place', 'Please enter your town or village.');
-    if (form.phone && !PHONE_PATTERN.test(form.phone)) errors.phone = 'Please enter a valid phone number.';
+    required('phone', t('booking.errors.phone'));
+    required('email', t('booking.errors.email'));
+    required('houseName', t('booking.errors.house'));
+    required('place', t('booking.errors.town'));
+    if (form.phone && !PHONE_PATTERN.test(form.phone)) errors.phone = t('booking.errors.phoneValid');
     if (!form.whatsappSame) {
-      required('whatsapp', 'Please enter your WhatsApp number.');
-      if (form.whatsapp && !PHONE_PATTERN.test(form.whatsapp)) errors.whatsapp = 'Please enter a valid WhatsApp number.';
+      required('whatsapp', t('booking.errors.whatsapp'));
+      if (form.whatsapp && !PHONE_PATTERN.test(form.whatsapp)) errors.whatsapp = t('booking.errors.whatsappValid');
     }
-    if (form.altPhone && !PHONE_PATTERN.test(form.altPhone)) errors.altPhone = 'Please enter a valid phone number.';
-    if (form.email && !EMAIL_PATTERN.test(form.email)) errors.email = 'Please enter a valid email address.';
+    if (form.altPhone && !PHONE_PATTERN.test(form.altPhone)) errors.altPhone = t('booking.errors.phoneValid');
+    if (form.email && !EMAIL_PATTERN.test(form.email)) errors.email = t('booking.errors.emailValid');
     if (!form.nonCatholic) {
-      required('diocese', 'Please enter your diocese.');
-      required('parish', 'Please enter your parish.');
+      required('diocese', t('booking.errors.diocese'));
+      required('parish', t('booking.errors.parish'));
     }
   }
-  if (step === 'family' && !form.acceptInstructions) errors.acceptInstructions = 'Please confirm you have read the instructions.';
-  if (step === 'review' && !form.acceptTerms) errors.acceptTerms = 'Please accept the retreat terms to complete your booking.';
+  if (step === 'family' && !form.acceptInstructions) errors.acceptInstructions = t('booking.errors.instructions');
+  if (step === 'review' && !form.acceptTerms) errors.acceptTerms = t('booking.errors.terms');
   return errors;
 };
 
 export default function BookRetreat() {
   const { slug } = useLocalSearchParams<{ slug: string }>();
+  const t = useT();
+  const { money } = useFormat();
+  const option = (value: string) => t.dynamic(`booking.options.${value}`, undefined, value);
   const { data } = useRetreats();
   const retreat = data?.data.find((item) => item.slug === slug);
   const profile = getAppState().profile;
@@ -127,8 +132,8 @@ export default function BookRetreat() {
 
   if (!retreat) {
     return (
-      <FlowLayout title="Book a retreat" onClose={() => router.back()}>
-        <EmptyState icon="leaf-outline" title="Retreat not found" />
+      <FlowLayout title={t('booking.title')} onClose={() => router.back()}>
+        <EmptyState icon="leaf-outline" title={t('retreats.notFound')} />
       </FlowLayout>
     );
   }
@@ -151,7 +156,7 @@ export default function BookRetreat() {
   };
 
   const next = async () => {
-    const found = validate(step.id, form, dobText);
+    const found = validate(step.id, form, dobText, t);
     if (Object.keys(found).length) {
       setErrors(found);
       haptic.error();
@@ -171,12 +176,12 @@ export default function BookRetreat() {
         bookingId: result.data.id,
         retreatSlug: retreat.slug,
         retreatTitle: retreat.title,
-        dateRange: retreat.dateRange,
+        dateRange: retreat.dateLabel ?? retreat.dateRange,
         fullName: form.fullName,
         savedAt: new Date().toISOString(),
       });
     } catch (error) {
-      setSubmitError(error instanceof Error ? error.message : 'We could not complete your booking.');
+      setSubmitError(error instanceof Error ? error.message : t('booking.errors.submit'));
       haptic.error();
     } finally {
       setSubmitting(false);
@@ -191,20 +196,20 @@ export default function BookRetreat() {
     const paymentDue = booking.data.paymentStatus === 'pending' && retreat.isPaid !== false && amount > 0;
     if (stage === 'pay') {
       return (
-        <FlowLayout title="Retreat contribution" subtitle={retreat.title} onClose={() => router.back()} onBack={() => setStage('done')}>
+        <FlowLayout title={t('booking.done.payTitle')} subtitle={retreat.title} onClose={() => router.back()} onBack={() => setStage('done')}>
           <MockCheckout
             amount={amount}
             reference={booking.ticketCode}
-            description={`${retreat.title} · ${1 + guests} ${guests ? 'people' : 'person'}`}
+            description={t('booking.done.people', { retreat: retreat.title, count: 1 + guests })}
             defaultPhone={form.phone}
             onPaid={() => {
               actions.addReceipt({
                 reference: booking.ticketCode,
                 kind: 'order',
-                title: `Retreat contribution · ${retreat.title}`,
+                title: t('booking.done.receipt', { retreat: retreat.title }),
                 amount,
                 createdAt: new Date().toISOString(),
-                detail: 'Demo payment',
+                detail: t('donate.demoPayment'),
               });
               haptic.success();
               setStage('paid');
@@ -215,15 +220,15 @@ export default function BookRetreat() {
     }
     return (
       <FlowLayout
-        title="Booking received"
+        title={t('booking.done.title')}
         onClose={() => router.back()}
         footer={
           <View style={{ gap: space.sm }}>
             {paymentDue && stage === 'done' ? (
-              <Button label={`Pay contribution · ${formatTZS(amount)}`} variant="gold" icon="card-outline" onPress={() => setStage('pay')} />
+              <Button label={t('booking.done.pay', { amount: money(amount) })} variant="gold" icon="card-outline" onPress={() => setStage('pay')} />
             ) : null}
             <Button
-              label="View in My tickets"
+              label={t('booking.done.viewTickets')}
               variant={paymentDue && stage === 'done' ? 'secondary' : 'primary'}
               onPress={() => {
                 router.back();
@@ -235,19 +240,17 @@ export default function BookRetreat() {
         <Animated.View entering={FadeIn} style={{ alignItems: 'center' }}>
           <SuccessMark />
           <Text variant="display" center>
-            {stage === 'paid' ? 'Thank you!' : 'You are booked in'}
+            {stage === 'paid' ? t('booking.done.thanks') : t('booking.done.booked')}
           </Text>
           <Text variant="body" color={colors.muted} center style={{ marginTop: space.sm }}>
-            {stage === 'paid'
-              ? 'Your demo payment was simulated. The DMRC office will confirm your contribution.'
-              : `We have sent a confirmation to ${form.email}. The office will review and approve your place.`}
+            {stage === 'paid' ? t('booking.done.paidText') : t('booking.done.bookedText', { email: form.email })}
           </Text>
         </Animated.View>
         <Animated.View entering={FadeInDown.delay(250).springify()}>
           <TicketCard
             code={booking.ticketCode}
             retreatTitle={retreat.title}
-            dateRange={retreat.dateRange}
+            dateRange={retreat.dateLabel ?? retreat.dateRange}
             fullName={form.fullName}
             status={booking.data.status}
             paymentStatus={stage === 'paid' ? 'pending' : booking.data.paymentStatus}
@@ -261,8 +264,8 @@ export default function BookRetreat() {
   /* --------------------------------------------------------------- Steps */
   return (
     <FlowLayout
-      title={step.title}
-      subtitle={`Step ${stepIndex + 1} of ${steps.length} · ${retreat.title}`}
+      title={t(`booking.steps.${step.id}`)}
+      subtitle={t('booking.stepSubtitle', { current: stepIndex + 1, total: steps.length, retreat: retreat.title })}
       step={stepIndex}
       steps={steps.length}
       scrollRef={scrollRef}
@@ -270,7 +273,7 @@ export default function BookRetreat() {
       onBack={stepIndex > 0 ? () => goTo(stepIndex - 1) : undefined}
       footer={
         <Button
-          label={stepIndex === steps.length - 1 ? 'Confirm booking' : 'Continue'}
+          label={stepIndex === steps.length - 1 ? t('booking.confirm') : t('common.continue')}
           iconRight={stepIndex === steps.length - 1 ? 'checkmark' : 'arrow-forward'}
           variant={stepIndex === steps.length - 1 ? 'gold' : 'primary'}
           loading={submitting}
@@ -280,23 +283,25 @@ export default function BookRetreat() {
       <Animated.View key={step.id} entering={FadeInRight.springify().damping(18)} exiting={FadeOutLeft.duration(120)} style={{ gap: space.lg }}>
         {step.id === 'about' ? (
           <>
-            <TextField label="Full name" required value={form.fullName} onChangeText={(v) => update('fullName', v)} error={errors.fullName} autoComplete="name" placeholder="As on your ID" />
-            <Field label="Gender" required>
-              <Segmented options={['Male', 'Female'] as const} value={form.gender as 'Male' | 'Female'} onChange={(v) => update('gender', v)} />
+            <TextField label={t('booking.fields.fullName')} required value={form.fullName} onChangeText={(v) => update('fullName', v)} error={errors.fullName} autoComplete="name" placeholder={t('booking.fields.fullNamePlaceholder')} />
+            <Field label={t('booking.fields.gender')} required>
+              <Segmented options={GENDERS} value={form.gender as (typeof GENDERS)[number]} onChange={(v) => update('gender', v)} labelFor={option} />
             </Field>
             {(form.gender === 'Female' ? retreat.availability.female : retreat.availability.male) > 0 ? (
               <Text variant="small" color={colors.success}>
-                {form.gender === 'Female' ? retreat.availability.female : retreat.availability.male} places for {form.gender === 'Female' ? 'women' : 'men'} on this retreat.
+                {form.gender === 'Female'
+                  ? t('booking.placesForWomen', { count: retreat.availability.female })
+                  : t('booking.placesForMen', { count: retreat.availability.male })}
               </Text>
             ) : null}
             <TextField
-              label="Date of birth"
+              label={t('booking.fields.dob')}
               required
               value={dobText}
               keyboardType="number-pad"
               placeholder="DD/MM/YYYY"
               error={errors.dob}
-              hint={form.age ? `Age ${form.age}` : undefined}
+              hint={form.age ? t('booking.fields.age', { age: form.age }) : undefined}
               onChangeText={(text) => {
                 const masked = maskDate(text);
                 setDobText(masked);
@@ -305,52 +310,52 @@ export default function BookRetreat() {
                 setErrors((prev) => ({ ...prev, dob: undefined }));
               }}
             />
-            <Field label="Life status">
-              <Segmented options={['Single', 'Married', 'Religious', 'Widowed'] as const} value={form.lifeStatus as 'Single'} onChange={(v) => update('lifeStatus', v)} />
+            <Field label={t('booking.fields.lifeStatus')}>
+              <Segmented options={LIFE_STATUSES} value={form.lifeStatus as (typeof LIFE_STATUSES)[number]} onChange={(v) => update('lifeStatus', v)} labelFor={option} />
             </Field>
-            <Field label="Currently">
-              <Segmented options={['Working', 'Studying', 'N/A'] as const} value={form.currentStatus as 'Working'} onChange={(v) => update('currentStatus', v)} />
+            <Field label={t('booking.fields.currently')}>
+              <Segmented options={CURRENT_STATUSES} value={form.currentStatus as (typeof CURRENT_STATUSES)[number]} onChange={(v) => update('currentStatus', v)} labelFor={option} />
             </Field>
-            <TextField label="Occupation" required value={form.occupation} onChangeText={(v) => update('occupation', v)} error={errors.occupation} placeholder="e.g. Teacher" />
+            <TextField label={t('booking.fields.occupation')} required value={form.occupation} onChangeText={(v) => update('occupation', v)} error={errors.occupation} placeholder={t('booking.fields.occupationPlaceholder')} />
           </>
         ) : null}
 
         {step.id === 'contact' ? (
           <>
-            <TextField label="Phone" required icon="call-outline" keyboardType="phone-pad" value={form.phone} onChangeText={(v) => update('phone', v)} error={errors.phone} autoComplete="tel" placeholder="07XX XXX XXX" />
-            <Checkbox checked={form.whatsappSame} onChange={(v) => update('whatsappSame', v)} label="My WhatsApp number is the same" />
+            <TextField label={t('booking.fields.phone')} required icon="call-outline" keyboardType="phone-pad" value={form.phone} onChangeText={(v) => update('phone', v)} error={errors.phone} autoComplete="tel" placeholder="07XX XXX XXX" />
+            <Checkbox checked={form.whatsappSame} onChange={(v) => update('whatsappSame', v)} label={t('booking.fields.whatsappSame')} />
             {!form.whatsappSame ? (
-              <TextField label="WhatsApp" required icon="logo-whatsapp" keyboardType="phone-pad" value={form.whatsapp} onChangeText={(v) => update('whatsapp', v)} error={errors.whatsapp} />
+              <TextField label={t('booking.fields.whatsapp')} required icon="logo-whatsapp" keyboardType="phone-pad" value={form.whatsapp} onChangeText={(v) => update('whatsapp', v)} error={errors.whatsapp} />
             ) : null}
-            <TextField label="Alternative phone" icon="call-outline" keyboardType="phone-pad" value={form.altPhone} onChangeText={(v) => update('altPhone', v)} error={errors.altPhone} />
-            <TextField label="Email" required icon="mail-outline" keyboardType="email-address" autoCapitalize="none" autoComplete="email" value={form.email} onChangeText={(v) => update('email', v)} error={errors.email} placeholder="you@example.com" />
+            <TextField label={t('booking.fields.altPhone')} icon="call-outline" keyboardType="phone-pad" value={form.altPhone} onChangeText={(v) => update('altPhone', v)} error={errors.altPhone} />
+            <TextField label={t('booking.fields.email')} required icon="mail-outline" keyboardType="email-address" autoCapitalize="none" autoComplete="email" value={form.email} onChangeText={(v) => update('email', v)} error={errors.email} placeholder="you@example.com" />
             <Divider />
-            <TextField label="House / street" required value={form.houseName} onChangeText={(v) => update('houseName', v)} error={errors.houseName} />
+            <TextField label={t('booking.fields.house')} required value={form.houseName} onChangeText={(v) => update('houseName', v)} error={errors.houseName} />
             <View style={styles.row}>
               <View style={{ flex: 1 }}>
-                <TextField label="Town / village" required value={form.place} onChangeText={(v) => update('place', v)} error={errors.place} />
+                <TextField label={t('booking.fields.town')} required value={form.place} onChangeText={(v) => update('place', v)} error={errors.place} />
               </View>
               <View style={{ flex: 1 }}>
-                <TextField label="District" value={form.district} onChangeText={(v) => update('district', v)} />
+                <TextField label={t('booking.fields.district')} value={form.district} onChangeText={(v) => update('district', v)} />
               </View>
             </View>
             <View style={styles.row}>
               <View style={{ flex: 1 }}>
-                <TextField label="Region" value={form.state} onChangeText={(v) => update('state', v)} />
+                <TextField label={t('booking.fields.region')} value={form.state} onChangeText={(v) => update('state', v)} />
               </View>
               <View style={{ flex: 1 }}>
-                <TextField label="Country" value={form.country} onChangeText={(v) => update('country', v)} />
+                <TextField label={t('booking.fields.country')} value={form.country} onChangeText={(v) => update('country', v)} />
               </View>
             </View>
             <Divider />
-            <Checkbox checked={form.nonCatholic} onChange={(v) => update('nonCatholic', v)} label="I am not Catholic" />
+            <Checkbox checked={form.nonCatholic} onChange={(v) => update('nonCatholic', v)} label={t('booking.fields.nonCatholic')} />
             {!form.nonCatholic ? (
               <View style={styles.row}>
                 <View style={{ flex: 1 }}>
-                  <TextField label="Diocese" required value={form.diocese} onChangeText={(v) => update('diocese', v)} error={errors.diocese} />
+                  <TextField label={t('booking.fields.diocese')} required value={form.diocese} onChangeText={(v) => update('diocese', v)} error={errors.diocese} />
                 </View>
                 <View style={{ flex: 1 }}>
-                  <TextField label="Parish" required value={form.parish} onChangeText={(v) => update('parish', v)} error={errors.parish} />
+                  <TextField label={t('booking.fields.parish')} required value={form.parish} onChangeText={(v) => update('parish', v)} error={errors.parish} />
                 </View>
               </View>
             ) : null}
@@ -360,37 +365,37 @@ export default function BookRetreat() {
         {step.id === 'family' ? (
           <>
             <Text variant="body" color={colors.muted}>
-              Bringing family members? Add them here so the team can prepare rooms. Leave empty if you are coming alone.
+              {t('booking.family.intro')}
             </Text>
             {form.familyMembers.map((member, index) => (
               <Animated.View key={index} entering={FadeInDown.springify()} layout={LinearTransition}>
                 <Card style={{ gap: space.md }}>
                   <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
-                    <Text variant="subtitle">Guest {index + 1}</Text>
+                    <Text variant="subtitle">{t('booking.family.guest', { number: index + 1 })}</Text>
                     <Pressable
                       hitSlop={10}
-                      accessibilityLabel={`Remove guest ${index + 1}`}
+                      accessibilityLabel={t('booking.family.remove', { number: index + 1 })}
                       onPress={() => update('familyMembers', form.familyMembers.filter((_, i) => i !== index))}>
                       <Icon name="trash-outline" size={18} color={colors.danger} />
                     </Pressable>
                   </View>
                   <TextField
-                    label="Name"
+                    label={t('booking.family.name')}
                     value={member.name}
                     onChangeText={(v) => update('familyMembers', form.familyMembers.map((m, i) => (i === index ? { ...m, name: v } : m)))}
                   />
                   <View style={styles.row}>
                     <View style={{ flex: 2 }}>
                       <TextField
-                        label="Relationship"
+                        label={t('booking.family.relationship')}
                         value={member.relationship}
-                        placeholder="e.g. Spouse"
+                        placeholder={t('booking.family.relationshipPlaceholder')}
                         onChangeText={(v) => update('familyMembers', form.familyMembers.map((m, i) => (i === index ? { ...m, relationship: v } : m)))}
                       />
                     </View>
                     <View style={{ flex: 1 }}>
                       <TextField
-                        label="Age"
+                        label={t('booking.family.age')}
                         keyboardType="number-pad"
                         value={member.age}
                         onChangeText={(v) => update('familyMembers', form.familyMembers.map((m, i) => (i === index ? { ...m, age: v.replace(/\D/g, '').slice(0, 3) } : m)))}
@@ -402,19 +407,19 @@ export default function BookRetreat() {
             ))}
             {form.familyMembers.length < 8 ? (
               <Button
-                label="Add a family member"
+                label={t('booking.family.add')}
                 icon="person-add-outline"
                 variant="secondary"
                 onPress={() => update('familyMembers', [...form.familyMembers, { name: '', relationship: '', age: '' }])}
               />
             ) : null}
             <Card style={{ gap: space.sm, backgroundColor: colors.gold50, borderColor: colors.gold100 }}>
-              <Text variant="subtitle">Before you come</Text>
-              {['Arrive on time for registration on the first day.', 'Bring your Bible, a notebook and personal medication.', 'Silence is kept during the retreat; phones are handed in.', 'Dress modestly for chapel and sessions.'].map((line) => (
-                <View key={line} style={{ flexDirection: 'row', gap: 8 }}>
+              <Text variant="subtitle">{t('booking.instructions.title')}</Text>
+              {INSTRUCTIONS.map((id) => (
+                <View key={id} style={{ flexDirection: 'row', gap: 8 }}>
                   <Icon name="checkmark-circle" size={16} color={colors.gold600} style={{ marginTop: 3 }} />
                   <Text variant="small" color={colors.text} style={{ flex: 1 }}>
-                    {line}
+                    {t(`booking.instructions.${id}`)}
                   </Text>
                 </View>
               ))}
@@ -422,7 +427,7 @@ export default function BookRetreat() {
             <Checkbox
               checked={form.acceptInstructions}
               onChange={(v) => update('acceptInstructions', v)}
-              label="I have read the instructions for retreatants"
+              label={t('booking.instructions.accept')}
               error={errors.acceptInstructions}
             />
           </>
@@ -431,16 +436,39 @@ export default function BookRetreat() {
         {step.id === 'review' ? (
           <>
             <Card style={{ gap: space.md }}>
-              <Text variant="caption">Retreat</Text>
+              <Text variant="caption">{t('booking.review.retreat')}</Text>
               <Text variant="heading">{retreat.title}</Text>
               <Text variant="small">
-                {retreat.dateRange} · {retreat.location}
+                {retreat.dateLabel ?? retreat.dateRange} · {retreat.location}
               </Text>
             </Card>
             {[
-              { title: 'About you', index: 0, rows: [['Name', form.fullName], ['Gender', form.gender], ['Age', form.age], ['Life status', form.lifeStatus], ['Occupation', form.occupation]] },
-              { title: 'Contact', index: 1, rows: [['Phone', form.phone], ['Email', form.email], ['Address', [form.houseName, form.place, form.country].filter(Boolean).join(', ')], ['Parish', form.nonCatholic ? 'Not Catholic' : `${form.parish}, ${form.diocese}`]] },
-              { title: 'Family', index: 2, rows: [['Guests', guests ? form.familyMembers.filter((m) => m.name.trim()).map((m) => m.name).join(', ') : 'Coming alone']] },
+              {
+                title: t('booking.review.about'),
+                index: 0,
+                rows: [
+                  [t('booking.review.name'), form.fullName],
+                  [t('booking.review.gender'), option(form.gender)],
+                  [t('booking.review.age'), form.age],
+                  [t('booking.review.lifeStatus'), option(form.lifeStatus)],
+                  [t('booking.review.occupation'), form.occupation],
+                ],
+              },
+              {
+                title: t('booking.review.contact'),
+                index: 1,
+                rows: [
+                  [t('booking.review.phone'), form.phone],
+                  [t('booking.review.email'), form.email],
+                  [t('booking.review.address'), [form.houseName, form.place, form.country].filter(Boolean).join(', ')],
+                  [t('booking.review.parish'), form.nonCatholic ? t('booking.review.notCatholic') : `${form.parish}, ${form.diocese}`],
+                ],
+              },
+              {
+                title: t('booking.review.family'),
+                index: 2,
+                rows: [[t('booking.review.guests'), guests ? form.familyMembers.filter((m) => m.name.trim()).map((m) => m.name).join(', ') : t('booking.review.alone')]],
+              },
             ].map((section) => (
               <Card key={section.title} style={{ gap: space.sm }}>
                 <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
@@ -448,7 +476,7 @@ export default function BookRetreat() {
                   <Pressable onPress={() => goTo(section.index)} hitSlop={10} style={{ flexDirection: 'row', gap: 4, alignItems: 'center' }}>
                     <Icon name="create-outline" size={15} color={colors.gold600} />
                     <Text variant="smallStrong" color={colors.gold600}>
-                      Edit
+                      {t('common.edit')}
                     </Text>
                   </Pressable>
                 </View>
@@ -465,26 +493,26 @@ export default function BookRetreat() {
             <View style={styles.total}>
               <View>
                 <Text variant="small" color={colors.navy200}>
-                  Contribution
+                  {t('booking.review.contribution')}
                 </Text>
                 <Text variant="title" color={colors.white}>
-                  {retreat.isPaid === false || !retreat.price ? retreatContribution(retreat) : formatTZS(amount)}
+                  {retreat.isPaid === false || !retreat.price ? retreatContribution(retreat, t, money) : money(amount)}
                 </Text>
               </View>
               <Text variant="small" color={colors.navy200} style={{ maxWidth: 150, textAlign: 'right' }}>
-                {retreat.isPaid === false || !retreat.price ? 'Give as you are able' : `${1 + guests} × ${formatTZS(retreat.price)}`}
+                {retreat.isPaid === false || !retreat.price ? t('booking.review.giveAsAble') : `${1 + guests} × ${money(retreat.price)}`}
               </Text>
             </View>
-            {retreat.isPaid !== false && retreat.price ? <DemoBanner text="You can pay your contribution after booking. Payments are demo-only until DMRC connects a payment provider." /> : null}
+            {retreat.isPaid !== false && retreat.price ? <DemoBanner text={t('booking.review.payLater')} /> : null}
             <View style={styles.terms}>
               {retreatTerms.slice(0, 3).map((term) => (
-                <Text key={term.title} variant="small">
-                  <Text variant="smallStrong">{term.title}. </Text>
-                  {term.body}
+                <Text key={term} variant="small">
+                  <Text variant="smallStrong">{t(`content.terms.${term}.title`)}. </Text>
+                  {t(`content.terms.${term}.body`)}
                 </Text>
               ))}
             </View>
-            <Checkbox checked={form.acceptTerms} onChange={(v) => update('acceptTerms', v)} label="I accept the retreat terms and conditions" error={errors.acceptTerms} />
+            <Checkbox checked={form.acceptTerms} onChange={(v) => update('acceptTerms', v)} label={t('booking.review.acceptTerms')} error={errors.acceptTerms} />
             <ErrorBanner message={submitError} />
           </>
         ) : null}
