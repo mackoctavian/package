@@ -11,7 +11,7 @@ const getQuickLinkId = (request: Request, params?: { id?: string }) => {
 
 export async function PATCH(request: Request, { params: paramsPromise }: { params: Promise<{ id: string }> }) {
   const params = await paramsPromise
-  const denied = await guardAdminApi('homepage')
+  const denied = await guardAdminApi('homepage', 'edit')
   if (denied) return denied
 
   try {
@@ -42,7 +42,7 @@ export async function PATCH(request: Request, { params: paramsPromise }: { param
 
 export async function DELETE(request: Request, { params: paramsPromise }: { params: Promise<{ id: string }> }) {
   const params = await paramsPromise
-  const denied = await guardAdminApi('homepage')
+  const denied = await guardAdminApi('homepage', 'edit')
   if (denied) return denied
 
   try {

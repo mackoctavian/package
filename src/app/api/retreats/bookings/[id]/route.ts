@@ -50,7 +50,7 @@ export const PATCH = async (request: Request, { params: paramsPromise }: RouteCo
   }
 
   const body = await request.json()
-  const isAdmin = await isAdminRequest('retreats')
+  const isAdmin = await isAdminRequest('retreats', 'edit')
   const { status, retreatId } = body
   // Retreatants (who hold their booking id) may only cancel or reschedule their own booking.
   const { paymentStatus, attended, notes } = isAdmin ? body : ({} as Record<string, undefined>)

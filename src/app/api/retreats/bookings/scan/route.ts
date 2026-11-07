@@ -4,7 +4,7 @@ import { guardAdminApi } from '@/lib/auth/api-guard'
 
 // Scan QR code and check in user
 export async function POST(request: Request) {
-  const denied = await guardAdminApi('retreats')
+  const denied = await guardAdminApi('retreats', 'edit')
   if (denied) return denied
 
   try {

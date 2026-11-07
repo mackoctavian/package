@@ -21,7 +21,7 @@ export const GET = async () => {
 }
 
 export const POST = async (request: Request) => {
-  const denied = await guardAdminApi('retreats')
+  const denied = await guardAdminApi('retreats', 'edit')
   if (denied) return denied
 
   try {

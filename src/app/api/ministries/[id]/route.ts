@@ -75,7 +75,7 @@ const buildPayload = (body: any) => {
 
 export async function PATCH(request: Request, { params: paramsPromise }: { params: Promise<{ id: string }> }) {
   const params = await paramsPromise
-  const denied = await guardAdminApi('ministries')
+  const denied = await guardAdminApi('ministries', 'edit')
   if (denied) return denied
 
   try {
@@ -100,7 +100,7 @@ export async function PATCH(request: Request, { params: paramsPromise }: { param
 
 export async function DELETE(_: Request, { params: paramsPromise }: { params: Promise<{ id: string }> }) {
   const params = await paramsPromise
-  const denied = await guardAdminApi('ministries')
+  const denied = await guardAdminApi('ministries', 'edit')
   if (denied) return denied
 
   try {

@@ -33,7 +33,7 @@ export const GET = async (_request: Request, context: RouteContext) => {
 }
 
 export const PATCH = async (request: Request, context: RouteContext) => {
-  const denied = await guardAdminApi('retreats')
+  const denied = await guardAdminApi('retreats', 'edit')
   if (denied) return denied
 
   const params = await context.params
@@ -102,7 +102,7 @@ export const PATCH = async (request: Request, context: RouteContext) => {
 }
 
 export const DELETE = async (_request: Request, context: RouteContext) => {
-  const denied = await guardAdminApi('retreats')
+  const denied = await guardAdminApi('retreats', 'edit')
   if (denied) return denied
 
   try {
