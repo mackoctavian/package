@@ -1,3 +1,4 @@
+import { PageBody } from '@/app/components/Admin/shell/primitives'
 import { ContentManager } from '@/app/components/Admin/content-manager'
 import { requireAdminPageAccess } from '@/lib/auth/admin-session'
 
@@ -5,7 +6,7 @@ export default async function AboutAdminPage() {
   await requireAdminPageAccess('about')
 
   return (
-    <div className='px-6 py-8'>
+    <PageBody>
       <ContentManager
         type='about'
         title='About page content'
@@ -15,7 +16,7 @@ export default async function AboutAdminPage() {
           { key: 'accent', label: 'Accent scripture / quote' },
         ]}
       />
-    </div>
+    </PageBody>
   )
 }
 

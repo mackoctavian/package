@@ -1,18 +1,16 @@
 import type { Metadata } from 'next'
+import { Suspense } from 'react'
 
-import { DonationsTable } from '@/app/components/Admin/DonationsTable'
+import { RecordsManager } from '@/app/components/Admin/records/RecordsManager'
 import { requireAdminPageAccess } from '@/lib/auth/admin-session'
 
-export const metadata: Metadata = {
-  title: 'Donations',
-}
+export const metadata: Metadata = { title: 'Donations' }
 
-export default async function DonationsAdminPage() {
+export default async function Page() {
   await requireAdminPageAccess('donations')
-
   return (
-    <div className='px-6 py-8'>
-      <DonationsTable />
-    </div>
+    <Suspense>
+      <RecordsManager kind='donations' />
+    </Suspense>
   )
 }

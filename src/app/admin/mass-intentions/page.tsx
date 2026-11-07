@@ -1,18 +1,16 @@
 import type { Metadata } from 'next'
+import { Suspense } from 'react'
 
-import { MassIntentionsTable } from '@/app/components/Admin/MassIntentionsTable'
+import { RecordsManager } from '@/app/components/Admin/records/RecordsManager'
 import { requireAdminPageAccess } from '@/lib/auth/admin-session'
 
-export const metadata: Metadata = {
-  title: 'Mass Intentions',
-}
+export const metadata: Metadata = { title: 'Mass intentions' }
 
-export default async function MassIntentionsAdminPage() {
+export default async function Page() {
   await requireAdminPageAccess('mass-intentions')
-
   return (
-    <div className='px-6 py-8'>
-      <MassIntentionsTable />
-    </div>
+    <Suspense>
+      <RecordsManager kind='mass-intentions' />
+    </Suspense>
   )
 }
