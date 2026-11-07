@@ -88,6 +88,7 @@ model AdminUser {
 
   sessions    AdminSession[]
   invitesSent AdminInvite[]  @relation("InviteSender")
+  member      Member?
 
   @@map("admin_users")
 }
@@ -359,4 +360,57 @@ model UiTranslation {
   @@unique([scope, locale, key])
   @@index([scope, locale])
   @@map("ui_translations")
+}
+
+/// Someone who serves at DMRC: priests, religious, staff and volunteers.
+/// A member can optionally be linked to an admin login.
+model Member {
+  id              String    @id @default(uuid())
+  fullName        String    @map("full_name")
+  email           String?
+  phone           String?
+  memberType      String    @default("staff") @map("member_type")
+  position        String?
+  department      String?
+  status          String    @default("active")
+  startDate       DateTime? @map("start_date")
+  photoUrl        String?   @map("photo_url")
+  annualLeaveDays Int       @default(21) @map("annual_leave_days")
+  notes           String?   @db.Text
+  adminUserId     String?   @unique @map("admin_user_id")
+  createdAt       DateTime  @default(now()) @map("created_at")
+  updatedAt       DateTime  @updatedAt @map("updated_at")
+
+  adminUser     AdminUser?     @relation(fields: [adminUserId], references: [id], onDelete: SetNull)
+  leaveRequests LeaveRequest[]
+
+  @@index([status])
+  @@index([memberType])
+  @@map("members")
+}
+
+/// A request for time away, reviewed by someone with leave access.
+model LeaveRequest {
+  id             String    @id @default(uuid())
+  memberId       String    @map("member_id")
+  leaveType      String    @map("leave_type")
+  startDate      DateTime  @map("start_date")
+  endDate        DateTime  @map("end_date")
+  days           Int
+  reason         String?   @db.Text
+  status         String    @default("pending")
+  reviewedById   String?   @map("reviewed_by_id")
+  reviewedByName String?   @map("reviewed_by_name")
+  reviewedAt     DateTime? @map("reviewed_at")
+  reviewNote     String?   @map("review_note") @db.Text
+  createdById    String?   @map("created_by_id")
+  createdAt      DateTime  @default(now()) @map("created_at")
+  updatedAt      DateTime  @updatedAt @map("updated_at")
+
+  member Member @relation(fields: [memberId], references: [id], onDelete: Cascade)
+
+  @@index([memberId])
+  @@index([status])
+  @@index([startDate, endDate])
+  @@map("leave_requests")
 }

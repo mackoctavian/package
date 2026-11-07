@@ -19,6 +19,8 @@ import {
   CalendarRange,
   ScanLine,
   Ticket,
+  Contact,
+  CalendarOff,
 } from 'lucide-react'
 
 import type { AdminModuleId } from '@/lib/auth/admin-permissions'
@@ -79,6 +81,8 @@ export const ADMIN_NAV: AdminNavGroup[] = [
   {
     title: 'Organisation',
     items: [
+      { title: 'Members', href: '/admin/members', icon: Contact, moduleId: 'members', keywords: 'priests sisters staff volunteers directory people' },
+      { title: 'Leave', href: '/admin/leave', icon: CalendarOff, moduleId: 'leave', keywords: 'leave requests away holiday absence' },
       { title: 'Team & access', href: '/admin/team', icon: Users2, moduleId: 'team', keywords: 'invite users roles permissions' },
       { title: 'Activity log', href: '/admin/activity', icon: Activity, moduleId: 'team', keywords: 'audit history' },
     ],
