@@ -1,0 +1,55 @@
+{
+  "expo": {
+    "name": "DMRC",
+    "slug": "dmrc",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/images/icon.png",
+    "scheme": "dmrc",
+    "userInterfaceStyle": "light",
+    "backgroundColor": "#0f1e38",
+    "ios": {
+      "bundleIdentifier": "org.dmrc.app",
+      "supportsTablet": true,
+      "infoPlist": {
+        "ITSAppUsesNonExemptEncryption": false
+      }
+    },
+    "android": {
+      "package": "org.dmrc.app",
+      "adaptiveIcon": {
+        "backgroundColor": "#0f1e38",
+        "foregroundImage": "./assets/images/android-icon-foreground.png",
+        "backgroundImage": "./assets/images/android-icon-background.png",
+        "monochromeImage": "./assets/images/android-icon-monochrome.png"
+      },
+      "predictiveBackGestureEnabled": false
+    },
+    "web": {
+      "output": "single",
+      "favicon": "./assets/images/favicon.png"
+    },
+    "plugins": [
+      "expo-router",
+      [
+        "expo-splash-screen",
+        {
+          "backgroundColor": "#0f1e38",
+          "image": "./assets/images/splash-icon.png",
+          "imageWidth": 120
+        }
+      ],
+      "expo-font"
+    ],
+    "experiments": {
+      "typedRoutes": true,
+      "reactCompiler": true
+    },
+    "extra": {
+      "apiUrl": "https://dmrc.vercel.app",
+      "eas": {
+        "projectId": "524a23df-895a-410f-a64b-0993581b93fc"
+      }
+    }
+  }
+}
