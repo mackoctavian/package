@@ -9,7 +9,7 @@ import { buildWorkbook, excelResponse, type ExcelColumn, exportFilename } from '
 
 export const dynamic = 'force-dynamic'
 
-type Filters = { from?: Date; to?: Date; status?: string; retreatId?: string; q?: string; payment?: string; attended?: string }
+type Filters = { from?: Date; to?: Date; status?: string; retreatId?: string; q?: string; payment?: string; attended?: string; type?: string }
 
 const parseFilters = (url: URL): Filters => {
   const date = (key: string, endOfDay = false) => {
@@ -27,6 +27,7 @@ const parseFilters = (url: URL): Filters => {
     q: text('q'),
     payment: text('payment'),
     attended: text('attended'),
+    type: text('type'),
   }
 }
 
@@ -169,6 +170,72 @@ const DATASETS: Record<string, Dataset> = {
         { header: 'Active', value: (r) => (r.isActive ? 'Yes' : 'No') },
         { header: 'Last sign-in', value: (r) => r.lastLoginAt, numFmt: dateTime, width: 18 },
         { header: 'Added', value: (r) => r.createdAt, numFmt: dateOnly, width: 14 },
+      ]
+      return { rows, columns }
+    },
+  },
+  members: {
+    moduleId: 'members',
+    sheet: 'Members',
+    load: async (filters) => {
+      const rows = await prisma.member.findMany({
+        where: {
+          ...(filters.status && { status: filters.status }),
+          ...(filters.type && { memberType: filters.type }),
+          ...search(filters.q, ['fullName', 'email', 'phone', 'position', 'department']),
+        },
+        orderBy: { fullName: 'asc' },
+      })
+      const year = new Date().getUTCFullYear()
+      const used = await prisma.leaveRequest.groupBy({
+        by: ['memberId'],
+        where: { leaveType: 'annual', status: 'approved', startDate: { gte: new Date(Date.UTC(year, 0, 1)), lte: new Date(Date.UTC(year, 11, 31)) } },
+        _sum: { days: true },
+      })
+      const usedBy = new Map(used.map((row) => [row.memberId, row._sum.days ?? 0]))
+      const columns: ExcelColumn<(typeof rows)[number]>[] = [
+        { header: 'Name', value: (r) => r.fullName, width: 26 },
+        { header: 'Role', value: (r) => r.memberType, width: 12 },
+        { header: 'Position', value: (r) => r.position, width: 24 },
+        { header: 'Department / ministry', value: (r) => r.department, width: 24 },
+        { header: 'Email', value: (r) => r.email, width: 28 },
+        { header: 'Phone', value: (r) => r.phone, width: 16 },
+        { header: 'Status', value: (r) => r.status },
+        { header: 'Started', value: (r) => r.startDate, numFmt: dateOnly, width: 14 },
+        { header: 'Annual leave allowance', value: (r) => r.annualLeaveDays, width: 12 },
+        { header: `Annual leave used ${year}`, value: (r) => usedBy.get(r.id) ?? 0, width: 12 },
+        { header: 'Leave remaining', value: (r) => r.annualLeaveDays - (usedBy.get(r.id) ?? 0), width: 12 },
+      ]
+      return { rows, columns }
+    },
+  },
+  leave: {
+    moduleId: 'leave',
+    sheet: 'Leave',
+    load: async (filters) => {
+      const rows = await prisma.leaveRequest.findMany({
+        where: {
+          ...(filters.status && { status: filters.status }),
+          ...(filters.type && { leaveType: filters.type }),
+          ...(filters.to && { startDate: { lte: filters.to } }),
+          ...(filters.from && { endDate: { gte: filters.from } }),
+        },
+        orderBy: { startDate: 'desc' },
+        include: { member: { select: { fullName: true, memberType: true, department: true } } },
+      })
+      const columns: ExcelColumn<(typeof rows)[number]>[] = [
+        { header: 'Member', value: (r) => r.member.fullName, width: 26 },
+        { header: 'Role', value: (r) => r.member.memberType, width: 12 },
+        { header: 'Department', value: (r) => r.member.department, width: 20 },
+        { header: 'Type', value: (r) => r.leaveType, width: 14 },
+        { header: 'From', value: (r) => r.startDate, numFmt: dateOnly, width: 14 },
+        { header: 'To', value: (r) => r.endDate, numFmt: dateOnly, width: 14 },
+        { header: 'Days', value: (r) => r.days },
+        { header: 'Status', value: (r) => r.status },
+        { header: 'Reason', value: (r) => r.reason, width: 40 },
+        { header: 'Reviewed by', value: (r) => r.reviewedByName, width: 20 },
+        { header: 'Reviewed on', value: (r) => r.reviewedAt, numFmt: dateOnly, width: 14 },
+        { header: 'Review note', value: (r) => r.reviewNote, width: 30 },
       ]
       return { rows, columns }
     },

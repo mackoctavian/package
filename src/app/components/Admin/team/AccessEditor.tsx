@@ -67,6 +67,13 @@ export const PRESETS: Array<{ id: string; label: string; description: string; ro
     },
   },
   {
+    id: 'people',
+    label: 'People & leave',
+    description: 'Members directory and leave approvals',
+    role: 'EDITOR',
+    levels: { overview: 'view', members: 'edit', leave: 'edit' },
+  },
+  {
     id: 'read-only',
     label: 'Read-only',
     description: 'Can see everything, change nothing',
