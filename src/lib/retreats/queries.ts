@@ -5,12 +5,14 @@ import { retreatData } from '@/app/data/retreats'
 import { mapPrismaRetreat } from '@/app/api/retreats/utils'
 import type { RetreatType } from '@/app/types/retreat'
 import { parseRetreatDates } from './dates'
+import { localizeRecord, localizeRecords } from '@/lib/i18n/content'
+import { DEFAULT_LOCALE, type Locale } from '@/i18n/config'
 
 /** Public retreat queries with a static fallback when the database is unreachable. */
 
-export const getAllRetreats = cache(async (): Promise<{ retreats: RetreatType[]; source: 'db' | 'static' }> => {
+export const getAllRetreats = cache(async (locale: Locale = DEFAULT_LOCALE): Promise<{ retreats: RetreatType[]; source: 'db' | 'static' }> => {
   try {
-    const rows = await prisma.retreat.findMany()
+    const rows = await localizeRecords('retreat', await prisma.retreat.findMany(), locale)
     return { retreats: rows.map(mapPrismaRetreat), source: 'db' }
   } catch (error) {
     console.error('[retreats] database unavailable, using static data', error instanceof Error ? error.message : error)
@@ -18,9 +20,9 @@ export const getAllRetreats = cache(async (): Promise<{ retreats: RetreatType[];
   }
 })
 
-export const getRetreatBySlug = cache(async (slug: string): Promise<RetreatType | undefined> => {
+export const getRetreatBySlug = cache(async (slug: string, locale: Locale = DEFAULT_LOCALE): Promise<RetreatType | undefined> => {
   try {
-    const row = await prisma.retreat.findUnique({ where: { slug } })
+    const row = await localizeRecord('retreat', await prisma.retreat.findUnique({ where: { slug } }), locale)
     if (row) return mapPrismaRetreat(row)
   } catch (error) {
     console.error('[retreats] lookup failed', error instanceof Error ? error.message : error)

@@ -1,10 +1,14 @@
-import Link from 'next/link'
+'use client'
+
+import { Link } from '@/i18n/link'
+import { useLocale, useT } from '@/i18n/client'
+import { formatMoney } from '@/i18n/format'
 import { ArrowRight, MapPin, Mic2, Users } from 'lucide-react'
 
 import SmartImage from '@/app/components/site/SmartImage'
 import type { RetreatType } from '@/app/types/retreat'
-import { formatRetreatMonthDay } from '@/lib/retreats/dates'
-import { categoryLabel } from '@/lib/retreats/categories'
+import { formatRetreatMonthDay, localizeDateRange } from '@/lib/retreats/dates'
+import { translatedCategoryLabel } from '@/lib/retreats/categories'
 import { cn } from '@/lib/utils'
 
 type RetreatCardProps = {
@@ -12,10 +16,6 @@ type RetreatCardProps = {
   className?: string
 }
 
-const formatPrice = (retreat: RetreatType) => {
-  if (retreat.isPaid === false || !retreat.price) return 'Free-will offering'
-  return `TZS ${retreat.price.toLocaleString('en-US')}`
-}
 
 const statusStyles: Record<string, string> = {
   'Registration Open': 'bg-emerald-50 text-emerald-700 ring-emerald-600/20',
@@ -24,7 +24,10 @@ const statusStyles: Record<string, string> = {
 }
 
 export default function RetreatCard({ retreat, className }: RetreatCardProps) {
-  const date = formatRetreatMonthDay(retreat.startDate ? new Date(retreat.startDate) : null)
+  const t = useT()
+  const locale = useLocale()
+  const date = formatRetreatMonthDay(retreat.startDate ? new Date(retreat.startDate) : null, locale)
+  const price = retreat.isPaid === false || !retreat.price ? t('common.labels.freeWillOffering') : formatMoney(retreat.price, locale)
   const seats = retreat.availability?.total ?? 0
   const ended = retreat.endDate ? new Date(retreat.endDate).getTime() < new Date().setHours(0, 0, 0, 0) : false
   const closed = retreat.status === 'Closed' || ended
@@ -58,15 +61,15 @@ export default function RetreatCard({ retreat, className }: RetreatCardProps) {
             ended ? statusStyles.Closed : statusStyles[retreat.status] ?? statusStyles['Registration Open'],
           )}
         >
-          {ended ? 'Completed' : retreat.status}
+          {ended ? t('retreats.status.Completed') : t.dynamic(`retreats.status.${retreat.status}`, undefined, retreat.status)}
         </span>
       </Link>
 
       <div className='flex flex-1 flex-col p-6'>
         <p className='flex items-center justify-between gap-3 text-sm font-medium text-gold-700'>
-          <span>{retreat.dateRange}</span>
+          <span>{localizeDateRange(retreat.dateRange, locale)}</span>
           {retreat.category && (
-            <span className='rounded-full bg-parchment px-2.5 py-0.5 text-xs font-medium text-navy-700'>{categoryLabel(retreat.category)}</span>
+            <span className='rounded-full bg-parchment px-2.5 py-0.5 text-xs font-medium text-navy-700'>{translatedCategoryLabel(t, retreat.category)}</span>
           )}
         </p>
         <h3 className='mt-2 font-display text-2xl font-semibold leading-snug text-navy-900'>
@@ -85,25 +88,25 @@ export default function RetreatCard({ retreat, className }: RetreatCardProps) {
           </li>
           {seats > 0 && (
             <li className='flex items-center gap-2'>
-              <Users className='h-4 w-4 text-navy-400' /> {seats} places available
+              <Users className='h-4 w-4 text-navy-400' /> {t('retreats.card.placesAvailable', { count: seats })}
             </li>
           )}
         </ul>
         <div className='mt-auto flex items-center justify-between gap-4 border-t border-border pt-5'>
           <div>
-            <p className='text-xs uppercase tracking-wider text-muted-foreground'>Contribution</p>
-            <p className='font-semibold text-navy-900'>{formatPrice(retreat)}</p>
+            <p className='text-xs uppercase tracking-wider text-muted-foreground'>{t('common.labels.contribution')}</p>
+            <p className='font-semibold text-navy-900'>{price}</p>
           </div>
           {closed ? (
             <Link href={href} className='text-sm font-medium text-navy-700 hover:underline'>
-              {ended ? 'View details' : 'Registration closed'}
+              {ended ? t('common.actions.viewDetails') : t('retreats.card.registrationClosed')}
             </Link>
           ) : (
             <Link
               href={retreat.ctaHref || `${href}#booking`}
               className='inline-flex items-center gap-1.5 rounded-full bg-navy-900 px-4 py-2 text-sm font-medium text-white transition hover:bg-navy-700'
             >
-              Reserve <ArrowRight className='h-4 w-4' />
+              {t('common.actions.reserve')} <ArrowRight className='h-4 w-4' />
             </Link>
           )}
         </div>

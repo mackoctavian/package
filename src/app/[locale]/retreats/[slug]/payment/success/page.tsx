@@ -1,0 +1,192 @@
+import type { Metadata } from 'next'
+import { Link } from '@/i18n/link'
+import { localizeRecord } from '@/lib/i18n/content'
+import { getT, setRequestLocale } from '@/i18n/server'
+import { resolveLocale } from '@/i18n/page'
+import { localizeHref } from '@/i18n/navigation'
+import type { Locale } from '@/i18n/config'
+import { localizeDateRange } from '@/lib/retreats/dates'
+import { notFound, redirect } from 'next/navigation'
+import { CheckCircle2, CalendarDays, MapPin, Users2, Ticket, Download, QrCode } from 'lucide-react'
+
+import prisma from '@/lib/prisma'
+import { retreatData } from '@/app/data/retreats'
+import { mapPrismaRetreat } from '@/app/api/retreats/utils'
+import { mapPrismaBooking } from '@/app/api/retreats/bookings/utils'
+import type { RetreatType } from '@/app/types/retreat'
+import TicketDisplay from './TicketDisplay'
+
+const buildTicketUrl = (code: string, locale: Locale) => {
+  const base =
+    process.env.NEXT_PUBLIC_APP_URL ||
+    process.env.NEXT_PUBLIC_SITE_URL ||
+    (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : '')
+  const path = localizeHref(`/retreats/check-booking?code=${encodeURIComponent(code)}`, locale)
+  return base ? `${base.replace(/\/$/, '')}${path}` : path
+}
+
+type PageProps = {
+  params: Promise<{ slug: string; locale: string }>
+  searchParams: Promise<{ booking?: string }>
+}
+
+const loadRetreat = async (slug: string, locale: Locale): Promise<RetreatType | undefined> => {
+  try {
+    const record = await localizeRecord('retreat', await prisma.retreat.findUnique({ where: { slug } }), locale)
+    if (record) {
+      return mapPrismaRetreat(record)
+    }
+  } catch (error) {
+    console.error('[retreat-payment-success] failed to load retreat', error)
+  }
+
+  return retreatData.find((item) => item.slug === slug)
+}
+
+export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
+  const locale = await resolveLocale(params)
+  const { slug } = await params
+  const t = await getT(locale)
+  const retreat = await loadRetreat(slug, locale)
+  return {
+    title: retreat ? t('retreats.success.metaTitle', { title: retreat.title }) : t('retreats.success.metaFallback'),
+    robots: { index: false },
+  }
+}
+
+export default async function RetreatPaymentSuccessPage({ params, searchParams }: PageProps) {
+  const locale = await resolveLocale(params)
+  setRequestLocale(locale)
+  const t = await getT(locale)
+  const { slug } = await params
+  const { booking: bookingId } = await searchParams
+  if (!bookingId) {
+    redirect(localizeHref(`/events/${slug}`, locale))
+  }
+
+  const [bookingRecord, retreat] = await Promise.all([
+    prisma.retreatBooking
+      .findUnique({ where: { id: bookingId } })
+      .catch((error) => {
+        console.error('[retreat-payment-success] failed to load booking', error)
+        return null
+      }),
+    loadRetreat(slug, locale),
+  ])
+
+  if (!bookingRecord || !retreat) {
+    notFound()
+  }
+
+  const booking = mapPrismaBooking(bookingRecord)
+  const ticketCode = (bookingRecord as any).ticketCode || `DMRC-${booking.id.slice(0, 8).toUpperCase()}`
+  const ticketUrl = buildTicketUrl(ticketCode, locale)
+  const dateRange = localizeDateRange(retreat.dateRange, locale)
+
+  return (
+    <main className='py-16 sm:py-20'>
+      <div className='container mx-auto max-w-4xl px-4'>
+        {/* Success Message */}
+        <div className='text-center mb-10'>
+          <div className='mx-auto flex h-20 w-20 items-center justify-center rounded-full bg-emerald-100 text-emerald-600 mb-6 shadow-lg shadow-emerald-200'>
+            <CheckCircle2 className='h-10 w-10' />
+          </div>
+          <h1 className='mb-3 text-5xl text-navy-900'>{t('retreats.success.title')}</h1>
+          <p className='text-lg text-navy-700 max-w-xl mx-auto'>
+            {t('retreats.success.text', { email: booking.email })}
+          </p>
+        </div>
+
+        {/* Ticket Display */}
+        <div className='mb-10'>
+          <TicketDisplay 
+            booking={{
+              id: booking.id,
+              fullName: booking.fullName,
+              email: booking.email,
+              phone: booking.phone,
+              ticketCode,
+              status: booking.status,
+            }}
+            retreat={{
+              title: retreat.title,
+              dateRange,
+              timeRange: retreat.timeRange,
+              location: retreat.location,
+            }}
+            ticketUrl={ticketUrl}
+          />
+        </div>
+
+        {/* Important Info */}
+        <div className='bg-white rounded-2xl border border-border p-6 mb-8 shadow-sm'>
+          <h2 className='text-lg font-semibold text-navy-900 mb-4 flex items-center gap-2'>
+            <Ticket className='h-5 w-5 text-gold-700' />
+            {t('retreats.success.important')}
+          </h2>
+          <ul className='space-y-3 text-navy-700'>
+            <li className='flex items-start gap-3'>
+              <div className='w-6 h-6 rounded-full bg-gold-100 text-gold-700 flex items-center justify-center text-sm font-bold flex-shrink-0'>1</div>
+              <span>{t('retreats.success.tip1')}</span>
+            </li>
+            <li className='flex items-start gap-3'>
+              <div className='w-6 h-6 rounded-full bg-gold-100 text-gold-700 flex items-center justify-center text-sm font-bold flex-shrink-0'>2</div>
+              <span>{t('retreats.success.tip2')}</span>
+            </li>
+            <li className='flex items-start gap-3'>
+              <div className='w-6 h-6 rounded-full bg-gold-100 text-gold-700 flex items-center justify-center text-sm font-bold flex-shrink-0'>3</div>
+              <span>{t('retreats.success.tip3')}</span>
+            </li>
+            <li className='flex items-start gap-3'>
+              <div className='w-6 h-6 rounded-full bg-gold-100 text-gold-700 flex items-center justify-center text-sm font-bold flex-shrink-0'>4</div>
+              <span>{t('retreats.success.tip4')}</span>
+            </li>
+          </ul>
+        </div>
+
+        {/* Summary Cards */}
+        <div className='grid gap-4 text-left sm:grid-cols-3 mb-8'>
+          <div className='rounded-2xl border border-border bg-white px-5 py-4 shadow-sm'>
+            <p className='flex items-center gap-2 text-xs font-semibold uppercase tracking-wide text-slate-500'>
+              <CalendarDays className='h-4 w-4 text-primary' /> {t('retreats.success.date')}
+            </p>
+            <p className='mt-2 text-base font-semibold text-navy-900'>{dateRange}</p>
+            {retreat.timeRange && <p className='text-sm text-slate-500'>{retreat.timeRange}</p>}
+          </div>
+          <div className='rounded-2xl border border-border bg-white px-5 py-4 shadow-sm'>
+            <p className='flex items-center gap-2 text-xs font-semibold uppercase tracking-wide text-slate-500'>
+              <MapPin className='h-4 w-4 text-primary' /> {t('retreats.success.venue')}
+            </p>
+            <p className='mt-2 text-base font-semibold text-navy-900'>{retreat.location}</p>
+          </div>
+          <div className='rounded-2xl border border-border bg-white px-5 py-4 shadow-sm'>
+            <p className='flex items-center gap-2 text-xs font-semibold uppercase tracking-wide text-slate-500'>
+              <Users2 className='h-4 w-4 text-primary' /> {t('retreats.success.guest')}
+            </p>
+            <p className='mt-2 text-base font-semibold text-navy-900'>{booking.fullName}</p>
+            <p className='text-sm text-slate-500'>{t('retreats.success.bookingNumber', { number: booking.id.slice(0, 8).toUpperCase() })}</p>
+          </div>
+        </div>
+
+        {/* Actions */}
+        <div className='flex flex-wrap items-center justify-center gap-3 text-sm'>
+          <Link 
+            href='/retreats/check-booking' 
+            className='inline-flex items-center gap-2 rounded-xl border border-border bg-white px-6 py-3 font-semibold text-slate-700 transition hover:border-primary/40 hover:text-primary shadow-sm'
+          >
+            <QrCode className='h-4 w-4' />
+            {t('retreats.success.checkStatus')}
+          </Link>
+          <Link href='/' className='inline-flex items-center gap-2 rounded-xl border border-border bg-white px-6 py-3 font-semibold text-slate-700 transition hover:border-primary/40 hover:text-primary shadow-sm'>
+            {t('retreats.success.home')}
+          </Link>
+          <Link
+            href={`/events/${slug}`}
+            className='inline-flex items-center gap-2 rounded-xl bg-primary px-6 py-3 font-semibold text-white shadow-lg shadow-primary/30 transition hover:bg-primary/90'>
+            {t('retreats.success.details')}
+          </Link>
+        </div>
+      </div>
+    </main>
+  )
+}

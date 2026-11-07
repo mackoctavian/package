@@ -1,7 +1,8 @@
 'use client'
 
 import Image from 'next/image'
-import Link from 'next/link'
+import { Link } from '@/i18n/link'
+import { useT } from '@/i18n/client'
 
 import { useBranding } from '@/app/hooks/useBranding'
 import { cn } from '@/lib/utils'
@@ -24,6 +25,7 @@ const Logo: React.FC<LogoProps> = ({
   priority = true,
 }) => {
   const { logoUrl, inverseLogoUrl, logoAlt } = useBranding()
+  const t = useT()
   const src = variant === 'inverse' ? inverseLogoUrl : logoUrl
   const wrapperStyle = {
     width: `${width}px`,
@@ -53,7 +55,7 @@ const Logo: React.FC<LogoProps> = ({
   }
 
   return (
-    <Link href='/' aria-label='Homepage' className={cn('inline-flex items-center justify-center', className)} style={wrapperStyle}>
+    <Link href='/' aria-label={t('common.a11y.homepage')} className={cn('inline-flex items-center justify-center', className)} style={wrapperStyle}>
       {image}
     </Link>
   )

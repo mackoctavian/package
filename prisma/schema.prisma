@@ -318,3 +318,45 @@ model AuditLog {
   @@index([actorId])
   @@map("audit_logs")
 }
+
+/// Swahili (and future) translations of admin-managed content such as
+/// retreats, news and ministries. English stays in the original tables; a
+/// translated field overrides it for that language. `sourceHash` records the
+/// English text the translation was made from, so the admin can flag
+/// translations that are out of date after the English changes.
+model ContentTranslation {
+  id          String   @id @default(uuid())
+  entity      String
+  entityId    String   @map("entity_id")
+  locale      String
+  field       String
+  value       String   @db.Text
+  sourceHash  String?  @map("source_hash")
+  updatedById String?  @map("updated_by_id")
+  updatedBy   String?  @map("updated_by")
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  @@unique([entity, entityId, locale, field])
+  @@index([entity, locale])
+  @@map("content_translations")
+}
+
+/// Admin overrides for interface text (buttons, headings, messages) on the
+/// website (`scope = "web"`) and in the mobile app (`scope = "mobile"`).
+/// Built-in text lives in code; a row here replaces it for one language.
+model UiTranslation {
+  id          String   @id @default(uuid())
+  scope       String   @default("web")
+  locale      String
+  key         String
+  value       String   @db.Text
+  updatedById String?  @map("updated_by_id")
+  updatedBy   String?  @map("updated_by")
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  @@unique([scope, locale, key])
+  @@index([scope, locale])
+  @@map("ui_translations")
+}

@@ -1,4 +1,5 @@
-import Link from 'next/link'
+import { Link } from '@/i18n/link'
+import { getT } from '@/i18n/server'
 import { ArrowRight, BookOpen, CalendarCheck, Church, ClipboardCheck, Flame, HandHeart, HeartHandshake, QrCode, Quote } from 'lucide-react'
 
 import SmartImage from '@/app/components/site/SmartImage'
@@ -13,53 +14,51 @@ import type { GalleryPreviewItem, HomepageRetreat, PatronView, TestimonialView }
  * ------------------------------------------------------------------------- */
 
 const offerings = [
-  { icon: Church, title: 'Holy Mass & Adoration', text: 'The Eucharist at the heart of every day of retreat.' },
-  { icon: HandHeart, title: 'Healing & counselling', text: 'Confession, intercession and spiritual direction.' },
-  { icon: BookOpen, title: 'Preached retreats', text: 'Word-centred teaching for youth, families and clergy.' },
-  { icon: Flame, title: 'Mass intentions', text: 'Your intentions offered at the altar on the day you request.' },
-]
+  { icon: Church, id: 'mass' },
+  { icon: HandHeart, id: 'healing' },
+  { icon: BookOpen, id: 'preached' },
+  { icon: Flame, id: 'intentions' },
+] as const
 
-export function WelcomeSection() {
+export async function WelcomeSection() {
+  const t = await getT()
   return (
     <section className='py-24 sm:py-28'>
       <div className='container grid items-center gap-16 lg:grid-cols-2'>
         <div className='relative'>
           <div className='relative aspect-[4/5] overflow-hidden rounded-[2rem] shadow-lift sm:w-4/5'>
-            <SmartImage src={imagery.candles} alt='Candles lit in prayer' fill sizes='(min-width: 1024px) 40vw, 90vw' className='object-cover' />
+            <SmartImage src={imagery.candles} alt={t('home.welcome.candlesAlt')} fill sizes='(min-width: 1024px) 40vw, 90vw' className='object-cover' />
           </div>
           <div className='absolute -bottom-10 right-0 hidden aspect-square w-1/2 overflow-hidden rounded-[2rem] border-8 border-ivory shadow-lift sm:block'>
-            <SmartImage src={imagery.bibleReading} alt='An open Bible' fill sizes='25vw' className='object-cover' />
+            <SmartImage src={imagery.bibleReading} alt={t('home.welcome.bibleAlt')} fill sizes='25vw' className='object-cover' />
           </div>
           <div className='absolute -left-4 top-10 hidden rounded-2xl bg-navy-900 px-5 py-4 text-white shadow-lift md:block'>
-            <p className='font-display text-3xl italic text-gold-300'>“Be merciful,</p>
-            <p className='font-display text-3xl italic text-gold-300'>as your Father is.”</p>
-            <p className='mt-1 text-xs uppercase tracking-widest text-navy-200'>Luke 6:36</p>
+            <p className='font-display text-3xl italic text-gold-300'>{t('home.welcome.quoteLine1')}</p>
+            <p className='font-display text-3xl italic text-gold-300'>{t('home.welcome.quoteLine2')}</p>
+            <p className='mt-1 text-xs uppercase tracking-widest text-navy-200'>{t('home.welcome.quoteRef')}</p>
           </div>
         </div>
 
         <div>
-          <p className='eyebrow'>Welcome to DMRC</p>
-          <h2 className='mt-3 text-4xl leading-tight sm:text-5xl'>A house of prayer where hearts are renewed in God’s mercy.</h2>
-          <p className='mt-6 text-lg leading-relaxed text-muted-foreground'>
-            Set in the quiet hills of Vikindu, the Divine Mercy Retreat Center welcomes individuals, families, parishes and religious
-            communities to step away from the noise and encounter Christ through the Word, the Sacraments and healing prayer.
-          </p>
+          <p className='eyebrow'>{t('home.welcome.eyebrow')}</p>
+          <h2 className='mt-3 text-4xl leading-tight sm:text-5xl'>{t('home.welcome.title')}</h2>
+          <p className='mt-6 text-lg leading-relaxed text-muted-foreground'>{t('home.welcome.body')}</p>
           <div className='mt-10 grid gap-6 sm:grid-cols-2'>
             {offerings.map((item) => (
-              <div key={item.title} className='flex gap-4'>
+              <div key={item.id} className='flex gap-4'>
                 <span className='flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-gold-100 text-gold-700'>
                   <item.icon className='h-5 w-5' />
                 </span>
                 <div>
-                  <h3 className='font-semibold text-navy-900'>{item.title}</h3>
-                  <p className='mt-1 text-sm leading-relaxed text-muted-foreground'>{item.text}</p>
+                  <h3 className='font-semibold text-navy-900'>{t(`home.welcome.offerings.${item.id}.title`)}</h3>
+                  <p className='mt-1 text-sm leading-relaxed text-muted-foreground'>{t(`home.welcome.offerings.${item.id}.text`)}</p>
                 </div>
               </div>
             ))}
           </div>
           <Button asChild variant='link' className='mt-10 text-base'>
             <Link href='/about'>
-              Discover our story <ArrowRight className='ml-1.5 h-4 w-4' />
+              {t('home.welcome.cta')} <ArrowRight className='ml-1.5 h-4 w-4' />
             </Link>
           </Button>
         </div>
@@ -72,18 +71,19 @@ export function WelcomeSection() {
  * Upcoming retreats
  * ------------------------------------------------------------------------- */
 
-export function RetreatsSection({ retreats }: { retreats: HomepageRetreat[] }) {
+export async function RetreatsSection({ retreats }: { retreats: HomepageRetreat[] }) {
+  const t = await getT()
   return (
     <section className='bg-parchment py-24 sm:py-28'>
       <div className='container'>
         <SectionHeading
-          eyebrow='Upcoming retreats'
-          title='Find your time of grace'
-          description='Residential, parish and special retreats led by experienced preachers. Places are limited — reserve early.'
+          eyebrow={t('home.retreats.eyebrow')}
+          title={t('home.retreats.title')}
+          description={t('home.retreats.description')}
           action={
             <Button asChild variant='outline' size='pill' className='border-navy-200 bg-white'>
               <Link href='/retreats'>
-                View all retreats <ArrowRight className='ml-1.5 h-4 w-4' />
+                {t('home.retreats.viewAll')} <ArrowRight className='ml-1.5 h-4 w-4' />
               </Link>
             </Button>
           }
@@ -97,10 +97,8 @@ export function RetreatsSection({ retreats }: { retreats: HomepageRetreat[] }) {
         ) : (
           <div className='mt-14 rounded-3xl border border-dashed border-gold-300 bg-white/60 px-6 py-16 text-center'>
             <CalendarCheck className='mx-auto h-10 w-10 text-gold-500' />
-            <h3 className='mt-4 font-display text-3xl text-navy-900'>New retreat dates are coming soon</h3>
-            <p className='mx-auto mt-3 max-w-md text-muted-foreground'>
-              Our next programme is being prepared. Call the office or check back shortly to reserve your place.
-            </p>
+            <h3 className='mt-4 font-display text-3xl text-navy-900'>{t('home.retreats.emptyTitle')}</h3>
+            <p className='mx-auto mt-3 max-w-md text-muted-foreground'>{t('home.retreats.emptyText')}</p>
           </div>
         )}
       </div>
@@ -113,29 +111,30 @@ export function RetreatsSection({ retreats }: { retreats: HomepageRetreat[] }) {
  * ------------------------------------------------------------------------- */
 
 const bookingSteps = [
-  { icon: CalendarCheck, title: 'Choose a retreat', text: 'Browse upcoming dates, speakers and available places.' },
-  { icon: ClipboardCheck, title: 'Register in minutes', text: 'Add yourself and family members, then confirm your contribution.' },
-  { icon: QrCode, title: 'Receive your ticket', text: 'Get a QR-code ticket by email for fast check-in on arrival.' },
-]
+  { icon: CalendarCheck, id: 'choose' },
+  { icon: ClipboardCheck, id: 'register' },
+  { icon: QrCode, id: 'ticket' },
+] as const
 
-export function BookingStepsSection() {
+export async function BookingStepsSection() {
+  const t = await getT()
   return (
     <section className='py-24 sm:py-28'>
       <div className='container'>
-        <SectionHeading align='center' eyebrow='Simple booking' title='From prayerful intention to confirmed place' />
+        <SectionHeading align='center' eyebrow={t('home.steps.eyebrow')} title={t('home.steps.title')} />
         <div className='relative mt-16'>
         <div aria-hidden className='absolute left-[16%] right-[16%] top-8 hidden h-px bg-gradient-to-r from-gold-200 via-gold-400 to-gold-200 md:block' />
         <ol className='relative grid gap-10 md:grid-cols-3'>
           {bookingSteps.map((step, i) => (
-            <li key={step.title} className='relative text-center'>
+            <li key={step.id} className='relative text-center'>
               <span className='relative mx-auto flex h-16 w-16 items-center justify-center rounded-full border border-gold-200 bg-ivory text-navy-900 shadow-soft'>
                 <step.icon className='h-6 w-6' />
                 <span className='absolute -right-1 -top-1 flex h-6 w-6 items-center justify-center rounded-full bg-gold-400 text-xs font-bold text-navy-950'>
                   {i + 1}
                 </span>
               </span>
-              <h3 className='mt-6 font-display text-2xl font-semibold text-navy-900'>{step.title}</h3>
-              <p className='mx-auto mt-2 max-w-xs text-muted-foreground'>{step.text}</p>
+              <h3 className='mt-6 font-display text-2xl font-semibold text-navy-900'>{t(`home.steps.${step.id}.title`)}</h3>
+              <p className='mx-auto mt-2 max-w-xs text-muted-foreground'>{t(`home.steps.${step.id}.text`)}</p>
             </li>
           ))}
         </ol>
@@ -143,7 +142,7 @@ export function BookingStepsSection() {
         <div className='mt-14 flex justify-center'>
           <Button asChild size='xl'>
             <Link href='/retreats'>
-              Start your booking <ArrowRight className='ml-2 h-4 w-4' />
+              {t('home.steps.cta')} <ArrowRight className='ml-2 h-4 w-4' />
             </Link>
           </Button>
         </div>
@@ -156,23 +155,24 @@ export function BookingStepsSection() {
  * Mass intentions & giving
  * ------------------------------------------------------------------------- */
 
-export function MassAndGivingSection() {
+export async function MassAndGivingSection() {
+  const t = await getT()
   const panels = [
     {
-      eyebrow: 'Mass intentions',
-      title: 'Offer a Holy Mass for someone you love',
-      text: 'For thanksgiving, healing, the faithful departed or a special intention. Choose a date and we will offer it at the altar.',
+      eyebrow: t('home.panels.mass.eyebrow'),
+      title: t('home.panels.mass.title'),
+      text: t('home.panels.mass.text'),
       href: '/mass-intentions',
-      cta: 'Request a Mass',
+      cta: t('home.panels.mass.cta'),
       icon: Flame,
       image: imagery.churchInterior,
     },
     {
-      eyebrow: 'Give',
-      title: 'Partner with the mission of mercy',
-      text: 'Your gift sustains retreats for those who cannot afford them, our outreach to the poor and the care of this holy place.',
+      eyebrow: t('home.panels.give.eyebrow'),
+      title: t('home.panels.give.title'),
+      text: t('home.panels.give.text'),
       href: '/donation',
-      cta: 'Give online',
+      cta: t('home.panels.give.cta'),
       icon: HeartHandshake,
       image: imagery.prayerHands,
     },
@@ -215,14 +215,15 @@ export function MassAndGivingSection() {
  * Patrons / spiritual directors
  * ------------------------------------------------------------------------- */
 
-export function PatronsSection({ patrons }: { patrons: PatronView[] }) {
+export async function PatronsSection({ patrons }: { patrons: PatronView[] }) {
   if (!patrons.length) return null
+  const t = await getT()
   return (
     <section className='bg-navy-950 py-24 text-white sm:py-28'>
       <div className='container'>
         <div className='max-w-2xl'>
-          <p className='eyebrow text-gold-300'>Spiritual leadership</p>
-          <h2 className='mt-3 text-4xl leading-tight text-white sm:text-5xl'>Shepherds who accompany you</h2>
+          <p className='eyebrow text-gold-300'>{t('home.patrons.eyebrow')}</p>
+          <h2 className='mt-3 text-4xl leading-tight text-white sm:text-5xl'>{t('home.patrons.title')}</h2>
         </div>
         <div className='mt-14 grid gap-8 sm:grid-cols-2 lg:grid-cols-4'>
           {patrons.map((patron) => (
@@ -253,13 +254,14 @@ export function PatronsSection({ patrons }: { patrons: PatronView[] }) {
  * Testimonials
  * ------------------------------------------------------------------------- */
 
-export function TestimonialsSection({ testimonials }: { testimonials: TestimonialView[] }) {
+export async function TestimonialsSection({ testimonials }: { testimonials: TestimonialView[] }) {
   if (!testimonials.length) return null
+  const t = await getT()
   const [featured, ...rest] = testimonials
   return (
     <section className='py-24 sm:py-28'>
       <div className='container'>
-        <SectionHeading align='center' eyebrow='Testimonies' title='Lives touched by mercy' />
+        <SectionHeading align='center' eyebrow={t('home.testimonials.eyebrow')} title={t('home.testimonials.title')} />
         <div className='mt-14 grid gap-6 lg:grid-cols-3'>
           <figure className='relative flex flex-col justify-between rounded-[2rem] bg-navy-900 p-10 text-white lg:row-span-2'>
             <Quote className='h-10 w-10 text-gold-400' />
@@ -298,18 +300,19 @@ export function TestimonialsSection({ testimonials }: { testimonials: Testimonia
  * Gallery preview
  * ------------------------------------------------------------------------- */
 
-export function GalleryPreviewSection({ items }: { items: GalleryPreviewItem[] }) {
+export async function GalleryPreviewSection({ items }: { items: GalleryPreviewItem[] }) {
   if (!items.length) return null
+  const t = await getT()
   return (
     <section className='bg-parchment py-24 sm:py-28'>
       <div className='container'>
         <SectionHeading
-          eyebrow='Gallery'
-          title='Moments of grace at DMRC'
+          eyebrow={t('home.gallery.eyebrow')}
+          title={t('home.gallery.title')}
           action={
             <Button asChild variant='outline' size='pill' className='border-navy-200 bg-white'>
               <Link href='/gallery'>
-                Open the gallery <ArrowRight className='ml-1.5 h-4 w-4' />
+                {t('home.gallery.cta')} <ArrowRight className='ml-1.5 h-4 w-4' />
               </Link>
             </Button>
           }

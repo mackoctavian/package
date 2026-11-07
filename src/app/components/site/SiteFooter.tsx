@@ -1,4 +1,6 @@
-import Link from 'next/link'
+import { Link } from '@/i18n/link'
+import { getT } from '@/i18n/server'
+import LanguageSwitcher from '@/app/components/i18n/LanguageSwitcher'
 import { ArrowRight, Facebook, Instagram, Mail, MapPin, Phone, Youtube } from 'lucide-react'
 
 import Logo from '@/app/components/Layout/Header/Logo'
@@ -6,7 +8,8 @@ import { footerNavigation, siteConfig } from '@/app/data/site'
 
 const socialIcons = { facebook: Facebook, instagram: Instagram, youtube: Youtube }
 
-export default function SiteFooter() {
+export default async function SiteFooter() {
+  const t = await getT()
   const year = new Date().getFullYear()
 
   return (
@@ -20,21 +23,21 @@ export default function SiteFooter() {
       <div className='container relative'>
         <div className='flex flex-col items-start justify-between gap-6 border-b border-white/10 py-14 md:flex-row md:items-center'>
           <div className='max-w-xl'>
-            <p className='eyebrow text-gold-300'>Come and see</p>
-            <h2 className='mt-3 text-4xl text-white sm:text-5xl'>Make time for God. We’ll prepare the place.</h2>
+            <p className='eyebrow text-gold-300'>{t('nav.footer.ctaEyebrow')}</p>
+            <h2 className='mt-3 text-4xl text-white sm:text-5xl'>{t('nav.footer.ctaTitle')}</h2>
           </div>
           <div className='flex flex-wrap gap-3'>
             <Link
               href='/retreats'
               className='inline-flex h-12 items-center gap-2 rounded-full bg-gold-400 px-7 font-medium text-navy-950 transition hover:bg-gold-300'
             >
-              Book a retreat <ArrowRight className='h-4 w-4' />
+              {t('common.actions.bookRetreat')} <ArrowRight className='h-4 w-4' />
             </Link>
             <Link
               href='/donation'
               className='inline-flex h-12 items-center rounded-full border border-white/25 px-7 font-medium text-white transition hover:bg-white/10'
             >
-              Support our mission
+              {t('nav.footer.ctaSupport')}
             </Link>
           </div>
         </div>
@@ -44,7 +47,7 @@ export default function SiteFooter() {
         <div className='space-y-5 lg:col-span-4'>
           <Logo variant='inverse' width={130} height={48} />
           <p className='max-w-sm leading-relaxed text-navy-300'>
-            {siteConfig.name} accompanies families, clergy, religious and parishes in prayer, healing and mission.
+            {t('nav.footer.about', { name: siteConfig.name })}
           </p>
           <div className='flex gap-2'>
             {siteConfig.social.map((social) => {
@@ -67,13 +70,13 @@ export default function SiteFooter() {
 
         <div className='grid grid-cols-2 gap-8 lg:col-span-4'>
           {footerNavigation.map((section) => (
-            <div key={section.title}>
-              <h3 className='text-xs font-semibold uppercase tracking-[0.2em] text-gold-300'>{section.title}</h3>
+            <div key={section.id}>
+              <h3 className='text-xs font-semibold uppercase tracking-[0.2em] text-gold-300'>{t.dynamic(`nav.footer.${section.id}`)}</h3>
               <ul className='mt-4 space-y-3'>
                 {section.links.map((link) => (
                   <li key={link.href}>
                     <Link href={link.href} className='text-[15px] text-navy-200 transition hover:text-white'>
-                      {link.label}
+                      {t.dynamic(`nav.items.${link.id}.label`)}
                     </Link>
                   </li>
                 ))}
@@ -83,7 +86,7 @@ export default function SiteFooter() {
         </div>
 
         <div className='lg:col-span-4'>
-          <h3 className='text-xs font-semibold uppercase tracking-[0.2em] text-gold-300'>Contact</h3>
+          <h3 className='text-xs font-semibold uppercase tracking-[0.2em] text-gold-300'>{t('nav.footer.contact')}</h3>
           <ul className='mt-4 space-y-4 text-[15px]'>
             <li>
               <a href={siteConfig.contact.mapsHref} target='_blank' rel='noopener noreferrer' className='flex gap-3 hover:text-white'>
@@ -101,15 +104,17 @@ export default function SiteFooter() {
               </a>
             </li>
           </ul>
+          <div className='mt-8'>
+            <h3 className='text-xs font-semibold uppercase tracking-[0.2em] text-gold-300'>{t('common.language.label')}</h3>
+            <LanguageSwitcher variant='segmented' tone='dark' className='mt-4' />
+          </div>
         </div>
       </div>
 
       <div className='border-t border-white/10'>
         <div className='container flex flex-col gap-2 py-6 text-sm text-navy-300 sm:flex-row sm:items-center sm:justify-between'>
-          <p>
-            © {year} {siteConfig.name}, Vikindu. All rights reserved.
-          </p>
-          <p className='font-display text-base italic text-navy-300'>“Jesus, I trust in You.”</p>
+          <p>{t('nav.footer.rights', { year: String(year), name: siteConfig.name })}</p>
+          <p className='font-display text-base italic text-navy-300'>{t('common.motto')}</p>
         </div>
       </div>
     </footer>
