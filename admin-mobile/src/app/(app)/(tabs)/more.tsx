@@ -14,7 +14,8 @@ import type { ModuleId } from '@/lib/types';
 import { colors, radius, space, TAB_BAR_SPACE } from '@/theme';
 
 type Href = Parameters<typeof router.push>[0];
-type Item = { label: string; icon: IconName; href: Href; module: ModuleId; hint?: string };
+/** Items without a module are shown to everyone. */
+type Item = { label: string; icon: IconName; href: Href; module?: ModuleId; hint?: string };
 
 const SECTIONS: { title: string; items: Item[] }[] = [
   {
@@ -39,6 +40,9 @@ const SECTIONS: { title: string; items: Item[] }[] = [
   {
     title: 'Organisation',
     items: [
+      { label: 'Members', icon: 'people-circle-outline', href: '/members', module: 'members', hint: 'Priests, sisters, staff and volunteers' },
+      { label: 'Leave requests', icon: 'airplane-outline', href: '/leave', module: 'leave', hint: 'Approve leave and see who is away' },
+      { label: 'My leave', icon: 'sunny-outline', href: '/my-leave', hint: 'Your balance and requests' },
       { label: 'Team & access', icon: 'people-outline', href: '/team', module: 'team', hint: 'Invite people and set their access' },
       { label: 'Activity log', icon: 'pulse-outline', href: '/activity', module: 'team', hint: 'Who did what, and when' },
     ],
@@ -58,7 +62,7 @@ export default function More() {
     await session.clear();
   };
 
-  const sections = SECTIONS.map((section) => ({ ...section, items: section.items.filter((item) => can(user, item.module)) })).filter((section) => section.items.length);
+  const sections = SECTIONS.map((section) => ({ ...section, items: section.items.filter((item) => !item.module || can(user, item.module)) })).filter((section) => section.items.length);
   const groups = user.role === 'SUPERADMIN' ? [] : Array.from(new Set(user.access.map((entry) => entry.group)));
 
   return (
@@ -111,7 +115,7 @@ export default function More() {
                       <Icon name={item.icon} size={18} color={colors.navy700} />
                     </View>
                   }
-                  trailing={!can(user, item.module, 'edit') ? <StatusPill status="view" label="view only" /> : undefined}
+                  trailing={item.module && !can(user, item.module, 'edit') ? <StatusPill status="view" label="view only" /> : undefined}
                   onPress={() => router.push(item.href)}
                 />
               </View>

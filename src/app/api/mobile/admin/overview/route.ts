@@ -28,6 +28,8 @@ export async function GET() {
     intentions: userHasModuleAccess(user, 'mass-intentions'),
     inbox: userHasModuleAccess(user, 'feedback'),
     team: userHasModuleAccess(user, 'team'),
+    members: userHasModuleAccess(user, 'members'),
+    leave: userHasModuleAccess(user, 'leave'),
   }
   const activeBooking = { status: { notIn: ['cancelled'] } }
   const none = <T,>(value: T) => Promise.resolve(value)
@@ -47,6 +49,8 @@ export async function GET() {
     unread,
     activity,
     teamSize,
+    pendingLeave,
+    awayToday,
   ] = await Promise.all([
     can.retreats || can.checkIn
       ? safeQuery(
@@ -124,6 +128,10 @@ export async function GET() {
         )
       : none([]),
     can.team ? safeQuery(() => prisma.adminUser.count({ where: { isActive: true } }), 0) : none(0),
+    can.leave ? safeQuery(() => prisma.leaveRequest.count({ where: { status: 'pending' } }), 0, 'leave') : none(0),
+    can.leave || can.members
+      ? safeQuery(() => prisma.leaveRequest.count({ where: { status: 'approved', startDate: { lte: new Date() }, endDate: { gte: new Date(new Date().toDateString()) } } }), 0, 'away')
+      : none(0),
   ])
 
   const months = Array.from({ length: 6 }, (_, index) => {
@@ -148,6 +156,8 @@ export async function GET() {
         newIntentions,
         unreadMessages: unread,
         teamSize,
+        pendingLeave,
+        awayToday,
       },
       givingMonths: can.donations ? months : [],
       openRetreats: openRetreats.map((retreat) => ({

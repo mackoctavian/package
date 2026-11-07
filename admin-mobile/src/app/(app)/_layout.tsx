@@ -9,6 +9,8 @@ export default function AppLayout() {
       <Stack.Screen name="(tabs)" options={{ animation: 'fade' }} />
       <Stack.Screen name="content/edit" options={{ presentation: 'modal', animation: 'slide_from_bottom' }} />
       <Stack.Screen name="invite" options={{ presentation: 'modal', animation: 'slide_from_bottom' }} />
+      <Stack.Screen name="member/edit" options={{ presentation: 'modal', animation: 'slide_from_bottom' }} />
+      <Stack.Screen name="leave-request" options={{ presentation: 'modal', animation: 'slide_from_bottom' }} />
     </Stack>
   );
 }
