@@ -73,7 +73,7 @@ export async function GET(request: Request) {
 }
 
 export async function POST(request: Request) {
-  const denied = await guardAdminApi('ministries')
+  const denied = await guardAdminApi('ministries', 'edit')
   if (denied) return denied
 
   try {

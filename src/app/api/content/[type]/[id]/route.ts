@@ -47,7 +47,7 @@ export const PATCH = async (request: Request, context: RouteContext) => {
   } catch (error) {
     return NextResponse.json({ error: (error as Error).message }, { status: 400 })
   }
-  const denied = await guardAdminApi(type as AdminModuleId)
+  const denied = await guardAdminApi(type as AdminModuleId, 'edit')
   if (denied) return denied
 
   try {
@@ -76,7 +76,7 @@ export const DELETE = async (_: Request, context: RouteContext) => {
   } catch (error) {
     return NextResponse.json({ error: (error as Error).message }, { status: 400 })
   }
-  const denied = await guardAdminApi(type as AdminModuleId)
+  const denied = await guardAdminApi(type as AdminModuleId, 'edit')
   if (denied) return denied
 
   try {

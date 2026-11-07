@@ -61,7 +61,7 @@ export const POST = async (request: Request) => {
     if (!retreat) {
       return NextResponse.json({ error: 'This retreat could not be found.' }, { status: 404 })
     }
-    const isAdmin = await isAdminRequest('retreats')
+    const isAdmin = await isAdminRequest('retreats', 'edit')
     if (retreat.status === 'Closed' && !isAdmin) {
       return NextResponse.json({ error: 'Registration for this retreat is closed.' }, { status: 409 })
     }

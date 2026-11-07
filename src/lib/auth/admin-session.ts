@@ -5,7 +5,8 @@ import crypto from 'node:crypto'
 import type { AdminUser } from '@prisma/client'
 
 import prisma from '@/lib/prisma'
-import { AdminModuleId, sanitizeModules } from './admin-permissions'
+import type { AccessLevel, AdminModuleId } from './admin-permissions'
+import { sanitizeModules } from './admin-permissions'
 import { AdminUserPayload, userHasModuleAccess } from './admin-shared'
 
 const SESSION_COOKIE = 'admin_session'
@@ -76,9 +77,16 @@ export const destroyAdminSession = async () => {
   const token = await getTokenFromCookie()
   if (!token) return
   await prisma.adminSession.delete({ where: { token } }).catch(() => null)
+  await clearSessionCookie()
+}
+
+const clearSessionCookie = async () => {
   const cookieStore = await cookies()
   cookieStore.set(SESSION_COOKIE, '', { httpOnly: true, path: '/', maxAge: 0 })
 }
+
+/** Signs a user out everywhere, e.g. after their access is removed. */
+export const revokeUserSessions = (userId: string) => prisma.adminSession.deleteMany({ where: { userId } })
 
 export const requireAdminUser = async () => {
   const user = await getCurrentAdminUser()
@@ -86,9 +94,9 @@ export const requireAdminUser = async () => {
   return user
 }
 
-export const requireAdminPageAccess = async (moduleId?: AdminModuleId) => {
+export const requireAdminPageAccess = async (moduleId?: AdminModuleId, level: AccessLevel = 'view') => {
   const user = await requireAdminUser()
-  if (moduleId && !userHasModuleAccess(user, moduleId)) {
+  if (moduleId && !userHasModuleAccess(user, moduleId, level)) {
     redirect('/admin?denied=1')
   }
   return user
@@ -101,13 +109,16 @@ type ApiAuthResult =
       status: number
     }
 
-export const requireAdminApiAccess = async (moduleId?: AdminModuleId): Promise<ApiAuthResult> => {
+export const requireAdminApiAccess = async (moduleId?: AdminModuleId, level: AccessLevel = 'view'): Promise<ApiAuthResult> => {
   const user = await getCurrentAdminUser()
   if (!user) {
     return { error: 'Unauthorized', status: 401 }
   }
-  if (moduleId && !userHasModuleAccess(user, moduleId)) {
-    return { error: 'Forbidden', status: 403 }
+  if (!userHasModuleAccess(user, moduleId, level)) {
+    return {
+      error: level === 'edit' ? 'You have view-only access to this area.' : 'You do not have access to this area.',
+      status: 403,
+    }
   }
   return { user }
 }

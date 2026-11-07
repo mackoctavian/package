@@ -4,7 +4,7 @@ import { guardAdminApi } from '@/lib/auth/api-guard'
 
 export async function POST(request: Request, { params: paramsPromise }: { params: Promise<{ id: string }> }) {
   const params = await paramsPromise
-  const denied = await guardAdminApi('retreats')
+  const denied = await guardAdminApi('retreats', 'edit')
   if (denied) return denied
 
   try {
@@ -48,7 +48,7 @@ export async function POST(request: Request, { params: paramsPromise }: { params
 // Undo check-in
 export async function DELETE(request: Request, { params: paramsPromise }: { params: Promise<{ id: string }> }) {
   const params = await paramsPromise
-  const denied = await guardAdminApi('retreats')
+  const denied = await guardAdminApi('retreats', 'edit')
   if (denied) return denied
 
   try {

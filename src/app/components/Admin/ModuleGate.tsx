@@ -17,7 +17,7 @@ export const ModuleGate = ({ moduleId, children }: { moduleId: AdminModuleId; ch
         <AlertTriangle className='h-10 w-10 text-amber-500' />
         <div>
           <p className='text-lg font-semibold text-slate-900'>Access restricted</p>
-          <p className='text-sm text-slate-500'>You don&apos;t have permission to view this module. Contact a super admin for access.</p>
+          <p className='text-sm text-slate-500'>You don&apos;t have permission to view this module. Ask an Owner for access.</p>
         </div>
       </div>
     )

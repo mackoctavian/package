@@ -6,7 +6,7 @@ import { guardAdminApi } from '@/lib/auth/api-guard'
 export const runtime = 'nodejs'
 
 export async function POST(request: Request) {
-  const denied = await guardAdminApi()
+  const denied = await guardAdminApi(undefined, 'edit')
   if (denied) return denied
 
   try {
