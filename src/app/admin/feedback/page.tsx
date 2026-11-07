@@ -1,21 +1,16 @@
 import type { Metadata } from 'next'
+import { Suspense } from 'react'
 
-import { FeedbackTable } from '@/app/components/Admin/FeedbackTable'
+import { RecordsManager } from '@/app/components/Admin/records/RecordsManager'
 import { requireAdminPageAccess } from '@/lib/auth/admin-session'
 
-export const metadata: Metadata = {
-  title: 'Feedback Inbox',
-}
+export const metadata: Metadata = { title: 'Messages' }
 
-export default async function FeedbackAdminPage() {
+export default async function Page() {
   await requireAdminPageAccess('feedback')
-
   return (
-    <div className='px-6 py-8'>
-      <FeedbackTable />
-    </div>
+    <Suspense>
+      <RecordsManager kind='feedback' />
+    </Suspense>
   )
 }
-
-
-

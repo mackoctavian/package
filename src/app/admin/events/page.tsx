@@ -1,5 +1,7 @@
 import type { Metadata } from 'next'
 
+import { PageBody } from '@/app/components/Admin/shell/primitives'
+
 import { ContentManager } from '@/app/components/Admin/content-manager'
 import { requireAdminPageAccess } from '@/lib/auth/admin-session'
 
@@ -11,13 +13,13 @@ export default async function EventsAdminPage() {
   await requireAdminPageAccess('events')
 
   return (
-    <div className='px-6 py-8'>
+    <PageBody>
       <ContentManager
         type='events'
         title='Event calendar'
         description='Coordinate events, vigils, parish missions, and leadership gatherings across the DMRC network.'
       />
-    </div>
+    </PageBody>
   )
 }
 

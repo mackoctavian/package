@@ -1,5 +1,7 @@
 import type { Metadata } from 'next'
 
+import { PageBody } from '@/app/components/Admin/shell/primitives'
+
 import { ContentManager } from '@/app/components/Admin/content-manager'
 import { requireAdminPageAccess } from '@/lib/auth/admin-session'
 
@@ -11,7 +13,7 @@ export default async function ArticlesAdminPage() {
   await requireAdminPageAccess('articles')
 
   return (
-    <div className='px-6 py-8'>
+    <PageBody>
       <ContentManager
         type='articles'
         title='Articles'
@@ -21,7 +23,7 @@ export default async function ArticlesAdminPage() {
           { key: 'readingTime', label: 'Reading time (mins)' },
         ]}
       />
-    </div>
+    </PageBody>
   )
 }
 

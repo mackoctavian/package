@@ -13,6 +13,11 @@ import { Label } from '@/app/components/ui/label'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/app/components/ui/table'
 import { Textarea } from '@/app/components/ui/textarea'
 import { cn } from '@/lib/utils'
+import { useAdminUser } from '@dashboard/context/admin-user'
+import { FilterSelect, SearchInput } from './shell/fields'
+import { PageHeader, StatCard } from './shell/primitives'
+import type { AdminModuleId } from '@/lib/auth/admin-permissions'
+import { canEdit } from '@/lib/auth/admin-shared'
 import { UploadField } from './UploadField'
 import { MultiImageUpload } from './MultiImageUpload'
 
@@ -98,6 +103,9 @@ const formatDate = (value?: string | null) => {
 
 export function ContentManager({ type, title, description, emptyState, metadataFields = [] }: ContentManagerProps) {
   const queryClient = useQueryClient()
+  const editable = canEdit(useAdminUser(), type as AdminModuleId)
+  const [search, setSearch] = useState('')
+  const [statusFilter, setStatusFilter] = useState('all')
   const [form, setForm] = useState<ContentForm>(emptyForm)
   const [isDialogOpen, setIsDialogOpen] = useState(false)
   const [isDeleteOpen, setIsDeleteOpen] = useState(false)
@@ -344,6 +352,12 @@ export function ContentManager({ type, title, description, emptyState, metadataF
     setIsDeleteOpen(true)
   }
 
+  const term = search.trim().toLowerCase()
+  const visibleRecords = (listQuery.data ?? []).filter(
+    (record) =>
+      (statusFilter === 'all' || record.status === statusFilter) &&
+      (!term || `${record.title} ${record.summary ?? ''} ${record.category ?? ''}`.toLowerCase().includes(term)),
+  )
   const isSaving = createMutation.isPending || updateMutation.isPending
 
   const renderForm = () => {
@@ -368,36 +382,37 @@ export function ContentManager({ type, title, description, emptyState, metadataF
 
   return (
     <div className='space-y-6'>
-      <div className='flex flex-wrap items-start justify-between gap-4'>
-        <div className='space-y-1'>
-          <p className='text-xs font-semibold uppercase tracking-[0.3em] text-primary'>Content control</p>
-          <h1 className='text-3xl font-semibold text-slate-900'>{title}</h1>
-          <p className='text-sm text-slate-500 max-w-2xl'>{description}</p>
-        </div>
-        <Button className='gap-2' onClick={() => handleEdit()}>
-          <Plus className='h-4 w-4' /> New entry
-        </Button>
+      <PageHeader
+        eyebrow='Website'
+        title={title}
+        description={description}
+        actions={
+          editable ? (
+            <Button className='gap-2' onClick={() => handleEdit()}>
+              <Plus className='h-4 w-4' /> New entry
+            </Button>
+          ) : null
+        }
+      />
+
+      <div className='grid gap-4 sm:grid-cols-3'>
+        <StatCard label='Total entries' value={stats.total} />
+        <StatCard label='Published' value={stats.published} tone='green' />
+        <StatCard label='Drafts' value={stats.draft} tone='gold' />
       </div>
 
-      <div className='grid gap-4 sm:grid-cols-2 lg:grid-cols-3'>
-        <Card>
-          <CardHeader className='pb-2'>
-            <CardDescription>Total entries</CardDescription>
-            <CardTitle className='text-3xl'>{stats.total}</CardTitle>
-          </CardHeader>
-        </Card>
-        <Card>
-          <CardHeader className='pb-2'>
-            <CardDescription>Published</CardDescription>
-            <CardTitle className='text-3xl'>{stats.published}</CardTitle>
-          </CardHeader>
-        </Card>
-        <Card>
-          <CardHeader className='pb-2'>
-            <CardDescription>Drafts</CardDescription>
-            <CardTitle className='text-3xl'>{stats.draft}</CardTitle>
-          </CardHeader>
-        </Card>
+      <div className='flex flex-col gap-2 sm:flex-row'>
+        <SearchInput value={search} onChange={setSearch} placeholder='Search titles and summaries' className='flex-1' />
+        <FilterSelect
+          label='Status'
+          value={statusFilter}
+          onChange={setStatusFilter}
+          options={[
+            { value: 'all', label: 'Any status' },
+            { value: 'published', label: 'Published' },
+            { value: 'draft', label: 'Draft' },
+          ]}
+        />
       </div>
 
       <Card>
@@ -413,9 +428,11 @@ export function ContentManager({ type, title, description, emptyState, metadataF
           ) : (listQuery.data?.length ?? 0) === 0 ? (
             <div className='flex h-48 flex-col items-center justify-center gap-2 text-center text-sm text-slate-500'>
               <p>{emptyState ?? 'No content yet. Create your first entry.'}</p>
-              <Button size='sm' onClick={() => handleEdit()}>
-                Create entry
-              </Button>
+              {editable && (
+                <Button size='sm' onClick={() => handleEdit()}>
+                  Create entry
+                </Button>
+              )}
             </div>
           ) : (
             <Table>
@@ -429,7 +446,7 @@ export function ContentManager({ type, title, description, emptyState, metadataF
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {listQuery.data?.map((record) => (
+                {visibleRecords.map((record) => (
                   <TableRow key={record.id}>
                     <TableCell>
                       <p className='font-semibold text-slate-900'>{record.title}</p>
@@ -443,6 +460,7 @@ export function ContentManager({ type, title, description, emptyState, metadataF
                     </TableCell>
                     <TableCell className='text-sm text-slate-500'>{formatDate(record.publishDate)}</TableCell>
                     <TableCell className='text-right space-x-2'>
+                      {editable && (<>
                       <Button variant='ghost' size='icon' onClick={() => handleEdit(record)}>
                         <PencilLine className='h-4 w-4 text-slate-600' />
                         <span className='sr-only'>Edit</span>
@@ -451,6 +469,7 @@ export function ContentManager({ type, title, description, emptyState, metadataF
                         <Trash2 className='h-4 w-4 text-red-600' />
                         <span className='sr-only'>Delete</span>
                       </Button>
+                      </>)}
                     </TableCell>
                   </TableRow>
                 ))}
