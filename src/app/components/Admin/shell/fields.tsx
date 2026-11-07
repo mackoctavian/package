@@ -63,11 +63,14 @@ const TONES: Record<string, string> = {
   cancelled: 'bg-rose-50 text-rose-700 ring-rose-200',
   refunded: 'bg-slate-100 text-slate-600 ring-slate-200',
   new: 'bg-amber-50 text-amber-700 ring-amber-200',
+  rejected: 'bg-rose-50 text-rose-700 ring-rose-200',
+  inactive: 'bg-slate-100 text-slate-600 ring-slate-200',
 }
 
 export function StatusPill({ status, label }: { status: string; label?: string }) {
   return (
-    <span className={cn('inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium capitalize ring-1 ring-inset', TONES[status] ?? 'bg-muted text-muted-foreground ring-border')}>
+    <span className={cn('inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium ring-1 ring-inset',
+        !label && 'capitalize', TONES[status] ?? 'bg-muted text-muted-foreground ring-border')}>
       {label ?? status.replace(/_/g, ' ')}
     </span>
   )

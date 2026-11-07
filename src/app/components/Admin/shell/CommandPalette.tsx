@@ -13,6 +13,8 @@ const EXPORTS: Array<{ title: string; dataset: string; moduleId: AdminModuleId }
   { title: 'Export donations to Excel', dataset: 'donations', moduleId: 'donations' },
   { title: 'Export Mass intentions to Excel', dataset: 'mass-intentions', moduleId: 'mass-intentions' },
   { title: 'Export messages to Excel', dataset: 'feedback', moduleId: 'feedback' },
+  { title: 'Export members directory to Excel', dataset: 'members', moduleId: 'members' },
+  { title: 'Export leave requests to Excel', dataset: 'leave', moduleId: 'leave' },
   { title: 'Export team list to Excel', dataset: 'team', moduleId: 'team' },
 ]
 
