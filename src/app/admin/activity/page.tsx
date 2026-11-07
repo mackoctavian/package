@@ -24,6 +24,7 @@ const AREAS: Record<string, string> = {
   feedback: 'Messages export',
   team: 'Team export',
   activity: 'Activity export',
+  translation: 'Translations',
 }
 
 const actionTone = (action: string) =>

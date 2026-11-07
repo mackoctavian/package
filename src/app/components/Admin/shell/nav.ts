@@ -9,6 +9,7 @@ import {
   Home,
   Images,
   Inbox,
+  Languages,
   Info,
   LayoutDashboard,
   Newspaper,
@@ -72,6 +73,7 @@ export const ADMIN_NAV: AdminNavGroup[] = [
       { title: 'Ministries', href: '/admin/ministries', icon: FileText, moduleId: 'ministries' },
       { title: 'Patrons', href: '/admin/patrons', icon: ShieldCheck, moduleId: 'patrons' },
       { title: 'About page', href: '/admin/about', icon: Info, moduleId: 'about' },
+      { title: 'Translations', href: '/admin/translations', icon: Languages, moduleId: 'translations', keywords: 'swahili kiswahili language translate interface mobile app' },
     ],
   },
   {

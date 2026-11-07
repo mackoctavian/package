@@ -27,6 +27,7 @@ export const ADMIN_MODULES = [
   { id: 'ministries', label: 'Ministries', group: 'Website content', description: 'Ministry pages.' },
   { id: 'patrons', label: 'Patrons', group: 'Website content', description: 'Patron saints and clergy.' },
   { id: 'about', label: 'About page', group: 'Website content', description: 'Mission, history and leadership.' },
+  { id: 'translations', label: 'Translations', group: 'Website content', description: 'Swahili versions of content, and interface text on the website and mobile app.' },
   { id: 'team', label: 'Team & access', group: 'Organisation', description: 'Invite people and set what they can do.' },
 ] as const
 
