@@ -1,5 +1,8 @@
 import type { Metadata } from 'next'
-import Link from 'next/link'
+import { Link } from '@/i18n/link'
+import { formatDate } from '@/i18n/format'
+import { pageMetadata, resolveLocale, type LocaleParams } from '@/i18n/page'
+import { getT, setRequestLocale } from '@/i18n/server'
 import { notFound } from 'next/navigation'
 import { ArrowLeft, ArrowRight, CalendarDays, Mail, Phone, Quote, UserRound } from 'lucide-react'
 
@@ -11,31 +14,33 @@ import { getMinistryBySlug } from '@/lib/ministries/queries'
 
 export const revalidate = 300
 
-type MinistryRouteProps = { params: Promise<{ slug: string }> }
+type MinistryRouteProps = LocaleParams<{ slug: string }>
 
+// Runs once per locale from the parent layout's params.
 export const generateStaticParams = () => ministriesData.map((ministry) => ({ slug: ministry.slug }))
 
 export async function generateMetadata({ params }: MinistryRouteProps): Promise<Metadata> {
+  const locale = await resolveLocale(params)
   const { slug } = await params
-  const result = await getMinistryBySlug(slug)
-  if (!result) return { title: 'Ministry not found' }
-  return { title: result.ministry.title, description: result.ministry.shortDescription }
+  const result = await getMinistryBySlug(slug, locale)
+  if (!result) return { title: (await getT(locale))('pages.ministries.notFound') }
+  return pageMetadata(locale, `/ministries/${slug}`, { title: result.ministry.title, description: result.ministry.shortDescription })
 }
 
-const formatDate = (value?: string) =>
-  value ? new Date(value).toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' }) : null
-
 export default async function MinistryDetailPage({ params }: MinistryRouteProps) {
+  const locale = await resolveLocale(params)
+  setRequestLocale(locale)
   const { slug } = await params
-  const result = await getMinistryBySlug(slug)
+  const t = await getT(locale)
+  const result = await getMinistryBySlug(slug, locale)
   if (!result) notFound()
   const { ministry, others } = result
 
   return (
     <main>
-      <PageHero eyebrow='Ministry' title={ministry.title} image={ministry.heroImage} description={ministry.shortDescription}>
+      <PageHero eyebrow={t('pages.ministries.detail.eyebrow')} title={ministry.title} image={ministry.heroImage} description={ministry.shortDescription}>
         <Link href='/ministries' className='mt-8 inline-flex items-center gap-2 text-sm font-medium text-gold-300 hover:text-gold-200'>
-          <ArrowLeft className='h-4 w-4' /> All ministries
+          <ArrowLeft className='h-4 w-4' /> {t('pages.ministries.detail.all')}
         </Link>
       </PageHero>
 
@@ -43,13 +48,13 @@ export default async function MinistryDetailPage({ params }: MinistryRouteProps)
         <div className='container grid gap-12 lg:grid-cols-12'>
           <div className='space-y-14 lg:col-span-8'>
             <div>
-              <p className='eyebrow'>Overview</p>
+              <p className='eyebrow'>{t('pages.ministries.detail.overview')}</p>
               <p className='mt-4 text-lg leading-relaxed text-navy-800'>{ministry.overview}</p>
             </div>
 
             {ministry.focusAreas?.length ? (
               <div>
-                <h2 className='text-4xl'>Focus areas</h2>
+                <h2 className='text-4xl'>{t('pages.ministries.detail.focusAreas')}</h2>
                 <div className='mt-6 grid gap-4 sm:grid-cols-2'>
                   {ministry.focusAreas.map((area, index) => (
                     <div key={area.title} className='rounded-2xl border border-border bg-white p-6'>
@@ -64,7 +69,7 @@ export default async function MinistryDetailPage({ params }: MinistryRouteProps)
 
             {ministry.activities?.length ? (
               <div>
-                <h2 className='text-4xl'>Recent activities</h2>
+                <h2 className='text-4xl'>{t('pages.ministries.detail.activities')}</h2>
                 <div className='mt-6 grid gap-6 sm:grid-cols-2'>
                   {ministry.activities.map((activity) => (
                     <article key={activity.id} className='overflow-hidden rounded-3xl border border-border bg-white shadow-soft'>
@@ -72,7 +77,9 @@ export default async function MinistryDetailPage({ params }: MinistryRouteProps)
                         <SmartImage src={activity.image} alt={activity.title} fill sizes='(min-width: 1024px) 30vw, 100vw' className='object-cover' />
                       </div>
                       <div className='p-6'>
-                        {formatDate(activity.date) && <p className='text-xs font-semibold uppercase tracking-widest text-gold-700'>{formatDate(activity.date)}</p>}
+                        {formatDate(activity.date, locale) && (
+                          <p className='text-xs font-semibold uppercase tracking-widest text-gold-700'>{formatDate(activity.date, locale)}</p>
+                        )}
                         <h3 className='mt-2 font-display text-2xl font-semibold text-navy-900'>{activity.title}</h3>
                         <p className='mt-2 text-sm leading-relaxed text-muted-foreground'>{activity.description}</p>
                       </div>
@@ -95,7 +102,7 @@ export default async function MinistryDetailPage({ params }: MinistryRouteProps)
               {ministry.gatherings?.length ? (
                 <div className='rounded-[2rem] border border-border bg-white p-8'>
                   <h2 className='flex items-center gap-2 font-display text-2xl font-semibold text-navy-900'>
-                    <CalendarDays className='h-5 w-5 text-gold-500' /> When we gather
+                    <CalendarDays className='h-5 w-5 text-gold-500' /> {t('pages.ministries.detail.gather')}
                   </h2>
                   <ul className='mt-5 space-y-4'>
                     {ministry.gatherings.map((gathering) => (
@@ -106,13 +113,13 @@ export default async function MinistryDetailPage({ params }: MinistryRouteProps)
                       </li>
                     ))}
                   </ul>
-                  <p className='mt-5 text-xs text-muted-foreground'>New participants are welcome at every public gathering.</p>
+                  <p className='mt-5 text-xs text-muted-foreground'>{t('pages.ministries.detail.welcome')}</p>
                 </div>
               ) : null}
 
               {ministry.contact && (
                 <div className='rounded-[2rem] bg-parchment p-8'>
-                  <h2 className='font-display text-2xl font-semibold text-navy-900'>Connect with the team</h2>
+                  <h2 className='font-display text-2xl font-semibold text-navy-900'>{t('pages.ministries.detail.connect')}</h2>
                   <p className='mt-3 flex items-center gap-2 text-sm text-navy-800'>
                     <UserRound className='h-4 w-4 text-gold-700' /> {ministry.contact.coordinator}
                   </p>
@@ -120,7 +127,7 @@ export default async function MinistryDetailPage({ params }: MinistryRouteProps)
                     {ministry.contact.email && (
                       <Button asChild size='pill'>
                         <a href={`mailto:${ministry.contact.email}`}>
-                          <Mail className='mr-2 h-4 w-4' /> Email the coordinator
+                          <Mail className='mr-2 h-4 w-4' /> {t('pages.ministries.detail.emailCoordinator')}
                         </a>
                       </Button>
                     )}
@@ -143,9 +150,9 @@ export default async function MinistryDetailPage({ params }: MinistryRouteProps)
         <section className='bg-parchment/60'>
           <div className='container'>
             <div className='flex items-end justify-between gap-6'>
-              <h2 className='text-4xl'>Other ministries</h2>
+              <h2 className='text-4xl'>{t('pages.ministries.detail.others')}</h2>
               <Link href='/ministries' className='hidden items-center gap-1.5 text-sm font-semibold text-navy-900 sm:inline-flex'>
-                View all <ArrowRight className='h-4 w-4' />
+                {t('pages.ministries.detail.viewAll')} <ArrowRight className='h-4 w-4' />
               </Link>
             </div>
             <div className='mt-8 grid gap-6 md:grid-cols-3'>

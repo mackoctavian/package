@@ -3,25 +3,26 @@ import type { Metadata } from 'next'
 import GalleryExplorer from '@/app/components/gallery/GalleryExplorer'
 import PageHero from '@/app/components/site/PageHero'
 import { imagery } from '@/app/data/site'
+import { pageMetadata, resolveLocale, type LocaleParams } from '@/i18n/page'
+import { getT, setRequestLocale } from '@/i18n/server'
 import { getGallery } from '@/lib/gallery/queries'
 
 export const revalidate = 300
 
-export const metadata: Metadata = {
-  title: 'Gallery',
-  description: 'Photos, videos, recordings and music from retreats and gatherings at the Divine Mercy Retreat Center.',
+export async function generateMetadata({ params }: LocaleParams): Promise<Metadata> {
+  const locale = await resolveLocale(params)
+  const t = await getT(locale)
+  return pageMetadata(locale, '/gallery', { title: t('pages.gallery.metaTitle'), description: t('pages.gallery.metaDescription') })
 }
 
-export default async function GalleryPage() {
-  const buckets = await getGallery()
+export default async function GalleryPage({ params }: LocaleParams) {
+  const locale = await resolveLocale(params)
+  setRequestLocale(locale)
+  const t = await getT(locale)
+  const buckets = await getGallery(locale)
   return (
     <main>
-      <PageHero
-        eyebrow='Gallery'
-        title='Sacred moments and memories'
-        image={imagery.candles}
-        description='Photos, videos, talks and music from retreats, services and community life at DMRC.'
-      />
+      <PageHero eyebrow={t('pages.gallery.eyebrow')} title={t('pages.gallery.title')} image={imagery.candles} description={t('pages.gallery.description')} />
       <section>
         <div className='container'>
           <GalleryExplorer buckets={buckets} />

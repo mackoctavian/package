@@ -1,5 +1,7 @@
 import type { Metadata } from 'next'
-import Link from 'next/link'
+import { Link } from '@/i18n/link'
+import { pageMetadata, resolveLocale, type LocaleParams } from '@/i18n/page'
+import { getT, setRequestLocale } from '@/i18n/server'
 import { ArrowRight, HeartHandshake, Mail, Phone } from 'lucide-react'
 
 import PageHero from '@/app/components/site/PageHero'
@@ -11,27 +13,30 @@ import { getMinistries } from '@/lib/ministries/queries'
 
 export const revalidate = 300
 
-export const metadata: Metadata = {
-  title: 'Ministries',
-  description:
-    'Explore the ministries of the Divine Mercy Retreat Center and find community, formation and mission opportunities that match your calling.',
+export async function generateMetadata({ params }: LocaleParams): Promise<Metadata> {
+  const locale = await resolveLocale(params)
+  const t = await getT(locale)
+  return pageMetadata(locale, '/ministries', { title: t('pages.ministries.metaTitle'), description: t('pages.ministries.metaDescription') })
 }
 
-export default async function MinistriesPage() {
-  const ministries = await getMinistries()
+export default async function MinistriesPage({ params }: LocaleParams) {
+  const locale = await resolveLocale(params)
+  setRequestLocale(locale)
+  const t = await getT(locale)
+  const ministries = await getMinistries(locale)
 
   return (
     <main>
       <PageHero
-        eyebrow='Ministries'
-        title='Serve, encounter and go forth'
+        eyebrow={t('pages.ministries.eyebrow')}
+        title={t('pages.ministries.title')}
         image={imagery.community}
-        description='Communities, outreach teams and formation tracks that carry the message of mercy to parishes, families and mission fields.'
+        description={t('pages.ministries.description')}
         aside={
           <div className='flex gap-8 text-white'>
             <div>
               <p className='font-display text-5xl font-semibold'>{ministries.length}</p>
-              <p className='text-sm text-navy-200'>Active ministries</p>
+              <p className='text-sm text-navy-200'>{t('pages.ministries.active')}</p>
             </div>
           </div>
         }
@@ -40,9 +45,9 @@ export default async function MinistriesPage() {
       <section>
         <div className='container'>
           <SectionHeading
-            eyebrow='Find your place'
-            title='Every gift has a home here'
-            description='Each ministry has coordinators ready to welcome you and help you take your next step.'
+            eyebrow={t('pages.ministries.findEyebrow')}
+            title={t('pages.ministries.findTitle')}
+            description={t('pages.ministries.findDescription')}
           />
           <div className='mt-12 grid gap-6 sm:grid-cols-2 xl:grid-cols-3'>
             {ministries.map((ministry) => (
@@ -61,7 +66,7 @@ export default async function MinistriesPage() {
                   <div className='absolute inset-0 bg-gradient-to-t from-navy-950/50 to-transparent' />
                   {ministry.focusAreas?.length ? (
                     <span className='absolute right-4 top-4 rounded-full bg-white/95 px-3 py-1 text-xs font-semibold text-navy-800'>
-                      {ministry.focusAreas.length} focus areas
+                      {t('pages.ministries.focusCount', { count: ministry.focusAreas.length })}
                     </span>
                   ) : null}
                 </div>
@@ -78,7 +83,7 @@ export default async function MinistriesPage() {
                     </p>
                   )}
                   <span className='mt-5 inline-flex items-center gap-1.5 text-sm font-semibold text-navy-900'>
-                    Explore ministry <ArrowRight className='h-4 w-4 transition-transform group-hover:translate-x-1' />
+                    {t('pages.ministries.explore')} <ArrowRight className='h-4 w-4 transition-transform group-hover:translate-x-1' />
                   </span>
                 </div>
               </article>
@@ -93,8 +98,8 @@ export default async function MinistriesPage() {
             <SmartImage src={imagery.candles} alt='' fill sizes='100vw' className='-z-10 object-cover opacity-20' />
             <div className='max-w-xl'>
               <HeartHandshake className='h-9 w-9 text-gold-400' />
-              <h2 className='mt-4 text-4xl text-white'>Not sure where to serve?</h2>
-              <p className='mt-3 text-navy-100'>Talk to our pastoral office. We will help you discern the ministry that fits your gifts and season of life.</p>
+              <h2 className='mt-4 text-4xl text-white'>{t('pages.ministries.unsureTitle')}</h2>
+              <p className='mt-3 text-navy-100'>{t('pages.ministries.unsureText')}</p>
             </div>
             <div className='mt-8 flex flex-wrap gap-3 lg:mt-0'>
               <Button asChild variant='gold' size='pill'>
@@ -104,7 +109,7 @@ export default async function MinistriesPage() {
               </Button>
               <Button asChild variant='outline-light' size='pill'>
                 <a href={`mailto:${siteConfig.contact.email}`}>
-                  <Mail className='mr-2 h-4 w-4' /> Email us
+                  <Mail className='mr-2 h-4 w-4' /> {t('pages.ministries.emailUs')}
                 </a>
               </Button>
             </div>

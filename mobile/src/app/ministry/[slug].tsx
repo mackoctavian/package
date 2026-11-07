@@ -7,19 +7,21 @@ import Animated, { FadeInDown } from 'react-native-reanimated';
 import { EmptyState } from '@/components/feedback';
 import { ParallaxScreen, ScreenHeader } from '@/components/headers';
 import { Button, Card, Icon, Img, Text } from '@/components/ui';
+import { useT } from '@/i18n';
 import { useMinistries } from '@/lib/api';
 import { colors, radius, space } from '@/theme';
 
 export default function MinistryScreen() {
   const { slug } = useLocalSearchParams<{ slug: string }>();
+  const t = useT();
   const { data } = useMinistries();
   const ministry = data?.data.find((item) => item.slug === slug);
 
   if (!ministry) {
     return (
       <View style={{ flex: 1 }}>
-        <ScreenHeader title="Ministry" />
-        <EmptyState icon="people-outline" title="Ministry not found" action="All ministries" onAction={() => router.replace('/ministries')} />
+        <ScreenHeader title={t('ministries.detailTitle')} />
+        <EmptyState icon="people-outline" title={t('ministries.notFound')} action={t('ministries.all')} onAction={() => router.replace('/ministries')} />
       </View>
     );
   }
@@ -33,7 +35,7 @@ export default function MinistryScreen() {
         hero={
           <View style={{ gap: 8 }}>
             <Text variant="caption" color={colors.gold300}>
-              Ministry
+              {t('ministries.eyebrow')}
             </Text>
             <Text variant="display" color={colors.white}>
               {ministry.title}
@@ -48,7 +50,7 @@ export default function MinistryScreen() {
 
           {ministry.focusAreas?.length ? (
             <View style={{ gap: space.md }}>
-              <Text variant="caption">Focus areas</Text>
+              <Text variant="caption">{t('ministries.focusAreas')}</Text>
               {ministry.focusAreas.map((area, i) => (
                 <Animated.View key={area.title} entering={FadeInDown.delay(i * 50).springify()}>
                   <Card style={{ flexDirection: 'row', gap: space.md }}>
@@ -65,7 +67,7 @@ export default function MinistryScreen() {
 
           {ministry.gatherings?.length ? (
             <Card style={{ gap: space.md }}>
-              <Text variant="subtitle">When we gather</Text>
+              <Text variant="subtitle">{t('ministries.gather')}</Text>
               {ministry.gatherings.map((gathering) => (
                 <View key={gathering.day + gathering.time} style={{ flexDirection: 'row', gap: space.md }}>
                   <Icon name="time-outline" size={18} color={colors.gold600} style={{ marginTop: 2 }} />
@@ -95,17 +97,17 @@ export default function MinistryScreen() {
           {ministry.contact ? (
             <Card style={{ gap: space.md, backgroundColor: colors.navy900, borderColor: colors.navy900, borderRadius: radius.xl }}>
               <Text variant="caption" color={colors.gold300}>
-                Get involved
+                {t('ministries.involved')}
               </Text>
               <Text variant="heading" color={colors.white}>
                 {ministry.contact.coordinator}
               </Text>
               <View style={{ flexDirection: 'row', gap: space.sm }}>
                 {ministry.contact.email ? (
-                  <Button label="Email" icon="mail-outline" size="md" variant="light" style={{ flex: 1 }} onPress={() => Linking.openURL(`mailto:${ministry.contact?.email}`)} />
+                  <Button label={t('common.email')} icon="mail-outline" size="md" variant="light" style={{ flex: 1 }} onPress={() => Linking.openURL(`mailto:${ministry.contact?.email}`)} />
                 ) : null}
                 {ministry.contact.phone ? (
-                  <Button label="Call" icon="call-outline" size="md" variant="gold" style={{ flex: 1 }} onPress={() => Linking.openURL(`tel:${ministry.contact?.phone?.replace(/\s/g, '')}`)} />
+                  <Button label={t('common.call')} icon="call-outline" size="md" variant="gold" style={{ flex: 1 }} onPress={() => Linking.openURL(`tel:${ministry.contact?.phone?.replace(/\s/g, '')}`)} />
                 ) : null}
               </View>
             </Card>

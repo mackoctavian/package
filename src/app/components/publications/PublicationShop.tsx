@@ -1,25 +1,23 @@
 'use client'
 
-import { usePathname, useRouter, useSearchParams } from 'next/navigation'
+import { useSearchParams } from 'next/navigation'
 import { useMemo, useState } from 'react'
 import { Search } from 'lucide-react'
 
+import { useT } from '@/i18n/client'
+import { useLocalizedRouter, usePathnameWithoutLocale } from '@/i18n/link'
 import { inputClass } from '@/app/components/site/FormFields'
 import type { Publication } from '@/lib/publications/format'
 import { cn } from '@/lib/utils'
 import PublicationCard from './PublicationCard'
 
-const sortOptions = {
-  featured: 'Featured',
-  newest: 'Newest',
-  'price-low': 'Price: low to high',
-  'price-high': 'Price: high to low',
-} as const
-type Sort = keyof typeof sortOptions
+const SORTS = ['featured', 'newest', 'price-low', 'price-high'] as const
+type Sort = (typeof SORTS)[number]
 
 export default function PublicationShop({ publications }: { publications: Publication[] }) {
-  const router = useRouter()
-  const pathname = usePathname()
+  const t = useT()
+  const router = useLocalizedRouter()
+  const pathname = usePathnameWithoutLocale()
   const params = useSearchParams()
   const category = params.get('category')
   const [query, setQuery] = useState('')
@@ -56,7 +54,7 @@ export default function PublicationShop({ publications }: { publications: Public
   return (
     <div>
       <div className='flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between'>
-        <div className='flex flex-wrap gap-2' role='group' aria-label='Category'>
+        <div className='flex flex-wrap gap-2' role='group' aria-label={t('publications.shop.categoryLabel')}>
           {[null, ...categories].map((value) => (
             <button
               key={value ?? 'all'}
@@ -68,7 +66,7 @@ export default function PublicationShop({ publications }: { publications: Public
                 category === value ? 'border-navy-900 bg-navy-900 text-white' : 'border-border bg-white text-navy-800 hover:border-navy-300',
               )}
             >
-              {value ?? 'Everything'}
+              {value ? t.dynamic(`publications.categories.${value}`, undefined, value) : t('publications.shop.everything')}
               <span className={cn('ml-1.5 text-xs', category === value ? 'text-navy-200' : 'text-muted-foreground')}>
                 {value ? publications.filter((p) => p.category === value).length : publications.length}
               </span>
@@ -78,12 +76,12 @@ export default function PublicationShop({ publications }: { publications: Public
         <div className='flex gap-3'>
           <div className='relative flex-1 lg:w-72'>
             <Search className='pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground' />
-            <input aria-label='Search publications' placeholder='Search title or author' className={cn(inputClass, 'pl-11')} value={query} onChange={(e) => setQuery(e.target.value)} />
+            <input aria-label={t('publications.shop.searchLabel')} placeholder={t('publications.shop.searchPlaceholder')} className={cn(inputClass, 'pl-11')} value={query} onChange={(e) => setQuery(e.target.value)} />
           </div>
-          <select aria-label='Sort by' value={sort} onChange={(e) => setSort(e.target.value as Sort)} className={cn(inputClass, 'w-auto')}>
-            {Object.entries(sortOptions).map(([value, label]) => (
+          <select aria-label={t('publications.shop.sortLabel')} value={sort} onChange={(e) => setSort(e.target.value as Sort)} className={cn(inputClass, 'w-auto')}>
+            {SORTS.map((value) => (
               <option key={value} value={value}>
-                {label}
+                {t(`publications.shop.sort.${value}`)}
               </option>
             ))}
           </select>
@@ -91,7 +89,7 @@ export default function PublicationShop({ publications }: { publications: Public
       </div>
 
       <p className='mt-6 text-sm text-muted-foreground' aria-live='polite'>
-        {results.length} {results.length === 1 ? 'item' : 'items'}
+        {t('publications.shop.count', { count: results.length })}
       </p>
 
       {results.length ? (
@@ -101,7 +99,7 @@ export default function PublicationShop({ publications }: { publications: Public
           ))}
         </div>
       ) : (
-        <p className='mt-6 rounded-3xl border border-dashed border-border p-12 text-center text-muted-foreground'>Nothing matches your search.</p>
+        <p className='mt-6 rounded-3xl border border-dashed border-border p-12 text-center text-muted-foreground'>{t('publications.shop.empty')}</p>
       )}
     </div>
   )

@@ -16,6 +16,10 @@ export type Retreat = {
   imageSrc: string;
   category: string;
   categoryLabel: string;
+  /** `status` in the requested language (older API versions may not send it). */
+  statusLabel?: string;
+  /** `dateRange` with month names in the requested language. */
+  dateLabel?: string;
   price?: number;
   isPaid?: boolean;
   startDate: string | null;
@@ -32,6 +36,9 @@ export type Publication = {
   author: string;
   category: string;
   format: string;
+  /** `category` / `format` in the requested language. */
+  categoryLabel?: string;
+  formatLabel?: string;
   coverImage: string;
   price: number;
   originalPrice?: number;

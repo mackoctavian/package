@@ -6,32 +6,40 @@ import { BookshopProvider } from '@/app/components/publications/Bookshop'
 import PublicationShop from '@/app/components/publications/PublicationShop'
 import PageHero from '@/app/components/site/PageHero'
 import { imagery } from '@/app/data/site'
-import { DELIVERY_FEE, formatTZS } from '@/lib/publications/format'
+import { formatMoney } from '@/i18n/format'
+import { pageMetadata, resolveLocale, type LocaleParams } from '@/i18n/page'
+import { getT, setRequestLocale } from '@/i18n/server'
+import { DELIVERY_FEE } from '@/lib/publications/format'
 import { getPublications } from '@/lib/publications/queries'
 
 export const revalidate = 300
 
-export const metadata: Metadata = {
-  title: 'Publications',
-  description: 'Bibles, spiritual books, worship CDs and Catholic calendars from the Divine Mercy Retreat Center bookshop.',
+export async function generateMetadata({ params }: LocaleParams): Promise<Metadata> {
+  const locale = await resolveLocale(params)
+  const t = await getT(locale)
+  return pageMetadata(locale, '/publications', { title: t('publications.metaTitle'), description: t('publications.metaDescription') })
 }
 
-const perks = [
-  { icon: Store, title: 'Collect at DMRC', text: 'Pick up your order at the retreat centre bookshop.' },
-  { icon: Truck, title: 'Delivery in Dar es Salaam', text: `Flat ${formatTZS(DELIVERY_FEE)} per order.` },
-  { icon: BookOpen, title: 'English and Kiswahili', text: 'Bibles and reading for every member of the family.' },
-]
+export default async function PublicationsPage({ params }: LocaleParams) {
+  const locale = await resolveLocale(params)
+  setRequestLocale(locale)
+  const t = await getT(locale)
+  const publications = await getPublications(locale)
 
-export default async function PublicationsPage() {
-  const publications = await getPublications()
+  const perks = [
+    { icon: Store, title: t('publications.perks.collect.title'), text: t('publications.perks.collect.text') },
+    { icon: Truck, title: t('publications.perks.delivery.title'), text: t('publications.perks.delivery.text', { fee: formatMoney(DELIVERY_FEE, locale) }) },
+    { icon: BookOpen, title: t('publications.perks.languages.title'), text: t('publications.perks.languages.text') },
+  ]
+
   return (
     <BookshopProvider catalogue={publications}>
       <main>
         <PageHero
-          eyebrow='Publications'
-          title='Nourish your faith at home'
+          eyebrow={t('publications.eyebrow')}
+          title={t('publications.title')}
           image={imagery.bibleReading}
-          description='Bibles, spiritual reading, worship music and calendars from the DMRC bookshop.'
+          description={t('publications.description')}
         />
         <div className='border-b border-border bg-parchment/60'>
           <div className='container grid gap-4 py-6 sm:grid-cols-3'>

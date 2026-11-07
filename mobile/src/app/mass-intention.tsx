@@ -10,7 +10,8 @@ import { MockCheckout } from '@/components/MockCheckout';
 import { Button, Card, Icon, Text } from '@/components/ui';
 import { intentionTypes, SUGGESTED_OFFERING_PER_MASS } from '@/data/content';
 import { submitMassIntention } from '@/lib/api';
-import { EMAIL_PATTERN, formatDate, formatTZS, makeReference, PHONE_PATTERN } from '@/lib/format';
+import { useFormat, useT } from '@/i18n';
+import { EMAIL_PATTERN, makeReference, PHONE_PATTERN } from '@/lib/format';
 import { haptic } from '@/lib/haptics';
 import { actions, getAppState } from '@/lib/store';
 import { colors, radius, space } from '@/theme';
@@ -34,6 +35,8 @@ const parseFutureDate = (value: string) => {
 
 export default function MassIntentionScreen() {
   const profile = getAppState().profile;
+  const t = useT();
+  const { money, date } = useFormat();
   const [type, setType] = useState<IntentionType>('thanksgiving');
   const [intentionFor, setIntentionFor] = useState('');
   const [details, setDetails] = useState('');
@@ -50,17 +53,17 @@ export default function MassIntentionScreen() {
 
   const suggested = masses * SUGGESTED_OFFERING_PER_MASS;
   const amount = Number(offering) || suggested;
-  const typeMeta = intentionTypes.find((item) => item.id === type)!;
+  const typeLabel = t(`content.intentions.${type}.label`);
 
   const submit = async () => {
     const next: Record<string, string> = {};
-    if (!intentionFor.trim()) next.intentionFor = 'Who is this Mass offered for?';
-    if (!details.trim()) next.details = 'Please write your intention.';
-    if (dateText && !parseFutureDate(dateText)) next.date = 'Enter a future date as DD/MM/YYYY, or leave empty.';
-    if (!person.fullName.trim()) next.fullName = 'Please enter your name.';
-    if (!EMAIL_PATTERN.test(person.email.trim())) next.email = 'Please enter a valid email address.';
-    if (!PHONE_PATTERN.test(person.phone.trim())) next.phone = 'Please enter a valid phone number.';
-    if (!accept) next.accept = 'Please confirm to continue.';
+    if (!intentionFor.trim()) next.intentionFor = t('mass.errors.for');
+    if (!details.trim()) next.details = t('mass.errors.details');
+    if (dateText && !parseFutureDate(dateText)) next.date = t('mass.errors.date');
+    if (!person.fullName.trim()) next.fullName = t('common.errors.name');
+    if (!EMAIL_PATTERN.test(person.email.trim())) next.email = t('common.errors.email');
+    if (!PHONE_PATTERN.test(person.phone.trim())) next.phone = t('common.errors.phone');
+    if (!accept) next.accept = t('mass.errors.accept');
     setErrors(next);
     if (Object.keys(next).length) {
       haptic.error();
@@ -82,7 +85,7 @@ export default function MassIntentionScreen() {
       haptic.success();
       setStage('done');
     } catch (error) {
-      setSubmitError(error instanceof Error ? error.message : 'We could not send your intention.');
+      setSubmitError(error instanceof Error ? error.message : t('mass.errors.submit'));
       haptic.error();
     } finally {
       setSubmitting(false);
@@ -91,14 +94,14 @@ export default function MassIntentionScreen() {
 
   if (stage === 'pay') {
     return (
-      <FlowLayout title="Mass offering" onClose={() => router.back()} onBack={() => setStage('done')}>
+      <FlowLayout title={t('mass.offeringTitle')} onClose={() => router.back()} onBack={() => setStage('done')}>
         <MockCheckout
           amount={amount}
           reference={reference}
-          description={`${masses} Mass${masses > 1 ? 'es' : ''} · ${typeMeta.label}`}
+          description={t('mass.description', { count: masses, type: typeLabel })}
           defaultPhone={person.phone}
           onPaid={() => {
-            actions.addReceipt({ reference, kind: 'mass-intention', title: `Mass offering · ${intentionFor}`, amount, createdAt: new Date().toISOString(), detail: 'Demo payment' });
+            actions.addReceipt({ reference, kind: 'mass-intention', title: t('mass.receipt', { name: intentionFor }), amount, createdAt: new Date().toISOString(), detail: t('donate.demoPayment') });
             haptic.success();
             setStage('paid');
           }}
@@ -110,32 +113,30 @@ export default function MassIntentionScreen() {
   if (stage === 'done' || stage === 'paid') {
     return (
       <FlowLayout
-        title="Intention received"
+        title={t('mass.received')}
         onClose={() => router.back()}
         footer={
           <View style={{ gap: space.sm }}>
-            {stage === 'done' ? <Button label={`Give offering · ${formatTZS(amount)}`} variant="gold" icon="heart-outline" onPress={() => setStage('pay')} /> : null}
-            <Button label="Done" variant={stage === 'done' ? 'secondary' : 'primary'} onPress={() => router.back()} />
+            {stage === 'done' ? <Button label={t('mass.giveOffering', { amount: money(amount) })} variant="gold" icon="heart-outline" onPress={() => setStage('pay')} /> : null}
+            <Button label={t('common.done')} variant={stage === 'done' ? 'secondary' : 'primary'} onPress={() => router.back()} />
           </View>
         }>
         <Animated.View entering={FadeIn} style={{ alignItems: 'center', gap: space.sm }}>
           <SuccessMark />
           <Text variant="display" center>
-            {stage === 'paid' ? 'Offering received' : 'Your intention is with us'}
+            {stage === 'paid' ? t('mass.paidTitle') : t('mass.withUs')}
           </Text>
           <Text variant="body" color={colors.muted} center>
-            {stage === 'paid'
-              ? 'Thank you. This was a demo payment, so no money was taken.'
-              : `A priest will offer ${masses > 1 ? `${masses} Masses` : 'Holy Mass'} for ${intentionFor}. We will email ${person.email} when it is scheduled.`}
+            {stage === 'paid' ? t('mass.paidText') : t('mass.doneText', { count: masses, name: intentionFor, email: person.email })}
           </Text>
         </Animated.View>
         <Card style={{ gap: space.sm }}>
           {[
-            ['Intention', typeMeta.label],
-            ['Offered for', intentionFor],
-            ['Masses', String(masses)],
-            ['Preferred date', dateText ? formatDate(parseFutureDate(dateText)?.toISOString()) : 'Next available'],
-            ['Offering', formatTZS(amount)],
+            [t('mass.summary.intention'), typeLabel],
+            [t('mass.summary.for'), intentionFor],
+            [t('mass.summary.masses'), String(masses)],
+            [t('mass.summary.date'), dateText ? date(parseFutureDate(dateText)?.toISOString()) : t('mass.summary.nextAvailable')],
+            [t('mass.summary.offering'), money(amount)],
           ].map(([label, value]) => (
             <View key={label} style={{ flexDirection: 'row', justifyContent: 'space-between', gap: space.lg }}>
               <Text variant="small">{label}</Text>
@@ -151,12 +152,12 @@ export default function MassIntentionScreen() {
 
   return (
     <FlowLayout
-      title="Mass intention"
-      subtitle="Offer Holy Mass for a person or intention"
+      title={t('mass.title')}
+      subtitle={t('mass.subtitle')}
       onClose={() => router.back()}
-      footer={<Button label="Send intention" icon="paper-plane-outline" variant="gold" loading={submitting} onPress={submit} />}>
+      footer={<Button label={t('mass.send')} icon="paper-plane-outline" variant="gold" loading={submitting} onPress={submit} />}>
       <Animated.View entering={FadeInDown.springify()} style={{ gap: space.lg }}>
-        <Text variant="caption">1 · Intention</Text>
+        <Text variant="caption">{t('mass.section1')}</Text>
         <View style={styles.types}>
           {intentionTypes.map((item) => {
             const active = type === item.id;
@@ -172,67 +173,67 @@ export default function MassIntentionScreen() {
                 style={[styles.type, active && styles.typeActive]}>
                 <Icon name={item.icon} size={22} color={active ? colors.gold300 : colors.gold600} />
                 <Text variant="smallStrong" color={active ? colors.white : colors.ink} style={{ marginTop: 6 }}>
-                  {item.label}
+                  {t(`content.intentions.${item.id}.label`)}
                 </Text>
                 <Text variant="small" color={active ? colors.navy200 : colors.muted} style={{ fontSize: 12 }}>
-                  {item.description}
+                  {t(`content.intentions.${item.id}.description`)}
                 </Text>
               </Pressable>
             );
           })}
         </View>
-        <TextField label="Offered for" required value={intentionFor} onChangeText={setIntentionFor} placeholder={typeMeta.placeholder} error={errors.intentionFor} />
+        <TextField label={t('mass.offeredFor')} required value={intentionFor} onChangeText={setIntentionFor} placeholder={t(`content.intentions.${type}.placeholder`)} error={errors.intentionFor} />
         <TextField
-          label="Your intention"
+          label={t('mass.yourIntention')}
           required
           multiline
           maxLength={4000}
           value={details}
           onChangeText={setDetails}
           error={errors.details}
-          hint="Kept confidential; read only by the celebrant."
-          placeholder="Write your intention…"
+          hint={t('mass.intentionHint')}
+          placeholder={t('mass.intentionPlaceholder')}
         />
 
         <Text variant="caption" style={{ marginTop: space.md }}>
-          2 · Date & offering
+          {t('mass.section2')}
         </Text>
         <TextField
-          label="Preferred date"
+          label={t('mass.preferredDate')}
           icon="calendar-outline"
           keyboardType="number-pad"
           placeholder="DD/MM/YYYY"
           value={dateText}
           onChangeText={(text) => setDateText(maskDate(text))}
           error={errors.date}
-          hint="Leave empty for the next available Mass."
+          hint={t('mass.dateHint')}
         />
-        <Field label="Number of Masses">
+        <Field label={t('mass.masses')}>
           <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
             <QuantityStepper value={masses} onChange={setMasses} min={1} max={50} />
-            <Text variant="small">Customary {formatTZS(SUGGESTED_OFFERING_PER_MASS)} per Mass</Text>
+            <Text variant="small">{t('mass.customary', { amount: money(SUGGESTED_OFFERING_PER_MASS) })}</Text>
           </View>
         </Field>
         <TextField
-          label="Your offering (TZS)"
+          label={t('mass.offering')}
           keyboardType="number-pad"
           value={offering}
           onChangeText={(v) => setOffering(v.replace(/\D/g, '').slice(0, 9))}
           placeholder={suggested.toLocaleString('en-US')}
-          hint="A free-will offering. You can give it after sending your intention."
+          hint={t('mass.offeringHint')}
         />
 
         <Text variant="caption" style={{ marginTop: space.md }}>
-          3 · Your details
+          {t('mass.section3')}
         </Text>
-        <TextField label="Full name" required value={person.fullName} onChangeText={(v) => setPerson((p) => ({ ...p, fullName: v }))} error={errors.fullName} autoComplete="name" />
-        <TextField label="Email" required icon="mail-outline" keyboardType="email-address" autoCapitalize="none" value={person.email} onChangeText={(v) => setPerson((p) => ({ ...p, email: v }))} error={errors.email} />
-        <TextField label="Phone" required icon="call-outline" keyboardType="phone-pad" value={person.phone} onChangeText={(v) => setPerson((p) => ({ ...p, phone: v }))} error={errors.phone} />
+        <TextField label={t('common.fields.fullName')} required value={person.fullName} onChangeText={(v) => setPerson((p) => ({ ...p, fullName: v }))} error={errors.fullName} autoComplete="name" />
+        <TextField label={t('common.fields.email')} required icon="mail-outline" keyboardType="email-address" autoCapitalize="none" value={person.email} onChangeText={(v) => setPerson((p) => ({ ...p, email: v }))} error={errors.email} />
+        <TextField label={t('common.fields.phone')} required icon="call-outline" keyboardType="phone-pad" value={person.phone} onChangeText={(v) => setPerson((p) => ({ ...p, phone: v }))} error={errors.phone} />
         <Checkbox
           checked={accept}
           onChange={setAccept}
           error={errors.accept}
-          label="I understand the Mass will be scheduled by the centre and my intention is kept confidential."
+          label={t('mass.accept')}
         />
         <ErrorBanner message={submitError} />
       </Animated.View>

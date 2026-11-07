@@ -9,12 +9,13 @@ import retreats from './retreats'
 import giving from './giving'
 import news from './news'
 import publications from './publications'
+import pages from './pages'
 
 /**
  * All interface text for the website, by namespace. Each namespace file holds
  * English and Swahili side by side. Add new namespaces here.
  */
-const namespaces = { common, meta, nav, home, about, apostolate, content, retreats, giving, news, publications }
+const namespaces = { common, meta, nav, home, about, apostolate, content, retreats, giving, news, publications, pages }
 
 type Namespaces = typeof namespaces
 type Locales = 'en' | 'sw'

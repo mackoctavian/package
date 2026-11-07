@@ -5,21 +5,23 @@ import { useEffect, useState } from 'react';
 import { Platform, Pressable, StyleSheet, View } from 'react-native';
 import Animated, { useAnimatedStyle, useSharedValue, withSpring } from 'react-native-reanimated';
 
+import { useT } from '@/i18n';
 import { haptic } from '@/lib/haptics';
 import { cartCount, useAppStore } from '@/lib/store';
 import { colors, fonts, shadow } from '@/theme';
 import { Icon, type IconName, Text } from './ui';
 
-const tabs: Record<string, { label: string; icon: IconName; active: IconName }> = {
-  index: { label: 'Home', icon: 'home-outline', active: 'home' },
-  retreats: { label: 'Retreats', icon: 'leaf-outline', active: 'leaf' },
-  give: { label: 'Give', icon: 'heart-outline', active: 'heart' },
-  shop: { label: 'Shop', icon: 'book-outline', active: 'book' },
-  more: { label: 'More', icon: 'grid-outline', active: 'grid' },
+const tabs: Record<string, { label: 'home' | 'retreats' | 'give' | 'shop' | 'more'; icon: IconName; active: IconName }> = {
+  index: { label: 'home', icon: 'home-outline', active: 'home' },
+  retreats: { label: 'retreats', icon: 'leaf-outline', active: 'leaf' },
+  give: { label: 'give', icon: 'heart-outline', active: 'heart' },
+  shop: { label: 'shop', icon: 'book-outline', active: 'book' },
+  more: { label: 'more', icon: 'grid-outline', active: 'grid' },
 };
 
 /** Floating, blurred tab bar with a sliding gold indicator and a raised "Give" action. */
 export function TabBar({ state, descriptors, emitter, navigateToTab, insets }: BottomTabBarProps) {
+  const t = useT();
   const [width, setWidth] = useState(0);
   const cart = useAppStore((s) => cartCount(s.cart));
   const itemWidth = width / state.routes.length;
@@ -43,7 +45,10 @@ export function TabBar({ state, descriptors, emitter, navigateToTab, insets }: B
           </Animated.View>
         ) : null}
         {state.routes.map((route, index) => {
-          const meta = tabs[route.name] ?? { label: descriptors[route.key]?.options.title ?? route.name, icon: 'ellipse-outline', active: 'ellipse' };
+          const known = tabs[route.name];
+          const meta = known
+            ? { ...known, label: t(`tabs.${known.label}`) }
+            : { label: descriptors[route.key]?.options.title ?? route.name, icon: 'ellipse-outline' as IconName, active: 'ellipse' as IconName };
           const focused = index === state.index;
           const onPress = () => {
             const event = emitter.emit({ type: 'tabPress', target: route.key, canPreventDefault: true });
@@ -53,7 +58,7 @@ export function TabBar({ state, descriptors, emitter, navigateToTab, insets }: B
 
           if (route.name === 'give') {
             return (
-              <Pressable key={route.key} onPress={onPress} style={styles.item} accessibilityRole="tab" accessibilityState={{ selected: focused }} accessibilityLabel="Give">
+              <Pressable key={route.key} onPress={onPress} style={styles.item} accessibilityRole="tab" accessibilityState={{ selected: focused }} accessibilityLabel={t('tabs.give')}>
                 <LinearGradient colors={[colors.gold300, colors.gold500]} style={styles.give}>
                   <Icon name={focused ? 'heart' : 'heart-outline'} size={24} color={colors.navy950} />
                 </LinearGradient>
