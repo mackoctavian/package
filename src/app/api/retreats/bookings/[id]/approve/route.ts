@@ -1,12 +1,13 @@
 import { NextResponse } from 'next/server'
 import prisma from '@/lib/prisma'
 import { nanoid } from 'nanoid'
-import { guardAdminApi } from '@/lib/auth/api-guard'
+import { audit } from '@/lib/audit'
+import { requireAdminApiAccess } from '@/lib/auth/admin-session'
 
 export async function POST(request: Request, { params: paramsPromise }: { params: Promise<{ id: string }> }) {
   const params = await paramsPromise
-  const denied = await guardAdminApi('retreats', 'edit')
-  if (denied) return denied
+  const auth = await requireAdminApiAccess('retreats', 'edit')
+  if ('error' in auth) return NextResponse.json({ error: auth.error }, { status: auth.status })
 
   try {
     const bookingId = params.id
@@ -29,9 +30,11 @@ export async function POST(request: Request, { params: paramsPromise }: { params
       data: {
         status: 'approved',
         approvedAt: new Date(),
+        approvedBy: auth.user.name,
         ticketCode,
       },
     })
+    await audit({ actor: auth.user, action: 'approved', entity: 'booking', entityId: bookingId, summary: `Approved ${booking.fullName}'s booking for ${booking.retreatTitle}`, request })
 
     return NextResponse.json({ 
       data: updated,

@@ -13,6 +13,8 @@ import {
   MoreHorizontal,
   PencilLine,
   Plus,
+  ScanLine,
+  Ticket,
   Trash2,
   Users2,
 } from 'lucide-react'
@@ -27,30 +29,14 @@ import { Input } from '@/app/components/ui/input'
 import { Textarea } from '@/app/components/ui/textarea'
 import { Label } from '@/app/components/ui/label'
 import { Switch } from '@/app/components/ui/switch'
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '@/app/components/ui/table'
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from '@/app/components/ui/dialog'
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from '@/app/components/ui/dropdown-menu'
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/app/components/ui/table'
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/app/components/ui/dialog'
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/app/components/ui/dropdown-menu'
 import { formatCurrencyValue, getCurrencyConfig } from '@dashboard/lib/currency'
 import { UploadField } from './UploadField'
+import { PageHeader, StatCard } from './shell/primitives'
+import { useAdminUser } from '@dashboard/context/admin-user'
+import { canEdit } from '@/lib/auth/admin-shared'
 
 const statusOptions: RetreatType['status'][] = ['Registration Open', 'Waitlist', 'Closed']
 const defaultCategoryOptions = [
@@ -264,12 +250,7 @@ export const RetreatFormFields = ({ form, onChange }: RetreatFormFieldsProps) =>
         </div>
         <div className='space-y-2'>
           <Label htmlFor='retreat-end-date'>End date</Label>
-          <Input
-            id='retreat-end-date'
-            type='date'
-            value={form.endDate}
-            onChange={(event) => onChange('endDate', event.target.value)}
-          />
+          <Input id='retreat-end-date' type='date' value={form.endDate} onChange={(event) => onChange('endDate', event.target.value)} />
         </div>
       </div>
       <div className='grid gap-4 sm:grid-cols-2'>
@@ -284,12 +265,7 @@ export const RetreatFormFields = ({ form, onChange }: RetreatFormFieldsProps) =>
         </div>
         <div className='space-y-2'>
           <Label htmlFor='retreat-end-time'>End time</Label>
-          <Input
-            id='retreat-end-time'
-            type='time'
-            value={form.endTime}
-            onChange={(event) => onChange('endTime', event.target.value)}
-          />
+          <Input id='retreat-end-time' type='time' value={form.endTime} onChange={(event) => onChange('endTime', event.target.value)} />
         </div>
       </div>
       <div className='space-y-2'>
@@ -308,7 +284,8 @@ export const RetreatFormFields = ({ form, onChange }: RetreatFormFieldsProps) =>
             id='retreat-category'
             value={form.category}
             onChange={(event) => onChange('category', event.target.value)}
-            className='h-10 rounded-lg border border-slate-200 px-3 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30'>
+            className='h-10 rounded-lg border border-slate-200 px-3 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30'
+          >
             {defaultCategoryOptions.map((option) => (
               <option key={option.value} value={option.value} className='capitalize'>
                 {option.label}
@@ -334,7 +311,8 @@ export const RetreatFormFields = ({ form, onChange }: RetreatFormFieldsProps) =>
             id='retreat-status'
             value={form.status}
             onChange={(event) => onChange('status', event.target.value as RetreatType['status'])}
-            className='h-10 rounded-lg border border-slate-200 px-3 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30'>
+            className='h-10 rounded-lg border border-slate-200 px-3 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30'
+          >
             {statusOptions.map((option) => (
               <option key={option} value={option}>
                 {option}
@@ -346,13 +324,7 @@ export const RetreatFormFields = ({ form, onChange }: RetreatFormFieldsProps) =>
       <div className='grid gap-4 sm:grid-cols-3'>
         <div className='space-y-2'>
           <Label htmlFor='retreat-total'>Total seats</Label>
-          <Input
-            id='retreat-total'
-            type='number'
-            min={0}
-            value={form.total}
-            onChange={(event) => onChange('total', event.target.value)}
-          />
+          <Input id='retreat-total' type='number' min={0} value={form.total} onChange={(event) => onChange('total', event.target.value)} />
         </div>
         <div className='space-y-2'>
           <Label htmlFor='retreat-male'>Male seats</Label>
@@ -380,13 +352,7 @@ export const RetreatFormFields = ({ form, onChange }: RetreatFormFieldsProps) =>
       <div className='grid gap-4 sm:grid-cols-2'>
         <div className='space-y-2'>
           <Label htmlFor='retreat-price'>Price (TSh)</Label>
-          <Input
-            id='retreat-price'
-            type='number'
-            min={0}
-            value={form.price}
-            onChange={(event) => onChange('price', event.target.value)}
-          />
+          <Input id='retreat-price' type='number' min={0} value={form.price} onChange={(event) => onChange('price', event.target.value)} />
         </div>
         <UploadField
           label='Retreat image'
@@ -417,6 +383,7 @@ export const RetreatFormFields = ({ form, onChange }: RetreatFormFieldsProps) =>
 
 const RetreatDashboard = () => {
   const queryClient = useQueryClient()
+  const editable = canEdit(useAdminUser(), 'retreats')
   const currencyConfig = useMemo(() => getCurrencyConfig(), [])
   const [isCreateOpen, setIsCreateOpen] = useState(false)
   const [createForm, setCreateForm] = useState<RetreatFormValues>(emptyForm)
@@ -425,10 +392,10 @@ const RetreatDashboard = () => {
   const [editForm, setEditForm] = useState<RetreatFormValues>(emptyForm)
   const [deleteTarget, setDeleteTarget] = useState<RetreatType | null>(null)
 
-  const {
-    data: retreatsPayload,
-    isLoading: retreatsLoading,
-  } = useQuery({ queryKey: ['retreats'], queryFn: fetchRetreats })
+  const { data: retreatsPayload, isLoading: retreatsLoading } = useQuery({
+    queryKey: ['retreats'],
+    queryFn: fetchRetreats,
+  })
 
   const { data: bookings = [], isLoading: bookingsLoading } = useQuery({
     queryKey: ['retreatBookings'],
@@ -447,35 +414,35 @@ const RetreatDashboard = () => {
     return false
   }
 
-const validateFormValues = (form: RetreatFormValues) => {
-  const errors: string[] = []
-  if (!form.title.trim()) errors.push('Title is required')
-  if (!form.speaker.trim()) errors.push('Speaker is required')
-  if (!form.conductor.trim()) errors.push('Conductor is required')
-  if (!form.description.trim()) errors.push('Description is required')
-  if (!form.startDate) errors.push('Start date is required')
-  if (!form.endDate) errors.push('End date is required')
-  if (form.startDate && form.endDate && new Date(form.startDate) > new Date(form.endDate)) {
-    errors.push('Start date must be before end date')
+  const validateFormValues = (form: RetreatFormValues) => {
+    const errors: string[] = []
+    if (!form.title.trim()) errors.push('Title is required')
+    if (!form.speaker.trim()) errors.push('Speaker is required')
+    if (!form.conductor.trim()) errors.push('Conductor is required')
+    if (!form.description.trim()) errors.push('Description is required')
+    if (!form.startDate) errors.push('Start date is required')
+    if (!form.endDate) errors.push('End date is required')
+    if (form.startDate && form.endDate && new Date(form.startDate) > new Date(form.endDate)) {
+      errors.push('Start date must be before end date')
+    }
+    if (!form.startTime) errors.push('Start time is required')
+    if (!form.endTime) errors.push('End time is required')
+    if (!form.location.trim()) errors.push('Location is required')
+    if (form.category === 'custom' && !form.customCategory.trim()) {
+      errors.push('Custom category is required')
+    }
+    if (!form.total || Number.isNaN(Number(form.total))) errors.push('Total capacity is required')
+    if (form.splitByGender) {
+      if (!form.male || Number.isNaN(Number(form.male))) errors.push('Male capacity is required')
+      if (!form.female || Number.isNaN(Number(form.female))) errors.push('Female capacity is required')
+    }
+    if (!form.imageSrc) {
+      errors.push('Retreat image is required')
+    } else if (!/^https?:\/\//i.test(form.imageSrc)) {
+      errors.push('Please upload a retreat image (it will be stored in the Supabase Storage bucket).')
+    }
+    return errors
   }
-  if (!form.startTime) errors.push('Start time is required')
-  if (!form.endTime) errors.push('End time is required')
-  if (!form.location.trim()) errors.push('Location is required')
-  if (form.category === 'custom' && !form.customCategory.trim()) {
-    errors.push('Custom category is required')
-  }
-  if (!form.total || Number.isNaN(Number(form.total))) errors.push('Total capacity is required')
-  if (form.splitByGender) {
-    if (!form.male || Number.isNaN(Number(form.male))) errors.push('Male capacity is required')
-    if (!form.female || Number.isNaN(Number(form.female))) errors.push('Female capacity is required')
-  }
-  if (!form.imageSrc) {
-    errors.push('Retreat image is required')
-  } else if (!/^https?:\/\//i.test(form.imageSrc)) {
-    errors.push('Please upload a retreat image (it will be stored in the Supabase Storage bucket).')
-  }
-  return errors
-}
 
   const createMutation = useMutation({
     mutationFn: async (payload: RetreatFormValues) => {
@@ -552,18 +519,21 @@ const validateFormValues = (form: RetreatFormValues) => {
 
   const isLoading = retreatsLoading || bookingsLoading
 
-  const totalCapacity = useMemo(
-    () => retreats.reduce((acc, retreat) => acc + (retreat.availability.total ?? 0), 0),
-    [retreats],
-  )
-  const totalBooked = useMemo(
-    () => bookings.filter((booking) => booking.status !== 'cancelled').length,
-    [bookings],
-  )
+  const totalCapacity = useMemo(() => retreats.reduce((acc, retreat) => acc + (retreat.availability.total ?? 0), 0), [retreats])
+  const totalBooked = useMemo(() => bookings.filter((booking) => booking.status !== 'cancelled').length, [bookings])
   const paidBookings = useMemo(
-    () => bookings.filter((booking) => booking.paymentStatus === 'paid').length,
+    () => bookings.filter((booking) => booking.paymentStatus === 'paid' && booking.status !== 'cancelled').length,
     [bookings],
   )
+  const openRetreats = retreats.filter((retreat) => retreat.status !== 'Closed').length
+  const bookedByRetreat = useMemo(() => {
+    const counts = new Map<string, number>()
+    for (const booking of bookings) {
+      if (booking.status === 'cancelled') continue
+      counts.set(booking.retreatId, (counts.get(booking.retreatId) ?? 0) + 1 + (booking.familyMembers?.length ?? 0))
+    }
+    return counts
+  }, [bookings])
 
   const handleOpenCreate = () => {
     if (!guardReadOnlyAction()) return
@@ -573,12 +543,12 @@ const validateFormValues = (form: RetreatFormValues) => {
 
   const handleSaveNew = () => {
     if (createMutation.isPending || !guardReadOnlyAction()) return
-  const errors = validateFormValues(createForm)
-  if (errors.length) {
-    toast.error(errors[0])
-    return
-  }
-  createMutation.mutate(createForm)
+    const errors = validateFormValues(createForm)
+    if (errors.length) {
+      toast.error(errors[0])
+      return
+    }
+    createMutation.mutate(createForm)
   }
 
   const handleOpenEdit = (retreat: RetreatType) => {
@@ -590,12 +560,12 @@ const validateFormValues = (form: RetreatFormValues) => {
 
   const handleSaveEdit = () => {
     if (!editId || updateMutation.isPending || !guardReadOnlyAction()) return
-  const errors = validateFormValues(editForm)
-  if (errors.length) {
-    toast.error(errors[0])
-    return
-  }
-  updateMutation.mutate({ id: editId, payload: editForm })
+    const errors = validateFormValues(editForm)
+    if (errors.length) {
+      toast.error(errors[0])
+      return
+    }
+    updateMutation.mutate({ id: editId, payload: editForm })
   }
 
   const handleDuplicate = (retreat: RetreatType) => {
@@ -613,61 +583,32 @@ const validateFormValues = (form: RetreatFormValues) => {
 
   return (
     <div className='space-y-8'>
-      <div className='flex flex-wrap items-center justify-between gap-4'>
-        <div>
-          <p className='text-xs font-semibold uppercase tracking-[0.3em] text-primary'>Retreat command center</p>
-          <h1 className='text-3xl font-semibold text-slate-900'>Retreats & attendance dashboard</h1>
-          <p className='text-sm text-slate-500'>Curate retreat experiences, manage capacity, and verify attendance in one elegant workspace.</p>
-        </div>
-        <div className='flex items-center gap-3'>
-          <Button variant='outline' onClick={() => queryClient.invalidateQueries({ queryKey: ['retreats'] })} className='gap-2'>
-            <Loader2 className='h-4 w-4 animate-spin text-slate-400' />
-            Refresh
-          </Button>
-          <Button className='gap-2' onClick={handleOpenCreate} disabled={isReadOnlyData}>
-            <Plus className='h-4 w-4' />
-            New retreat
-          </Button>
-        </div>
-      </div>
+      <PageHeader
+        eyebrow='Retreats'
+        title='Retreats'
+        description='Plan retreat sessions, set capacity and pricing, and keep an eye on how full each one is.'
+        actions={
+          <>
+            <Button asChild variant='outline' className='gap-2'>
+              <Link href='/admin/bookings'>
+                <Ticket className='h-4 w-4' /> All bookings
+              </Link>
+            </Button>
+            {editable && (
+              <Button className='gap-2' onClick={handleOpenCreate} disabled={isReadOnlyData}>
+                <Plus className='h-4 w-4' />
+                New retreat
+              </Button>
+            )}
+          </>
+        }
+      />
 
-      <div className='grid gap-4 lg:grid-cols-3'>
-        <Card>
-          <CardHeader className='pb-3'>
-            <CardTitle className='text-base font-semibold text-slate-800 flex items-center gap-2'>
-              <Users2 className='h-4 w-4 text-primary' />
-              Booked guests
-            </CardTitle>
-            <CardDescription>Guests registered across all retreats</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <p className='text-3xl font-semibold text-slate-900'>{totalBooked}</p>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader className='pb-3'>
-            <CardTitle className='text-base font-semibold text-slate-800 flex items-center gap-2'>
-              <CalendarDays className='h-4 w-4 text-primary' />
-              Active retreats
-            </CardTitle>
-            <CardDescription>Retreats currently open for registration</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <p className='text-3xl font-semibold text-slate-900'>{retreats.length}</p>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader className='pb-3'>
-            <CardTitle className='text-base font-semibold text-slate-800 flex items-center gap-2'>
-              <CircleDollarSign className='h-4 w-4 text-primary' />
-              Paid conversions
-            </CardTitle>
-            <CardDescription>Confirmed payments awaiting attendance</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <p className='text-3xl font-semibold text-slate-900'>{paidBookings}</p>
-          </CardContent>
-        </Card>
+      <div className='grid gap-4 sm:grid-cols-2 xl:grid-cols-4'>
+        <StatCard label='Retreats' value={retreats.length} hint={`${openRetreats} open for registration`} icon={CalendarDays} />
+        <StatCard label='Seats offered' value={totalCapacity} hint='Across all retreats' icon={Users2} tone='gold' />
+        <StatCard label='Active bookings' value={totalBooked} hint='Not counting cancellations' icon={Ticket} tone='green' />
+        <StatCard label='Paid bookings' value={paidBookings} hint='Payment recorded' icon={CircleDollarSign} tone='navy' />
       </div>
 
       {isReadOnlyData ? (
@@ -732,9 +673,7 @@ const validateFormValues = (form: RetreatFormValues) => {
                             {retreat.category}
                           </Badge>
                         </div>
-                        {retreat.subtitle ? (
-                          <p className='text-xs text-slate-500 line-clamp-1'>{retreat.subtitle}</p>
-                        ) : null}
+                        {retreat.subtitle ? <p className='text-xs text-slate-500 line-clamp-1'>{retreat.subtitle}</p> : null}
                         <p className='text-xs text-slate-500'>Facilitator: {retreat.speaker}</p>
                       </div>
                     </TableCell>
@@ -750,8 +689,20 @@ const validateFormValues = (form: RetreatFormValues) => {
                     </TableCell>
                     <TableCell className='align-top text-sm text-slate-600'>
                       <div className='space-y-1'>
-                        <p className='font-semibold text-slate-800'>{retreat.availability.total} seats</p>
-                        <p className='text-xs text-slate-500'>Male {retreat.availability.male} • Female {retreat.availability.female}</p>
+                        <p className='font-semibold text-slate-800'>
+                          {bookedByRetreat.get(retreat.id) ?? 0} / {retreat.availability.total} booked
+                        </p>
+                        <div className='h-1.5 w-28 overflow-hidden rounded-full bg-muted'>
+                          <div
+                            className='h-full bg-navy-700'
+                            style={{
+                              width: `${Math.min(100, Math.round(((bookedByRetreat.get(retreat.id) ?? 0) / Math.max(1, retreat.availability.total)) * 100))}%`,
+                            }}
+                          />
+                        </div>
+                        <p className='text-xs text-slate-500'>
+                          Male {retreat.availability.male} • Female {retreat.availability.female}
+                        </p>
                       </div>
                     </TableCell>
                     <TableCell className='align-top text-sm text-slate-600'>
@@ -759,9 +710,7 @@ const validateFormValues = (form: RetreatFormValues) => {
                         <Badge variant='success'>Sponsored</Badge>
                       ) : (
                         <div className='space-y-1'>
-                          <p className='font-semibold text-slate-800'>
-                            {formatCurrencyValue(retreat.price ?? 0, currencyConfig)}
-                          </p>
+                          <p className='font-semibold text-slate-800'>{formatCurrencyValue(retreat.price ?? 0, currencyConfig)}</p>
                           <p className='text-xs text-slate-500'>Standard contribution</p>
                         </div>
                       )}
@@ -784,18 +733,33 @@ const validateFormValues = (form: RetreatFormValues) => {
                               <ExternalLink className='h-4 w-4 text-primary' /> View details
                             </Link>
                           </DropdownMenuItem>
-                          <DropdownMenuItem onSelect={() => handleOpenEdit(retreat)} className='gap-2' disabled={isReadOnlyData}>
-                            <PencilLine className='h-4 w-4 text-primary' /> Edit
+                          <DropdownMenuItem asChild className='gap-2'>
+                            <Link href={`/admin/bookings?retreatId=${retreat.id}`}>
+                              <Ticket className='h-4 w-4 text-primary' /> Bookings
+                            </Link>
                           </DropdownMenuItem>
-                          <DropdownMenuItem onSelect={() => handleDuplicate(retreat)} className='gap-2' disabled={isReadOnlyData}>
-                            <Users2 className='h-4 w-4 text-slate-500' /> Duplicate
+                          <DropdownMenuItem asChild className='gap-2'>
+                            <Link href={`/admin/check-in?retreat=${retreat.id}`}>
+                              <ScanLine className='h-4 w-4 text-primary' /> Check-in desk
+                            </Link>
                           </DropdownMenuItem>
-                          <DropdownMenuItem
-                            onSelect={() => handleRequestDelete(retreat)}
-                            className='gap-2 text-red-600 focus:bg-red-100/80'
-                            disabled={isReadOnlyData}>
-                            <Trash2 className='h-4 w-4' /> Delete
-                          </DropdownMenuItem>
+                          {editable && (
+                            <>
+                              <DropdownMenuItem onSelect={() => handleOpenEdit(retreat)} className='gap-2' disabled={isReadOnlyData}>
+                                <PencilLine className='h-4 w-4 text-primary' /> Edit
+                              </DropdownMenuItem>
+                              <DropdownMenuItem onSelect={() => handleDuplicate(retreat)} className='gap-2' disabled={isReadOnlyData}>
+                                <Users2 className='h-4 w-4 text-slate-500' /> Duplicate
+                              </DropdownMenuItem>
+                              <DropdownMenuItem
+                                onSelect={() => handleRequestDelete(retreat)}
+                                className='gap-2 text-red-600 focus:bg-red-100/80'
+                                disabled={isReadOnlyData}
+                              >
+                                <Trash2 className='h-4 w-4' /> Delete
+                              </DropdownMenuItem>
+                            </>
+                          )}
                         </DropdownMenuContent>
                       </DropdownMenu>
                     </TableCell>
@@ -807,43 +771,6 @@ const validateFormValues = (form: RetreatFormValues) => {
         </CardContent>
       </Card>
 
-      <Card>
-        <CardHeader className='flex flex-row items-center justify-between'>
-          <div>
-            <CardTitle className='text-lg font-semibold text-slate-900'>Booking + attendance queue</CardTitle>
-            <CardDescription>Monitor payment progression, attendance confirmation, and reschedules.</CardDescription>
-          </div>
-          <Badge variant='outline'>Total {bookings.length}</Badge>
-        </CardHeader>
-        <CardContent className='space-y-4'>
-          {bookings.length === 0 ? (
-            <p className='rounded-xl border border-dashed border-slate-200 bg-slate-50/60 px-4 py-10 text-center text-sm text-slate-500'>
-              No bookings yet. Invite guests to experience the mercy weekend.
-            </p>
-          ) : (
-            bookings.slice(0, 6).map((booking) => (
-              <div key={booking.id} className='rounded-xl border border-slate-200 px-4 py-3 shadow-sm'>
-                <div className='flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between'>
-                  <div>
-                    <p className='text-sm font-semibold text-slate-900'>{booking.fullName}</p>
-                    <p className='text-xs text-slate-500'>{booking.email}</p>
-                  </div>
-                  <div className='flex items-center gap-2'>
-                    <Badge variant='outline' className='uppercase tracking-[0.25em] text-xs'>
-                      {booking.status}
-                    </Badge>
-                    <Badge variant={booking.paymentStatus === 'paid' ? 'success' : 'warning'}>
-                      {booking.paymentStatus === 'paid' ? 'Paid' : 'Pending'}
-                    </Badge>
-                  </div>
-                </div>
-                <p className='mt-2 text-xs text-slate-500'>Retreat: {booking.retreatTitle}</p>
-              </div>
-            ))
-          )}
-        </CardContent>
-      </Card>
-
       <Dialog
         open={isCreateOpen}
         onOpenChange={(open) => {
@@ -851,7 +778,8 @@ const validateFormValues = (form: RetreatFormValues) => {
           if (!open) {
             setCreateForm(emptyForm)
           }
-        }}>
+        }}
+      >
         <DialogContent className='max-h-[85vh] overflow-y-auto sm:max-w-3xl'>
           <DialogHeader>
             <DialogTitle>Create a new retreat</DialogTitle>
@@ -878,7 +806,8 @@ const validateFormValues = (form: RetreatFormValues) => {
             setEditForm(emptyForm)
             setEditId(null)
           }
-        }}>
+        }}
+      >
         <DialogContent className='max-h-[85vh] overflow-y-auto sm:max-w-3xl'>
           <DialogHeader>
             <DialogTitle>Edit retreat details</DialogTitle>
@@ -903,7 +832,8 @@ const validateFormValues = (form: RetreatFormValues) => {
           if (!open) {
             setDeleteTarget(null)
           }
-        }}>
+        }}
+      >
         <DialogContent className='max-w-md'>
           <DialogHeader>
             <DialogTitle>Delete retreat</DialogTitle>
@@ -924,7 +854,8 @@ const validateFormValues = (form: RetreatFormValues) => {
                 if (!deleteTarget) return
                 if (!guardReadOnlyAction()) return
                 deleteMutation.mutate(deleteTarget.id)
-              }}>
+              }}
+            >
               {deleteMutation.isPending ? <Loader2 className='h-4 w-4 animate-spin' /> : <Trash2 className='h-4 w-4' />}
               Delete retreat
             </Button>
@@ -936,4 +867,3 @@ const validateFormValues = (form: RetreatFormValues) => {
 }
 
 export default RetreatDashboard
-

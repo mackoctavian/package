@@ -14,6 +14,7 @@ import type { AdminRole } from '@prisma/client'
 export const ADMIN_MODULES = [
   { id: 'overview', label: 'Dashboard', group: 'General', description: 'Key numbers and recent activity.' },
   { id: 'retreats', label: 'Retreats & bookings', group: 'Retreats', description: 'Retreat sessions, bookings, approvals and check-in.' },
+  { id: 'check-in', label: 'Check-in desk', group: 'Retreats', description: 'Scan tickets at the door. Nothing else about bookings.' },
   { id: 'donations', label: 'Donations', group: 'Giving', description: 'Gifts, payment status and donor details.' },
   { id: 'mass-intentions', label: 'Mass intentions', group: 'Giving', description: 'Mass intention requests and their scheduling.' },
   { id: 'feedback', label: 'Inbox', group: 'Inbox', description: 'Messages sent through the contact form.' },

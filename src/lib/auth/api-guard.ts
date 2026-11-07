@@ -26,3 +26,17 @@ export const isAdminRequest = async (moduleId?: AdminModuleId, level: AccessLeve
   if (!user) return false
   return userHasModuleAccess(user, moduleId, level)
 }
+
+/**
+ * Like guardAdminApi, but passes when the caller meets any one of the
+ * requirements, e.g. retreats edit OR check-in edit for the ticket scanner.
+ * Returns the signed-in user when allowed.
+ */
+export const guardAnyAdminApi = async (requirements: Array<[AdminModuleId, AccessLevel]>) => {
+  const user = await getCurrentAdminUser()
+  if (!user) return { denied: NextResponse.json({ error: 'Unauthorized' }, { status: 401 }) } as const
+  if (!requirements.some(([moduleId, level]) => userHasModuleAccess(user, moduleId, level))) {
+    return { denied: NextResponse.json({ error: 'You do not have access to this area.' }, { status: 403 }) } as const
+  }
+  return { user } as const
+}

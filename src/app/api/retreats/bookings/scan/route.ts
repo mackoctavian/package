@@ -1,171 +1,133 @@
 import { NextResponse } from 'next/server'
-import prisma from '@/lib/prisma'
-import { guardAdminApi } from '@/lib/auth/api-guard'
 
-// Scan QR code and check in user
+import prisma from '@/lib/prisma'
+import { audit } from '@/lib/audit'
+import { extractTicketCode, partySize } from '@/lib/admin/bookings'
+import { guardAnyAdminApi } from '@/lib/auth/api-guard'
+
+const retreatSelect = { select: { id: true, title: true, dateRange: true, location: true } } as const
+
+const findBooking = (input: { ticketCode?: string; bookingId?: string }) =>
+  input.bookingId
+    ? prisma.retreatBooking.findUnique({ where: { id: input.bookingId }, include: { retreat: retreatSelect } })
+    : prisma.retreatBooking.findUnique({ where: { ticketCode: input.ticketCode! }, include: { retreat: retreatSelect } })
+
+type FoundBooking = NonNullable<Awaited<ReturnType<typeof findBooking>>>
+
+const summary = (booking: FoundBooking) => ({
+  id: booking.id,
+  fullName: booking.fullName,
+  email: booking.email,
+  phone: booking.phone,
+  status: booking.status,
+  paymentStatus: booking.paymentStatus,
+  ticketCode: booking.ticketCode,
+  partySize: partySize(booking),
+  retreat: booking.retreat,
+})
+
+/**
+ * Checks a guest in from a scanned or typed ticket code (or a booking id
+ * picked from the expected-guests list). Optional `retreatId` flags tickets
+ * for a different retreat. `undo: true` reverses a check-in.
+ */
 export async function POST(request: Request) {
-  const denied = await guardAdminApi('retreats', 'edit')
-  if (denied) return denied
+  const access = await guardAnyAdminApi([
+    ['retreats', 'edit'],
+    ['check-in', 'edit'],
+  ])
+  if ('denied' in access) return access.denied
 
   try {
-    const body = await request.json()
-    const { ticketCode } = body
+    const body = await request.json().catch(() => ({}))
+    const ticketCode = typeof body?.ticketCode === 'string' && body.ticketCode.trim() ? extractTicketCode(body.ticketCode) : undefined
+    const bookingId = typeof body?.bookingId === 'string' ? body.bookingId : undefined
+    const retreatId = typeof body?.retreatId === 'string' ? body.retreatId : undefined
 
-    if (!ticketCode) {
-      return NextResponse.json({ error: 'Ticket code is required' }, { status: 400 })
+    if (!ticketCode && !bookingId) {
+      return NextResponse.json({ error: 'Ticket code is required', valid: false }, { status: 400 })
     }
 
-    // Find booking by ticket code
-    const booking = await prisma.retreatBooking.findUnique({
-      where: { ticketCode },
-      include: {
-        retreat: {
-          select: {
-            id: true,
-            title: true,
-            dateRange: true,
-            location: true,
-          },
-        },
-      },
-    })
-
+    const booking = await findBooking({ ticketCode, bookingId })
     if (!booking) {
-      return NextResponse.json({ 
-        error: 'Invalid ticket code',
-        valid: false,
-      }, { status: 404 })
+      return NextResponse.json({ error: 'No booking matches this ticket.', valid: false }, { status: 404 })
     }
 
-    // Check if booking is approved
+    if (body?.undo === true) {
+      await prisma.retreatBooking.update({ where: { id: booking.id }, data: { attended: false, checkedInAt: null } })
+      await audit({ actor: access.user, action: 'updated', entity: 'booking', entityId: booking.id, summary: `Undid check-in for ${booking.fullName}`, request })
+      return NextResponse.json({ message: 'Check-in undone', valid: true, booking: summary(booking) })
+    }
+
+    if (retreatId && booking.retreatId !== retreatId) {
+      return NextResponse.json(
+        { error: `This ticket is for ${booking.retreat.title}.`, valid: false, wrongRetreat: true, booking: summary(booking) },
+        { status: 409 },
+      )
+    }
+
     if (booking.status !== 'approved') {
-      return NextResponse.json({ 
-        error: 'Booking not approved',
-        valid: false,
-        booking: {
-          id: booking.id,
-          fullName: booking.fullName,
-          status: booking.status,
-          retreat: booking.retreat,
-        },
-      }, { status: 400 })
+      const reason = booking.status === 'cancelled' ? 'This booking was cancelled.' : 'This booking has not been approved yet.'
+      return NextResponse.json({ error: reason, valid: false, booking: summary(booking) }, { status: 400 })
     }
 
-    // Check if already checked in
     if (booking.attended) {
-      return NextResponse.json({ 
+      return NextResponse.json({
         message: 'Already checked in',
         valid: true,
         alreadyCheckedIn: true,
         checkedInAt: booking.checkedInAt,
-        booking: {
-          id: booking.id,
-          fullName: booking.fullName,
-          email: booking.email,
-          phone: booking.phone,
-          status: booking.status,
-          retreat: booking.retreat,
-        },
+        booking: summary(booking),
       })
     }
 
-    // Check in the user
-    const updated = await prisma.retreatBooking.update({
-      where: { id: booking.id },
-      data: {
-        attended: true,
-        checkedInAt: new Date(),
-      },
-      include: {
-        retreat: {
-          select: {
-            id: true,
-            title: true,
-            dateRange: true,
-            location: true,
-          },
-        },
-      },
+    // Conditional update so two scanners scanning the same ticket can't both "win".
+    const checkedInAt = new Date()
+    const result = await prisma.retreatBooking.updateMany({
+      where: { id: booking.id, attended: false },
+      data: { attended: true, checkedInAt },
+    })
+    if (!result.count) {
+      const latest = await prisma.retreatBooking.findUnique({ where: { id: booking.id }, select: { checkedInAt: true } })
+      return NextResponse.json({ message: 'Already checked in', valid: true, alreadyCheckedIn: true, checkedInAt: latest?.checkedInAt, booking: summary(booking) })
+    }
+
+    await audit({
+      actor: access.user,
+      action: 'checked_in',
+      entity: 'booking',
+      entityId: booking.id,
+      summary: `Checked in ${booking.fullName} (${partySize(booking)}) for ${booking.retreat.title}`,
+      request,
     })
 
-    return NextResponse.json({ 
-      message: 'Check-in successful',
-      valid: true,
-      alreadyCheckedIn: false,
-      checkedInAt: updated.checkedInAt,
-      booking: {
-        id: updated.id,
-        fullName: updated.fullName,
-        email: updated.email,
-        phone: updated.phone,
-        status: updated.status,
-        retreat: updated.retreat,
-      },
-    })
+    return NextResponse.json({ message: 'Check-in successful', valid: true, alreadyCheckedIn: false, checkedInAt, booking: summary(booking) })
   } catch (error) {
     console.error('Error scanning ticket:', error)
     return NextResponse.json({ error: 'Failed to process scan' }, { status: 500 })
   }
 }
 
-// Lookup ticket info without checking in
+// Look up a ticket without checking in.
 export async function GET(request: Request) {
-  const denied = await guardAdminApi('retreats')
-  if (denied) return denied
+  const access = await guardAnyAdminApi([
+    ['retreats', 'view'],
+    ['check-in', 'view'],
+  ])
+  if ('denied' in access) return access.denied
+
+  const raw = new URL(request.url).searchParams.get('code')
+  if (!raw) return NextResponse.json({ error: 'Ticket code is required' }, { status: 400 })
 
   try {
-    const { searchParams } = new URL(request.url)
-    const ticketCode = searchParams.get('code')
-
-    if (!ticketCode) {
-      return NextResponse.json({ error: 'Ticket code is required' }, { status: 400 })
-    }
-
-    const booking = await prisma.retreatBooking.findUnique({
-      where: { ticketCode },
-      include: {
-        retreat: {
-          select: {
-            id: true,
-            title: true,
-            dateRange: true,
-            location: true,
-          },
-        },
-      },
-    })
-
-    if (!booking) {
-      return NextResponse.json({ 
-        error: 'Invalid ticket code',
-        valid: false,
-      }, { status: 404 })
-    }
-
-    return NextResponse.json({ 
+    const booking = await findBooking({ ticketCode: extractTicketCode(raw) })
+    if (!booking) return NextResponse.json({ error: 'Invalid ticket code', valid: false }, { status: 404 })
+    return NextResponse.json({
       valid: true,
-      booking: {
-        id: booking.id,
-        fullName: booking.fullName,
-        email: booking.email,
-        phone: booking.phone,
-        status: booking.status,
-        attended: booking.attended,
-        checkedInAt: booking.checkedInAt,
-        ticketCode: booking.ticketCode,
-        retreat: booking.retreat,
-      },
+      booking: { ...summary(booking), attended: booking.attended, checkedInAt: booking.checkedInAt },
     })
   } catch (error) {
     console.error('Error looking up ticket:', error)
     return NextResponse.json({ error: 'Failed to lookup ticket' }, { status: 500 })
   }
 }
-
-
-
-
-
-
-
-

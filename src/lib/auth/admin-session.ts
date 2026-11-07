@@ -116,7 +116,7 @@ export const requireAdminApiAccess = async (moduleId?: AdminModuleId, level: Acc
   }
   if (!userHasModuleAccess(user, moduleId, level)) {
     return {
-      error: level === 'edit' ? 'You have view-only access to this area.' : 'You do not have access to this area.',
+      error: level === 'edit' && userHasModuleAccess(user, moduleId) ? 'You have view-only access to this area.' : 'You do not have access to this area.',
       status: 403,
     }
   }
