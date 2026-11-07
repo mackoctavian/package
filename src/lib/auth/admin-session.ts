@@ -1,5 +1,5 @@
 
-import { cookies } from 'next/headers'
+import { cookies, headers } from 'next/headers'
 import { redirect } from 'next/navigation'
 import crypto from 'node:crypto'
 import type { AdminUser } from '@prisma/client'
@@ -26,6 +26,23 @@ const getTokenFromCookie = async () => {
   return cookieStore.get(SESSION_COOKIE)?.value ?? null
 }
 
+/**
+ * The admin mobile app sends its session token as `Authorization: Bearer …`
+ * instead of a cookie. Same sessions table, same permission checks.
+ */
+const getTokenFromHeader = async () => {
+  try {
+    const value = (await headers()).get('authorization') ?? ''
+    const match = /^Bearer\s+([a-f0-9]{64,128})$/i.exec(value.trim())
+    return match ? match[1] : null
+  } catch {
+    return null
+  }
+}
+
+/** The bearer token on the current request, if the caller is the admin app. */
+export const getBearerToken = getTokenFromHeader
+
 export const getAdminUserByToken = async (token: string | null): Promise<AdminUserPayload | null> => {
   if (!token) return null
 
@@ -45,8 +62,28 @@ export const getAdminUserByToken = async (token: string | null): Promise<AdminUs
 }
 
 export const getCurrentAdminUser = async () => {
-  const token = await getTokenFromCookie()
+  const token = (await getTokenFromHeader()) ?? (await getTokenFromCookie())
   return getAdminUserByToken(token)
+}
+
+const MOBILE_SESSION_DAYS = 30
+
+/**
+ * Starts a session for the admin mobile app. Returns the raw token for the
+ * app to keep in the device's secure storage; no cookie is set.
+ */
+export const createMobileAdminSession = async (userId: string) => {
+  const token = crypto.randomBytes(48).toString('hex')
+  const expiresAt = new Date(Date.now() + MOBILE_SESSION_DAYS * 24 * 60 * 60 * 1000)
+  await prisma.adminSession.create({ data: { token, userId, expiresAt } })
+  return { token, expiresAt }
+}
+
+/** Ends the admin app session that made this request. */
+export const destroyBearerSession = async () => {
+  const token = await getTokenFromHeader()
+  if (!token) return
+  await prisma.adminSession.delete({ where: { token } }).catch(() => null)
 }
 
 export const createAdminSession = async (userId: string) => {
