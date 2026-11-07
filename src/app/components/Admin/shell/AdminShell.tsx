@@ -16,10 +16,10 @@ import {
   DropdownMenuTrigger,
 } from '@/app/components/ui/dropdown-menu'
 import { ROLE_LABELS } from '@/lib/auth/admin-permissions'
-import { type AdminUserPayload, userHasModuleAccess } from '@/lib/auth/admin-shared'
+import type { AdminUserPayload } from '@/lib/auth/admin-shared'
 import { cn } from '@/lib/utils'
 import { CommandPalette } from './CommandPalette'
-import { ADMIN_NAV, findNavItem } from './nav'
+import { ADMIN_NAV, canSeeNavItem, findNavItem } from './nav'
 
 export const initials = (name: string) =>
   name
@@ -32,7 +32,7 @@ export const initials = (name: string) =>
 function useVisibleNav(user: AdminUserPayload) {
   return useMemo(
     () =>
-      ADMIN_NAV.map((group) => ({ ...group, items: group.items.filter((item) => userHasModuleAccess(user, item.moduleId)) })).filter(
+      ADMIN_NAV.map((group) => ({ ...group, items: group.items.filter((item) => canSeeNavItem(user, item)) })).filter(
         (group) => group.items.length,
       ),
     [user],

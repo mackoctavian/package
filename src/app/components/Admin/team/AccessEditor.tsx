@@ -32,7 +32,14 @@ export const PRESETS: Array<{ id: string; label: string; description: string; ro
     label: 'Retreat desk',
     description: 'Bookings, approvals and check-in',
     role: 'EDITOR',
-    levels: { overview: 'view', retreats: 'edit', feedback: 'view' },
+    levels: { overview: 'view', retreats: 'edit', 'check-in': 'edit', feedback: 'view' },
+  },
+  {
+    id: 'door',
+    label: 'Door volunteer',
+    description: 'Only scans tickets at check-in',
+    role: 'EDITOR',
+    levels: { overview: 'view', 'check-in': 'edit' },
   },
   {
     id: 'finance',

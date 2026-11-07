@@ -9,7 +9,7 @@ import { buildWorkbook, excelResponse, type ExcelColumn, exportFilename } from '
 
 export const dynamic = 'force-dynamic'
 
-type Filters = { from?: Date; to?: Date; status?: string; retreatId?: string; q?: string }
+type Filters = { from?: Date; to?: Date; status?: string; retreatId?: string; q?: string; payment?: string; attended?: string }
 
 const parseFilters = (url: URL): Filters => {
   const date = (key: string, endOfDay = false) => {
@@ -19,7 +19,15 @@ const parseFilters = (url: URL): Filters => {
     return Number.isNaN(parsed.getTime()) ? undefined : parsed
   }
   const text = (key: string) => url.searchParams.get(key)?.trim() || undefined
-  return { from: date('from'), to: date('to', true), status: text('status'), retreatId: text('retreatId'), q: text('q') }
+  return {
+    from: date('from'),
+    to: date('to', true),
+    status: text('status'),
+    retreatId: text('retreatId'),
+    q: text('q'),
+    payment: text('payment'),
+    attended: text('attended'),
+  }
 }
 
 const createdRange = ({ from, to }: Filters) => (from || to ? { createdAt: { ...(from && { gte: from }), ...(to && { lte: to }) } } : {})
@@ -33,6 +41,7 @@ const dateOnly = 'dd mmm yyyy'
 type Dataset = {
   moduleId: AdminModuleId
   sheet: string
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- each dataset has its own row type
   load: (filters: Filters) => Promise<{ rows: any[]; columns: ExcelColumn<any>[] }>
 }
 
@@ -45,6 +54,8 @@ const DATASETS: Record<string, Dataset> = {
         ...createdRange(filters),
         ...(filters.status && { status: filters.status }),
         ...(filters.retreatId && { retreatId: filters.retreatId }),
+        ...(filters.payment && { paymentStatus: filters.payment }),
+        ...((filters.attended === 'yes' || filters.attended === 'no') && { attended: filters.attended === 'yes' }),
         ...search(filters.q, ['fullName', 'email', 'phone', 'ticketCode']),
       }
       const rows = await prisma.retreatBooking.findMany({ where, orderBy: { createdAt: 'desc' } })

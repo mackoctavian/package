@@ -16,15 +16,20 @@ import {
   Sparkles,
   Users2,
   CalendarRange,
+  ScanLine,
+  Ticket,
 } from 'lucide-react'
 
 import type { AdminModuleId } from '@/lib/auth/admin-permissions'
+import { type AdminUserPayload, userHasModuleAccess } from '@/lib/auth/admin-shared'
 
 export type AdminNavItem = {
   title: string
   href: string
   icon: LucideIcon
   moduleId: AdminModuleId
+  /** Also shown to people with access to any of these areas. */
+  orModules?: AdminModuleId[]
   /** Extra words that find this page in the command palette. */
   keywords?: string
 }
@@ -38,7 +43,11 @@ export const ADMIN_NAV: AdminNavGroup[] = [
   },
   {
     title: 'Retreats',
-    items: [{ title: 'Retreats & bookings', href: '/admin/retreats', icon: CalendarDays, moduleId: 'retreats', keywords: 'booking attendees check-in tickets' }],
+    items: [
+      { title: 'Retreats', href: '/admin/retreats', icon: CalendarDays, moduleId: 'retreats', keywords: 'sessions capacity' },
+      { title: 'Bookings', href: '/admin/bookings', icon: Ticket, moduleId: 'retreats', keywords: 'approve guests payments' },
+      { title: 'Check-in desk', href: '/admin/check-in', icon: ScanLine, moduleId: 'check-in', orModules: ['retreats'], keywords: 'scan qr tickets attendance' },
+    ],
   },
   {
     title: 'Giving',
@@ -84,3 +93,6 @@ export const findNavItem = (pathname: string) => {
   }
   return match
 }
+
+export const canSeeNavItem = (user: AdminUserPayload, item: AdminNavItem) =>
+  [item.moduleId, ...(item.orModules ?? [])].some((moduleId) => userHasModuleAccess(user, moduleId))

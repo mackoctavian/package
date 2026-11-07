@@ -6,7 +6,7 @@ import { ExternalLink, Download } from 'lucide-react'
 import { CommandDialog, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from '@/app/components/ui/command'
 import { type AdminUserPayload, userHasModuleAccess } from '@/lib/auth/admin-shared'
 import type { AdminModuleId } from '@/lib/auth/admin-permissions'
-import { ADMIN_NAV } from './nav'
+import { ADMIN_NAV, canSeeNavItem } from './nav'
 
 const EXPORTS: Array<{ title: string; dataset: string; moduleId: AdminModuleId }> = [
   { title: 'Export bookings to Excel', dataset: 'bookings', moduleId: 'retreats' },
@@ -29,7 +29,7 @@ export function CommandPalette({ open, onOpenChange, user }: { open: boolean; on
       <CommandList>
         <CommandEmpty>Nothing matches that search.</CommandEmpty>
         {ADMIN_NAV.map((group) => {
-          const items = group.items.filter((item) => userHasModuleAccess(user, item.moduleId))
+          const items = group.items.filter((item) => canSeeNavItem(user, item))
           if (!items.length) return null
           return (
             <CommandGroup key={group.title} heading={group.title}>
