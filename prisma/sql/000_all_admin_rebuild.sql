@@ -30,7 +30,7 @@ CREATE TABLE IF NOT EXISTS "admin_invites" (
     "role" "AdminRole" NOT NULL DEFAULT 'EDITOR',
     "allowed_modules" TEXT[] DEFAULT ARRAY[]::TEXT[],
     "token_hash" TEXT NOT NULL,
-    "invited_by_id" TEXT,
+    "invited_by_id" UUID, -- admin_users.id is a uuid column in Supabase
     "expires_at" TIMESTAMP(3) NOT NULL,
     "accepted_at" TIMESTAMP(3),
     "revoked_at" TIMESTAMP(3),
@@ -102,7 +102,7 @@ CREATE TABLE IF NOT EXISTS "members" (
     "photo_url" TEXT,
     "annual_leave_days" INTEGER NOT NULL DEFAULT 21,
     "notes" TEXT,
-    "admin_user_id" TEXT,
+    "admin_user_id" UUID, -- admin_users.id is a uuid column in Supabase
     "created_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updated_at" TIMESTAMP(3) NOT NULL,
     CONSTRAINT "members_pkey" PRIMARY KEY ("id"),

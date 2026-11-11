@@ -15,6 +15,8 @@ export type ModuleId =
   | 'ministries'
   | 'patrons'
   | 'about'
+  | 'members'
+  | 'leave'
   | 'team';
 
 export type AccessLevel = 'view' | 'edit';
@@ -213,7 +215,7 @@ export type ContentItem = {
 };
 
 export type Overview = {
-  can: { retreats: boolean; checkIn: boolean; donations: boolean; intentions: boolean; inbox: boolean; team: boolean };
+  can: { retreats: boolean; checkIn: boolean; donations: boolean; intentions: boolean; inbox: boolean; team: boolean; members?: boolean; leave?: boolean };
   stats: {
     pendingBookings: number;
     bookings30: number;
@@ -224,6 +226,8 @@ export type Overview = {
     newIntentions: number;
     unreadMessages: number;
     teamSize: number;
+    pendingLeave?: number;
+    awayToday?: number;
   };
   givingMonths: { month: string; total: number }[];
   openRetreats: { id: string; title: string; dateRange: string; location: string; imageSrc: string; status: string; capacity: number; booked: number }[];
@@ -258,3 +262,38 @@ export type Invite = {
 };
 
 export type ModuleInfo = { id: ModuleId; label: string; group: string; description: string };
+
+export type Member = {
+  id: string;
+  fullName: string;
+  email: string | null;
+  phone: string | null;
+  memberType: string;
+  position: string | null;
+  department: string | null;
+  status: 'active' | 'inactive';
+  startDate: string | null;
+  photoUrl: string | null;
+  annualLeaveDays: number;
+  notes: string | null;
+  adminUserId: string | null;
+  adminUser?: { id: string; name: string; email: string } | null;
+  annualLeaveUsed: number;
+  awayUntil?: string | null;
+};
+
+export type LeaveRequest = {
+  id: string;
+  memberId: string;
+  member: { id: string; fullName: string; memberType: string; position: string | null; department: string | null; annualLeaveDays: number };
+  leaveType: string;
+  startDate: string;
+  endDate: string;
+  days: number;
+  reason: string | null;
+  status: 'pending' | 'approved' | 'rejected' | 'cancelled';
+  reviewedByName: string | null;
+  reviewedAt: string | null;
+  reviewNote: string | null;
+  createdAt: string;
+};
