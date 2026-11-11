@@ -12,7 +12,7 @@ import { ActivityIndicator, Pressable, StyleSheet, View } from 'react-native';
 import Animated, { FadeIn, FadeInDown, LinearTransition } from 'react-native-reanimated';
 
 import { mobileNetworks } from '@/data/content';
-import { formatTZS } from '@/lib/format';
+import { useFormat, useT } from '@/i18n';
 import { haptic } from '@/lib/haptics';
 import { colors, radius, space } from '@/theme';
 import { DemoBanner, ErrorBanner } from './feedback';
@@ -23,10 +23,10 @@ export type PaymentMethod = 'mobile' | 'card' | 'bank';
 
 const simulatePayment = () => new Promise<void>((resolve) => setTimeout(resolve, 1800));
 
-const methods: { id: PaymentMethod; label: string; icon: IconName }[] = [
-  { id: 'mobile', label: 'Mobile money', icon: 'phone-portrait-outline' },
-  { id: 'card', label: 'Card', icon: 'card-outline' },
-  { id: 'bank', label: 'Bank', icon: 'business-outline' },
+const methods: { id: PaymentMethod; icon: IconName }[] = [
+  { id: 'mobile', icon: 'phone-portrait-outline' },
+  { id: 'card', icon: 'card-outline' },
+  { id: 'bank', icon: 'business-outline' },
 ];
 
 export function MockCheckout({
@@ -44,6 +44,8 @@ export function MockCheckout({
   onPaid: (method: PaymentMethod) => Promise<void> | void;
   busyLabel?: string;
 }) {
+  const t = useT();
+  const { money } = useFormat();
   const [method, setMethod] = useState<PaymentMethod>('mobile');
   const [network, setNetwork] = useState<string>(mobileNetworks[0]);
   const [phone, setPhone] = useState(defaultPhone);
@@ -54,12 +56,12 @@ export function MockCheckout({
   const pay = async () => {
     setError(null);
     if (method === 'mobile' && !/^[0-9+\s-]{9,16}$/.test(phone)) {
-      setError('Enter the mobile money number to charge.');
+      setError(t('checkout.errors.mobile'));
       haptic.error();
       return;
     }
     if (method === 'card' && (card.number.replace(/\D/g, '').length < 12 || !card.expiry || card.cvc.length < 3)) {
-      setError('Enter the card details to continue.');
+      setError(t('checkout.errors.card'));
       haptic.error();
       return;
     }
@@ -70,7 +72,7 @@ export function MockCheckout({
       setCard({ number: '', expiry: '', cvc: '' });
       await onPaid(method);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Payment could not be completed.');
+      setError(err instanceof Error ? err.message : t('checkout.errors.failed'));
       haptic.error();
     } finally {
       setProcessing(false);
@@ -82,10 +84,10 @@ export function MockCheckout({
       <Animated.View entering={FadeIn} style={styles.processing}>
         <ActivityIndicator size="large" color={colors.gold500} />
         <Text variant="heading" center>
-          {busyLabel ?? (method === 'mobile' ? 'Waiting for confirmation…' : 'Processing payment…')}
+          {busyLabel ?? (method === 'mobile' ? t('checkout.waiting') : t('checkout.processing'))}
         </Text>
         <Text variant="small" center>
-          {method === 'mobile' ? `A real checkout would send a PIN prompt to ${phone}.` : 'This is a demo; no money is moving.'}
+          {method === 'mobile' ? t('checkout.pinPrompt', { phone }) : t('checkout.demoNote')}
         </Text>
       </Animated.View>
     );
@@ -101,12 +103,12 @@ export function MockCheckout({
             {description}
           </Text>
           <Text variant="display" color={colors.white} style={{ marginTop: 4 }}>
-            {formatTZS(amount)}
+            {money(amount)}
           </Text>
         </View>
         <View style={{ alignItems: 'flex-end' }}>
           <Text variant="caption" color={colors.gold300} style={{ fontSize: 10 }}>
-            Reference
+            {t('common.reference')}
           </Text>
           <Text variant="smallStrong" color={colors.white}>
             {reference}
@@ -130,7 +132,7 @@ export function MockCheckout({
               style={[styles.method, active && styles.methodActive]}>
               <Icon name={item.icon} size={20} color={active ? colors.white : colors.navy700} />
               <Text variant="smallStrong" color={active ? colors.white : colors.navy700}>
-                {item.label}
+                {t(`checkout.methods.${item.id}`)}
               </Text>
             </Pressable>
           );
@@ -154,14 +156,14 @@ export function MockCheckout({
               </Pressable>
             ))}
           </View>
-          <TextField label="Mobile money number" icon="call-outline" keyboardType="phone-pad" value={phone} onChangeText={setPhone} placeholder="07XX XXX XXX" />
+          <TextField label={t('checkout.mobileNumber')} icon="call-outline" keyboardType="phone-pad" value={phone} onChangeText={setPhone} placeholder="07XX XXX XXX" />
         </Animated.View>
       ) : null}
 
       {method === 'card' ? (
         <Animated.View entering={FadeIn} style={{ gap: space.md }}>
           <TextField
-            label="Card number"
+            label={t('checkout.cardNumber')}
             icon="card-outline"
             keyboardType="number-pad"
             value={card.number}
@@ -171,11 +173,11 @@ export function MockCheckout({
           />
           <View style={{ flexDirection: 'row', gap: space.md }}>
             <View style={{ flex: 1 }}>
-              <TextField label="Expiry" value={card.expiry} onChangeText={(value) => setCard((prev) => ({ ...prev, expiry: value.slice(0, 5) }))} placeholder="MM/YY" autoComplete="off" />
+              <TextField label={t('checkout.expiry')} value={card.expiry} onChangeText={(value) => setCard((prev) => ({ ...prev, expiry: value.slice(0, 5) }))} placeholder="MM/YY" autoComplete="off" />
             </View>
             <View style={{ flex: 1 }}>
               <TextField
-                label="CVC"
+                label={t('checkout.cvc')}
                 keyboardType="number-pad"
                 value={card.cvc}
                 onChangeText={(value) => setCard((prev) => ({ ...prev, cvc: value.replace(/\D/g, '').slice(0, 4) }))}
@@ -185,14 +187,14 @@ export function MockCheckout({
               />
             </View>
           </View>
-          <Text variant="small">Demo only: card details stay on this screen and are cleared after the simulated payment.</Text>
+          <Text variant="small">{t('checkout.cardNote')}</Text>
         </Animated.View>
       ) : null}
 
       {method === 'bank' ? (
         <Animated.View entering={FadeIn} style={styles.bank}>
-          <Text variant="smallStrong">Bank transfer details</Text>
-          <Text variant="small">Account details will appear here once DMRC confirms its banking information. Use this reference so the office can match your transfer:</Text>
+          <Text variant="smallStrong">{t('checkout.bankTitle')}</Text>
+          <Text variant="small">{t('checkout.bankText')}</Text>
           <Pressable
             onPress={() => {
               Clipboard.setStringAsync(reference).catch(() => undefined);
@@ -208,7 +210,7 @@ export function MockCheckout({
       <ErrorBanner message={error} />
 
       <Button
-        label={method === 'bank' ? 'I have made the transfer' : `Pay ${formatTZS(amount)}`}
+        label={method === 'bank' ? t('checkout.transferred') : t('checkout.pay', { amount: money(amount) })}
         icon="lock-closed"
         variant="gold"
         onPress={pay}

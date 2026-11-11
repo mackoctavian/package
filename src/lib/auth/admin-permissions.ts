@@ -27,6 +27,7 @@ export const ADMIN_MODULES = [
   { id: 'ministries', label: 'Ministries', group: 'Website content', description: 'Ministry pages.' },
   { id: 'patrons', label: 'Patrons', group: 'Website content', description: 'Patron saints and clergy.' },
   { id: 'about', label: 'About page', group: 'Website content', description: 'Mission, history and leadership.' },
+  { id: 'translations', label: 'Translations', group: 'Website content', description: 'Swahili versions of content, and interface text on the website and mobile app.' },
   { id: 'members', label: 'Members directory', group: 'Organisation', description: 'Priests, religious, staff and volunteers.' },
   { id: 'leave', label: 'Leave requests', group: 'Organisation', description: 'Approve leave and see who is away.' },
   { id: 'team', label: 'Team & access', group: 'Organisation', description: 'Invite people and set what they can do.' },

@@ -6,6 +6,7 @@ import { CheckCircle2, Clock, Loader2, Mail, MapPin, Phone, Send } from 'lucide-
 import { Honeypot } from '@/app/components/site/FormFields'
 import { Button } from '@/app/components/ui/button'
 import { siteConfig } from '@/app/data/site'
+import { useT } from '@/i18n/client'
 import { cn } from '@/lib/utils'
 
 const emptyForm = { firstname: '', lastname: '', email: '', phnumber: '', message: '' }
@@ -14,6 +15,7 @@ const fieldClass =
   'w-full rounded-xl border border-input bg-white px-4 py-3 text-navy-900 placeholder:text-navy-300 transition focus:border-gold-400 focus:outline-none focus:ring-4 focus:ring-gold-200/50'
 
 export default function ContactSection() {
+  const t = useT()
   const [form, setForm] = useState(emptyForm)
   const [status, setStatus] = useState<'idle' | 'submitting' | 'success' | 'error'>('idle')
   const [error, setError] = useState<string | null>(null)
@@ -34,32 +36,30 @@ export default function ContactSection() {
       })
       if (!response.ok) {
         const payload = await response.json().catch(() => ({}))
-        throw new Error(payload.error ?? 'We could not send your message right now.')
+        throw new Error(payload.error ?? t('home.contact.error'))
       }
       setForm(emptyForm)
       setStatus('success')
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'We could not send your message right now.')
+      setError(err instanceof Error ? err.message : t('home.contact.error'))
       setStatus('error')
     }
   }
 
   const details = [
-    { icon: MapPin, label: 'Visit', lines: [siteConfig.contact.address, siteConfig.contact.postal], href: siteConfig.contact.mapsHref },
-    { icon: Phone, label: 'Call', lines: [siteConfig.contact.phone, siteConfig.contact.secondaryPhone], href: siteConfig.contact.phoneHref },
-    { icon: Mail, label: 'Email', lines: [siteConfig.contact.email], href: `mailto:${siteConfig.contact.email}` },
-    { icon: Clock, label: 'Office hours', lines: siteConfig.contact.officeHours },
+    { icon: MapPin, label: t('home.contact.visit'), lines: [siteConfig.contact.address, siteConfig.contact.postal], href: siteConfig.contact.mapsHref },
+    { icon: Phone, label: t('home.contact.call'), lines: [siteConfig.contact.phone, siteConfig.contact.secondaryPhone], href: siteConfig.contact.phoneHref },
+    { icon: Mail, label: t('home.contact.email'), lines: [siteConfig.contact.email], href: `mailto:${siteConfig.contact.email}` },
+    { icon: Clock, label: t('home.contact.hours'), lines: [t('common.officeHours.weekdays'), t('common.officeHours.saturday')] },
   ]
 
   return (
     <section id='contact' className='py-24 sm:py-28'>
       <div className='container grid gap-12 lg:grid-cols-12'>
         <div className='lg:col-span-5'>
-          <p className='eyebrow'>Contact</p>
-          <h2 className='mt-3 text-4xl leading-tight sm:text-5xl'>We’d love to hear from you</h2>
-          <p className='mt-4 text-lg text-muted-foreground'>
-            Questions about a retreat, a group booking or a Mass intention? Our office team will reply within one working day.
-          </p>
+          <p className='eyebrow'>{t('home.contact.eyebrow')}</p>
+          <h2 className='mt-3 text-4xl leading-tight sm:text-5xl'>{t('home.contact.title')}</h2>
+          <p className='mt-4 text-lg text-muted-foreground'>{t('home.contact.text')}</p>
           <ul className='mt-10 grid gap-6 sm:grid-cols-2'>
             {details.map((item) => (
               <li key={item.label} className='flex gap-4'>
@@ -92,29 +92,29 @@ export default function ContactSection() {
             {status === 'success' ? (
               <div className='flex flex-col items-center py-12 text-center'>
                 <CheckCircle2 className='h-14 w-14 text-emerald-600' />
-                <h3 className='mt-5 font-display text-3xl text-navy-900'>Thank you — message received</h3>
-                <p className='mt-2 max-w-sm text-muted-foreground'>We will get back to you shortly. God bless you.</p>
+                <h3 className='mt-5 font-display text-3xl text-navy-900'>{t('home.contact.successTitle')}</h3>
+                <p className='mt-2 max-w-sm text-muted-foreground'>{t('home.contact.successText')}</p>
                 <Button variant='outline' size='pill' className='mt-8' onClick={() => setStatus('idle')}>
-                  Send another message
+                  {t('home.contact.another')}
                 </Button>
               </div>
             ) : (
               <form onSubmit={submit} className='grid gap-5 sm:grid-cols-2'>
                 <Honeypot value={website} onChange={setWebsite} />
                 <label className='block'>
-                  <span className='mb-1.5 block text-sm font-medium text-navy-800'>First name</span>
+                  <span className='mb-1.5 block text-sm font-medium text-navy-800'>{t('home.contact.firstName')}</span>
                   <input required name='firstname' autoComplete='given-name' value={form.firstname} onChange={update} className={fieldClass} />
                 </label>
                 <label className='block'>
-                  <span className='mb-1.5 block text-sm font-medium text-navy-800'>Last name</span>
+                  <span className='mb-1.5 block text-sm font-medium text-navy-800'>{t('home.contact.lastName')}</span>
                   <input required name='lastname' autoComplete='family-name' value={form.lastname} onChange={update} className={fieldClass} />
                 </label>
                 <label className='block'>
-                  <span className='mb-1.5 block text-sm font-medium text-navy-800'>Email</span>
+                  <span className='mb-1.5 block text-sm font-medium text-navy-800'>{t('home.contact.emailLabel')}</span>
                   <input required type='email' name='email' autoComplete='email' value={form.email} onChange={update} className={fieldClass} />
                 </label>
                 <label className='block'>
-                  <span className='mb-1.5 block text-sm font-medium text-navy-800'>Phone</span>
+                  <span className='mb-1.5 block text-sm font-medium text-navy-800'>{t('home.contact.phone')}</span>
                   <input
                     required
                     type='tel'
@@ -127,7 +127,7 @@ export default function ContactSection() {
                   />
                 </label>
                 <label className='block sm:col-span-2'>
-                  <span className='mb-1.5 block text-sm font-medium text-navy-800'>How can we help?</span>
+                  <span className='mb-1.5 block text-sm font-medium text-navy-800'>{t('home.contact.message')}</span>
                   <textarea
                     required
                     minLength={5}
@@ -146,7 +146,7 @@ export default function ContactSection() {
                 <div className='sm:col-span-2'>
                   <Button type='submit' size='xl' disabled={status === 'submitting'} className='w-full sm:w-auto'>
                     {status === 'submitting' ? <Loader2 className='mr-2 h-4 w-4 animate-spin' /> : <Send className='mr-2 h-4 w-4' />}
-                    Send message
+                    {t('home.contact.send')}
                   </Button>
                 </div>
               </form>

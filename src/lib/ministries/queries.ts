@@ -4,6 +4,8 @@ import prisma from '@/lib/prisma'
 import { ministriesData } from '@/app/data/ministries'
 import { imagery } from '@/app/data/site'
 import type { MinistryFocusArea, MinistryGathering, MinistryType } from '@/app/types/ministry'
+import { localizeRecords } from '@/lib/i18n/content'
+import { DEFAULT_LOCALE, type Locale } from '@/i18n/config'
 
 /**
  * Public ministry queries. Ministries managed in the admin take priority; the
@@ -71,9 +73,9 @@ const fromRow = (row: MinistryRow): MinistryType => {
   }
 }
 
-export const getMinistries = cache(async (): Promise<MinistryType[]> => {
+export const getMinistries = cache(async (locale: Locale = DEFAULT_LOCALE): Promise<MinistryType[]> => {
   try {
-    const rows = await prisma.ministry.findMany({ where: { isActive: true }, orderBy: { order: 'asc' } })
+    const rows = await localizeRecords('ministry', await prisma.ministry.findMany({ where: { isActive: true }, orderBy: { order: 'asc' } }), locale)
     if (rows.length) return rows.map(fromRow).map(withImage)
   } catch (error) {
     console.error('[ministries] database unavailable, using static data', error instanceof Error ? error.message : error)
@@ -81,8 +83,8 @@ export const getMinistries = cache(async (): Promise<MinistryType[]> => {
   return ministriesData.filter((item) => item.isActive !== false).map(withImage)
 })
 
-export const getMinistryBySlug = cache(async (slug: string) => {
-  const all = await getMinistries()
+export const getMinistryBySlug = cache(async (slug: string, locale: Locale = DEFAULT_LOCALE) => {
+  const all = await getMinistries(locale)
   const index = all.findIndex((item) => item.slug === slug)
   return index === -1 ? undefined : { ministry: all[index], others: all.filter((_, i) => i !== index).slice(0, 3) }
 })

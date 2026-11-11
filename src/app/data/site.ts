@@ -17,7 +17,6 @@ export const siteConfig = {
     secondaryPhone: '0713 840 018',
     address: 'Jesus Town, Vikindu, Tanzania',
     postal: 'P.O. Box 14189, Dar es Salaam',
-    officeHours: ['Mon – Fri: 9am – 5pm', 'Sat: 10am – 2pm'],
     mapsHref: 'https://maps.google.com/?q=Divine+Mercy+Retreat+Center+Vikindu',
   },
   // TODO: replace with the centre's real social media profiles.
@@ -28,10 +27,16 @@ export const siteConfig = {
   ] as const,
 }
 
+/**
+ * Navigation. Labels and descriptions are translated: `id` points at
+ * `nav.items.<id>` in `src/i18n/messages/nav.ts` (and footer groups at
+ * `nav.footer.<id>`), so the same structure serves English and Swahili.
+ */
 export type NavLink = {
-  label: string
+  id: string
   href: string
-  description?: string
+  /** Show the `nav.items.<id>.description` line in dropdowns. */
+  described?: boolean
 }
 
 export type NavItem = NavLink & {
@@ -40,65 +45,65 @@ export type NavItem = NavLink & {
 
 export const mainNavigation: NavItem[] = [
   {
-    label: 'Retreats',
+    id: 'retreats',
     href: '/retreats',
     children: [
-      { label: 'Upcoming retreats', href: '/retreats', description: 'Browse dates and reserve your place' },
-      { label: 'Manage my booking', href: '/retreats/check-booking', description: 'Look up, download or check a ticket' },
-      { label: 'Residential retreats', href: '/ministries/residential-retreats', description: 'Five-day silent and preached retreats' },
-      { label: 'Parish retreats', href: '/ministries/parish-retreat', description: 'Bring your community to DMRC' },
+      { id: 'upcomingRetreats', href: '/retreats', described: true },
+      { id: 'manageBooking', href: '/retreats/check-booking', described: true },
+      { id: 'residentialRetreats', href: '/ministries/residential-retreats', described: true },
+      { id: 'parishRetreats', href: '/ministries/parish-retreat', described: true },
     ],
   },
   {
-    label: 'Worship',
+    id: 'worship',
     href: '/mass-intentions',
     children: [
-      { label: 'Request a Mass intention', href: '/mass-intentions', description: 'Offer a Mass for a loved one or intention' },
-      { label: 'Saturday service', href: '/ministries/saturday-service', description: 'Weekly healing and adoration service' },
-      { label: 'Spiritual counselling', href: '/ministries/spiritual-counselling', description: 'Meet a priest for guidance and confession' },
+      { id: 'massIntention', href: '/mass-intentions', described: true },
+      { id: 'saturdayService', href: '/ministries/saturday-service', described: true },
+      { id: 'counselling', href: '/ministries/spiritual-counselling', described: true },
     ],
   },
   {
-    label: 'Ministries',
+    id: 'ministries',
     href: '/ministries',
     children: [
-      { label: 'All ministries', href: '/ministries', description: 'Every way we serve the Church' },
-      { label: 'Bible convention', href: '/ministries/bible-convention' },
-      { label: 'Children’s ministry', href: '/ministries/bible-children' },
-      { label: 'Media ministry', href: '/ministries/media-ministries' },
-      { label: 'Spiritual partners', href: '/ministries/spiritual-partners' },
+      { id: 'allMinistries', href: '/ministries', described: true },
+      { id: 'bibleConvention', href: '/ministries/bible-convention' },
+      { id: 'childrensMinistry', href: '/ministries/bible-children' },
+      { id: 'mediaMinistry', href: '/ministries/media-ministries' },
+      { id: 'spiritualPartners', href: '/ministries/spiritual-partners' },
     ],
   },
   {
-    label: 'Resources',
+    id: 'resources',
     href: '/publications',
     children: [
-      { label: 'Publications', href: '/publications', description: 'Bibles, books, CDs and calendars' },
-      { label: 'News & events', href: '/news', description: 'Stories and announcements from DMRC' },
-      { label: 'Gallery', href: '/gallery', description: 'Photos, videos and audio' },
+      { id: 'publications', href: '/publications', described: true },
+      { id: 'news', href: '/news', described: true },
+      { id: 'gallery', href: '/gallery', described: true },
     ],
   },
-  { label: 'About', href: '/about' },
+  { id: 'about', href: '/about' },
 ]
 
-export const footerNavigation: { title: string; links: NavLink[] }[] = [
+export const footerNavigation: { id: string; links: NavLink[] }[] = [
   {
-    title: 'Visit',
+    id: 'visit',
     links: [
-      { label: 'Upcoming retreats', href: '/retreats' },
-      { label: 'Manage my booking', href: '/retreats/check-booking' },
-      { label: 'Ministries', href: '/ministries' },
-      { label: 'About DMRC', href: '/about' },
+      { id: 'upcomingRetreats', href: '/retreats' },
+      { id: 'manageBooking', href: '/retreats/check-booking' },
+      { id: 'ministries', href: '/ministries' },
+      { id: 'aboutDmrc', href: '/about' },
     ],
   },
   {
-    title: 'Participate',
+    id: 'participate',
     links: [
-      { label: 'Mass intentions', href: '/mass-intentions' },
-      { label: 'Give online', href: '/donation' },
-      { label: 'Publications', href: '/publications' },
-      { label: 'News & events', href: '/news' },
-      { label: 'Gallery', href: '/gallery' },
+      { id: 'massIntentions', href: '/mass-intentions' },
+      { id: 'giveOnline', href: '/donation' },
+      { id: 'publications', href: '/publications' },
+      { id: 'news', href: '/news' },
+      { id: 'gallery', href: '/gallery' },
     ],
   },
 ]

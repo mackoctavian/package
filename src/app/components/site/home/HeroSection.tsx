@@ -1,6 +1,7 @@
 'use client'
 
-import Link from 'next/link'
+import { Link } from '@/i18n/link'
+import { useT } from '@/i18n/client'
 import { useEffect, useState } from 'react'
 import { AnimatePresence, motion } from 'framer-motion'
 import { ArrowRight, CalendarCheck, Flame, HeartHandshake, Ticket } from 'lucide-react'
@@ -13,33 +14,14 @@ import { cn } from '@/lib/utils'
 const ROTATION_MS = 7000
 
 const quickActions = [
-  {
-    title: 'Book a retreat',
-    description: 'Reserve your place in minutes',
-    href: '/retreats',
-    icon: CalendarCheck,
-  },
-  {
-    title: 'Request a Mass',
-    description: 'Offer a Mass intention',
-    href: '/mass-intentions',
-    icon: Flame,
-  },
-  {
-    title: 'Give online',
-    description: 'Support the mission of mercy',
-    href: '/donation',
-    icon: HeartHandshake,
-  },
-  {
-    title: 'Manage booking',
-    description: 'Find or download your ticket',
-    href: '/retreats/check-booking',
-    icon: Ticket,
-  },
-]
+  { id: 'book', href: '/retreats', icon: CalendarCheck },
+  { id: 'mass', href: '/mass-intentions', icon: Flame },
+  { id: 'give', href: '/donation', icon: HeartHandshake },
+  { id: 'manage', href: '/retreats/check-booking', icon: Ticket },
+] as const
 
 export default function HeroSection({ slides }: { slides: HeroSlideView[] }) {
+  const t = useT()
   const [index, setIndex] = useState(0)
   const slide = slides[index] ?? slides[0]
 
@@ -49,10 +31,8 @@ export default function HeroSection({ slides }: { slides: HeroSlideView[] }) {
     return () => clearInterval(timer)
   }, [slides.length])
 
-  const title = slide?.title || 'Come away and rest a while.'
-  const subtitle =
-    slide?.subtitle ||
-    'Silent and preached retreats, daily Eucharist and healing prayer at the Divine Mercy Retreat Center in Vikindu, Tanzania.'
+  const title = slide?.title || t('home.hero.title')
+  const subtitle = slide?.subtitle || t('home.hero.subtitle')
 
   return (
     <section className='relative !py-0'>
@@ -81,31 +61,32 @@ export default function HeroSection({ slides }: { slides: HeroSlideView[] }) {
             className='max-w-2xl'
           >
             <p className='eyebrow text-gold-300'>
-              Divine Mercy Retreat Center<span className='hidden sm:inline'> · Vikindu</span>
+              {t('home.hero.eyebrow')}
+              <span className='hidden sm:inline'>{t('home.hero.eyebrowPlace')}</span>
             </p>
             <h1 className='mt-5 text-5xl leading-[1.05] text-white sm:text-6xl lg:text-7xl'>{title}</h1>
             <p className='mt-6 max-w-xl text-lg leading-relaxed text-navy-100'>{subtitle}</p>
             <div className='mt-9 flex flex-wrap gap-3'>
               <Button asChild size='xl' variant='gold'>
                 <Link href={slide?.linkUrl || '/retreats'}>
-                  {slide?.linkText || 'Find a retreat'} <ArrowRight className='ml-2 h-4 w-4' />
+                  {slide?.linkText || t('home.hero.cta')} <ArrowRight className='ml-2 h-4 w-4' />
                 </Link>
               </Button>
               <Button asChild size='xl' variant='outline-light'>
-                <Link href='/mass-intentions'>Request a Mass intention</Link>
+                <Link href='/mass-intentions'>{t('common.actions.requestMassIntention')}</Link>
               </Button>
             </div>
           </motion.div>
 
           {slides.length > 1 && (
-            <div className='mt-10 flex gap-2' role='tablist' aria-label='Hero slides'>
+            <div className='mt-10 flex gap-2' role='tablist' aria-label={t('home.hero.slidesLabel')}>
               {slides.map((item, i) => (
                 <button
                   key={item.id}
                   type='button'
                   role='tab'
                   aria-selected={i === index}
-                  aria-label={`Show slide ${i + 1}`}
+                  aria-label={t('home.hero.showSlide', { number: i + 1 })}
                   onClick={() => setIndex(i)}
                   className={cn('h-1.5 rounded-full transition-all', i === index ? 'w-10 bg-gold-300' : 'w-5 bg-white/40 hover:bg-white/70')}
                 />
@@ -129,10 +110,10 @@ export default function HeroSection({ slides }: { slides: HeroSlideView[] }) {
               </span>
               <span>
                 <span className='flex items-center gap-1.5 font-semibold text-navy-900'>
-                  {action.title}
+                  {t(`home.quick.${action.id}.title`)}
                   <ArrowRight className='h-4 w-4 -translate-x-1 opacity-0 transition-all group-hover:translate-x-0 group-hover:opacity-100' />
                 </span>
-                <span className='mt-1 block text-sm text-muted-foreground'>{action.description}</span>
+                <span className='mt-1 block text-sm text-muted-foreground'>{t(`home.quick.${action.id}.description`)}</span>
               </span>
             </Link>
           ))}

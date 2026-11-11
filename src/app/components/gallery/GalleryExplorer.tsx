@@ -1,6 +1,7 @@
 'use client'
 
-import Link from 'next/link'
+import { useT } from '@/i18n/client'
+import { Link } from '@/i18n/link'
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { ChevronLeft, ChevronRight, Disc3, Film, Headphones, ImageIcon, Play, ShoppingBag, X } from 'lucide-react'
 
@@ -11,11 +12,11 @@ import { cn } from '@/lib/utils'
 
 type Tab = keyof GalleryBuckets
 
-const tabMeta: { id: Tab; label: string; icon: typeof ImageIcon }[] = [
-  { id: 'photos', label: 'Photos', icon: ImageIcon },
-  { id: 'videos', label: 'Videos', icon: Film },
-  { id: 'audio', label: 'Audio', icon: Headphones },
-  { id: 'cds', label: 'Music CDs', icon: Disc3 },
+const tabMeta: { id: Tab; icon: typeof ImageIcon }[] = [
+  { id: 'photos', icon: ImageIcon },
+  { id: 'videos', icon: Film },
+  { id: 'audio', icon: Headphones },
+  { id: 'cds', icon: Disc3 },
 ]
 
 const useModalKeys = (open: boolean, handlers: Record<string, () => void>) => {
@@ -33,6 +34,7 @@ const useModalKeys = (open: boolean, handlers: Record<string, () => void>) => {
 }
 
 function Lightbox({ photos, index, onChange, onClose }: { photos: GalleryMedia[]; index: number; onChange: (i: number) => void; onClose: () => void }) {
+  const t = useT()
   const photo = photos[index]
   const prev = useCallback(() => onChange((index - 1 + photos.length) % photos.length), [index, photos.length, onChange])
   const next = useCallback(() => onChange((index + 1) % photos.length), [index, photos.length, onChange])
@@ -43,9 +45,9 @@ function Lightbox({ photos, index, onChange, onClose }: { photos: GalleryMedia[]
     <div role='dialog' aria-modal='true' aria-label={photo.title} className='fixed inset-0 z-[70] flex flex-col bg-navy-950/95 backdrop-blur-sm'>
       <div className='flex items-center justify-between px-4 py-4 text-white sm:px-8'>
         <p className='text-sm text-navy-200'>
-          {index + 1} / {photos.length}
+          {t('pages.gallery.position', { current: index + 1, total: photos.length })}
         </p>
-        <button type='button' onClick={onClose} aria-label='Close' className='rounded-full p-2 hover:bg-white/10'>
+        <button type='button' onClick={onClose} aria-label={t('common.actions.close')} className='rounded-full p-2 hover:bg-white/10'>
           <X className='h-6 w-6' />
         </button>
       </div>
@@ -53,10 +55,10 @@ function Lightbox({ photos, index, onChange, onClose }: { photos: GalleryMedia[]
         <SmartImage src={photo.src} alt={photo.title} fill sizes='100vw' className='object-contain' priority />
         {photos.length > 1 && (
           <>
-            <button type='button' onClick={prev} aria-label='Previous photo' className='absolute left-3 top-1/2 -translate-y-1/2 rounded-full bg-white/10 p-3 text-white hover:bg-white/20 sm:left-6'>
+            <button type='button' onClick={prev} aria-label={t('pages.gallery.previous')} className='absolute left-3 top-1/2 -translate-y-1/2 rounded-full bg-white/10 p-3 text-white hover:bg-white/20 sm:left-6'>
               <ChevronLeft className='h-6 w-6' />
             </button>
-            <button type='button' onClick={next} aria-label='Next photo' className='absolute right-3 top-1/2 -translate-y-1/2 rounded-full bg-white/10 p-3 text-white hover:bg-white/20 sm:right-6'>
+            <button type='button' onClick={next} aria-label={t('pages.gallery.next')} className='absolute right-3 top-1/2 -translate-y-1/2 rounded-full bg-white/10 p-3 text-white hover:bg-white/20 sm:right-6'>
               <ChevronRight className='h-6 w-6' />
             </button>
           </>
@@ -71,11 +73,12 @@ function Lightbox({ photos, index, onChange, onClose }: { photos: GalleryMedia[]
 }
 
 function VideoModal({ video, onClose }: { video: GalleryMedia; onClose: () => void }) {
+  const t = useT()
   const keys = useMemo(() => ({ Escape: onClose }), [onClose])
   useModalKeys(true, keys)
   return (
     <div role='dialog' aria-modal='true' aria-label={video.title} className='fixed inset-0 z-[70] flex items-center justify-center bg-navy-950/95 p-4' onClick={onClose}>
-      <button type='button' onClick={onClose} aria-label='Close' className='absolute right-4 top-4 rounded-full p-2 text-white hover:bg-white/10'>
+      <button type='button' onClick={onClose} aria-label={t('common.actions.close')} className='absolute right-4 top-4 rounded-full p-2 text-white hover:bg-white/10'>
         <X className='h-6 w-6' />
       </button>
       <div className='w-full max-w-5xl' onClick={(event) => event.stopPropagation()}>
@@ -94,6 +97,7 @@ function VideoModal({ video, onClose }: { video: GalleryMedia; onClose: () => vo
 }
 
 export default function GalleryExplorer({ buckets }: { buckets: GalleryBuckets }) {
+  const t = useT()
   const tabs = tabMeta.filter((tab) => buckets[tab.id].length > 0)
   const [tab, setTab] = useState<Tab>(tabs[0]?.id ?? 'photos')
   const [album, setAlbum] = useState<string | null>(null)
@@ -106,12 +110,12 @@ export default function GalleryExplorer({ buckets }: { buckets: GalleryBuckets }
   const closeVideo = useCallback(() => setVideo(null), [])
 
   if (!tabs.length) {
-    return <p className='rounded-3xl border border-dashed border-border p-12 text-center text-muted-foreground'>The gallery is being prepared. Please check back soon.</p>
+    return <p className='rounded-3xl border border-dashed border-border p-12 text-center text-muted-foreground'>{t('pages.gallery.empty')}</p>
   }
 
   return (
     <div>
-      <div role='tablist' aria-label='Media type' className='flex flex-wrap gap-2'>
+      <div role='tablist' aria-label={t('pages.gallery.mediaType')} className='flex flex-wrap gap-2'>
         {tabs.map((item) => (
           <button
             key={item.id}
@@ -124,7 +128,7 @@ export default function GalleryExplorer({ buckets }: { buckets: GalleryBuckets }
               tab === item.id ? 'border-navy-900 bg-navy-900 text-white' : 'border-border bg-white text-navy-800 hover:border-navy-300',
             )}
           >
-            <item.icon className='h-4 w-4' /> {item.label}
+            <item.icon className='h-4 w-4' /> {t(`pages.gallery.tabs.${item.id}`)}
             <span className={cn('text-xs', tab === item.id ? 'text-navy-200' : 'text-muted-foreground')}>{buckets[item.id].length}</span>
           </button>
         ))}
@@ -134,7 +138,7 @@ export default function GalleryExplorer({ buckets }: { buckets: GalleryBuckets }
         {tab === 'photos' && (
           <>
             {albums.length > 1 && (
-              <div className='mb-8 flex flex-wrap gap-x-6 gap-y-2 border-b border-border text-sm' aria-label='Albums'>
+              <div className='mb-8 flex flex-wrap gap-x-6 gap-y-2 border-b border-border text-sm' aria-label={t('pages.gallery.albums')}>
                 {[null, ...albums].map((value) => (
                   <button
                     key={value ?? 'all'}
@@ -143,7 +147,7 @@ export default function GalleryExplorer({ buckets }: { buckets: GalleryBuckets }
                     onClick={() => setAlbum(value)}
                     className={cn('-mb-px border-b-2 pb-3 font-medium transition', album === value ? 'border-gold-500 text-navy-900' : 'border-transparent text-muted-foreground hover:text-navy-900')}
                   >
-                    {value ?? 'All photos'}
+                    {value ?? t('pages.gallery.allPhotos')}
                   </button>
                 ))}
               </div>
@@ -203,10 +207,10 @@ export default function GalleryExplorer({ buckets }: { buckets: GalleryBuckets }
                 </div>
                 {item.src && item.src !== '#' ? (
                   <audio controls preload='none' src={item.src} className='w-full sm:w-72'>
-                    Your browser does not support audio playback.
+                    {t('pages.gallery.noAudio')}
                   </audio>
                 ) : (
-                  <span className='rounded-full bg-parchment px-4 py-2 text-xs font-medium text-navy-700'>Recording coming soon</span>
+                  <span className='rounded-full bg-parchment px-4 py-2 text-xs font-medium text-navy-700'>{t('pages.gallery.audioSoon')}</span>
                 )}
               </li>
             ))}
@@ -225,7 +229,7 @@ export default function GalleryExplorer({ buckets }: { buckets: GalleryBuckets }
                   {item.artist && <p className='text-sm text-gold-700'>{item.artist}</p>}
                   {item.description && <p className='mt-2 line-clamp-3 text-sm text-muted-foreground'>{item.description}</p>}
                   <Link href={item.src && item.src !== '#' ? item.src : '/publications?category=CDs'} className='mt-4 inline-flex items-center gap-2 text-sm font-semibold text-navy-900 hover:text-gold-700'>
-                    <ShoppingBag className='h-4 w-4' /> Get this CD
+                    <ShoppingBag className='h-4 w-4' /> {t('pages.gallery.getCd')}
                   </Link>
                 </div>
               </article>

@@ -18,5 +18,16 @@ export type Article = {
   gallery: string[]
 }
 
-export const formatArticleDate = (iso?: string) =>
-  iso ? new Intl.DateTimeFormat('en-GB', { day: 'numeric', month: 'long', year: 'numeric' }).format(new Date(iso)) : ''
+export const formatArticleDate = (iso?: string, locale: 'en' | 'sw' = 'en') =>
+  iso
+    ? new Intl.DateTimeFormat(locale === 'sw' ? 'sw-TZ' : 'en-GB', { day: 'numeric', month: 'long', year: 'numeric' }).format(new Date(iso))
+    : ''
+
+/** "5 min read" in the visitor's language (reading times are stored in English). */
+export const formatReadingTime = (
+  readingTime: string | undefined,
+  t: { dynamic: (key: string, values?: Record<string, number>, fallback?: string) => string },
+) => {
+  const minutes = Number(readingTime?.match(/\d+/)?.[0])
+  return minutes ? t.dynamic('news.readingTime', { count: minutes }, readingTime) : readingTime
+}

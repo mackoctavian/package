@@ -10,7 +10,8 @@ import { MockCheckout } from '@/components/MockCheckout';
 import { Button, Card, Icon, Text } from '@/components/ui';
 import { givingFunds, givingPresets } from '@/data/content';
 import { recordDonation } from '@/lib/api';
-import { EMAIL_PATTERN, formatTZS, makeReference, PHONE_PATTERN } from '@/lib/format';
+import { useFormat, useT } from '@/i18n';
+import { EMAIL_PATTERN, makeReference, PHONE_PATTERN } from '@/lib/format';
 import { haptic } from '@/lib/haptics';
 import { actions, getAppState } from '@/lib/store';
 import { colors, fonts, radius, space } from '@/theme';
@@ -20,6 +21,8 @@ const order: Step[] = ['gift', 'details', 'payment'];
 
 export default function DonateScreen() {
   const params = useLocalSearchParams<{ fund?: string }>();
+  const t = useT();
+  const { money } = useFormat();
   const profile = getAppState().profile;
   const [step, setStep] = useState<Step>('gift');
   const [fund, setFund] = useState<string>(givingFunds.some((f) => f.id === params.fund) ? (params.fund as string) : 'general');
@@ -31,12 +34,12 @@ export default function DonateScreen() {
   const [reference] = useState(() => makeReference('GIFT'));
 
   const amount = useMemo(() => (custom ? Number(custom) : preset) || 0, [custom, preset]);
-  const fundLabel = givingFunds.find((f) => f.id === fund)?.label ?? '';
+  const fundLabel = givingFunds.some((f) => f.id === fund) ? t(`content.funds.${fund as (typeof givingFunds)[number]['id']}.label`) : '';
   const index = order.indexOf(step);
 
   const continueFromGift = () => {
     if (amount < 1000) {
-      setErrors({ amount: 'Please choose an amount of at least TZS 1,000.' });
+      setErrors({ amount: t('donate.minAmount', { amount: money(1000) }) });
       haptic.error();
       return;
     }
@@ -46,9 +49,9 @@ export default function DonateScreen() {
 
   const continueFromDetails = () => {
     const next: Record<string, string> = {};
-    if (!details.fullName.trim()) next.fullName = 'Please enter your name.';
-    if (!EMAIL_PATTERN.test(details.email.trim())) next.email = 'Please enter a valid email address.';
-    if (!PHONE_PATTERN.test(details.phone.trim())) next.phone = 'Please enter a valid phone number.';
+    if (!details.fullName.trim()) next.fullName = t('common.errors.name');
+    if (!EMAIL_PATTERN.test(details.email.trim())) next.email = t('common.errors.email');
+    if (!PHONE_PATTERN.test(details.phone.trim())) next.phone = t('common.errors.phone');
     setErrors(next);
     if (Object.keys(next).length) {
       haptic.error();
@@ -63,31 +66,31 @@ export default function DonateScreen() {
     try {
       await recordDonation({ ...details, amount, paymentMethod: method, fund, reference });
     } catch (error) {
-      setSaveError(error instanceof Error ? error.message : 'We could not record your gift.');
+      setSaveError(error instanceof Error ? error.message : t('donate.recordError'));
       throw error;
     }
-    actions.addReceipt({ reference, kind: 'donation', title: `Gift · ${fundLabel}`, amount, createdAt: new Date().toISOString(), detail: 'Demo payment' });
+    actions.addReceipt({ reference, kind: 'donation', title: t('donate.gift', { fund: fundLabel }), amount, createdAt: new Date().toISOString(), detail: t('donate.demoPayment') });
     haptic.success();
     setStep('done');
   };
 
   if (step === 'done') {
     return (
-      <FlowLayout title="Thank you" onClose={() => router.back()} footer={<Button label="Done" onPress={() => router.back()} />}>
+      <FlowLayout title={t('donate.thankYou')} onClose={() => router.back()} footer={<Button label={t('common.done')} onPress={() => router.back()} />}>
         <Animated.View entering={FadeIn} style={{ alignItems: 'center', gap: space.sm }}>
           <SuccessMark />
           <Text variant="display" center>
-            Thank you for your generosity
+            {t('donate.thanksTitle')}
           </Text>
           <Text variant="body" color={colors.muted} center>
-            Your gift of {formatTZS(amount)} to {fundLabel.toLowerCase()} has been recorded. The community remembers all benefactors in prayer.
+            {t('donate.thanksText', { amount: money(amount), fund: fundLabel })}
           </Text>
           <Card style={{ alignSelf: 'stretch', marginTop: space.lg, gap: space.sm }}>
             {[
-              ['Reference', reference],
-              ['Fund', fundLabel],
-              ['Amount', formatTZS(amount)],
-              ['Payment', 'Demo (no money taken)'],
+              [t('common.reference'), reference],
+              [t('donate.fund'), fundLabel],
+              [t('donate.amountLabel'), money(amount)],
+              [t('donate.payment'), t('donate.demo')],
             ].map(([label, value]) => (
               <View key={label} style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
                 <Text variant="small">{label}</Text>
@@ -102,8 +105,8 @@ export default function DonateScreen() {
 
   return (
     <FlowLayout
-      title={step === 'gift' ? 'Your gift' : step === 'details' ? 'Your details' : 'Payment'}
-      subtitle={`Step ${index + 1} of 3`}
+      title={t(`donate.steps.${step}`)}
+      subtitle={t('common.stepOf', { current: index + 1, total: 3 })}
       step={index}
       steps={3}
       onClose={() => router.back()}
@@ -112,16 +115,16 @@ export default function DonateScreen() {
         step === 'payment' ? undefined : (
           <View style={{ gap: 8 }}>
             <Text variant="small" center>
-              Giving <Text variant="smallStrong">{formatTZS(amount)}</Text> · {fundLabel}
+              {t('donate.giving', { amount: money(amount), fund: fundLabel })}
             </Text>
-            <Button label="Continue" iconRight="arrow-forward" onPress={step === 'gift' ? continueFromGift : continueFromDetails} />
+            <Button label={t('common.continue')} iconRight="arrow-forward" onPress={step === 'gift' ? continueFromGift : continueFromDetails} />
           </View>
         )
       }>
       <Animated.View key={step} entering={FadeInRight.springify().damping(18)} exiting={FadeOutLeft.duration(120)} style={{ gap: space.lg }}>
         {step === 'gift' ? (
           <>
-            <Text variant="caption">Choose a fund</Text>
+            <Text variant="caption">{t('donate.chooseFund')}</Text>
             <View style={{ gap: space.sm }}>
               {givingFunds.map((item) => {
                 const active = fund === item.id;
@@ -139,8 +142,8 @@ export default function DonateScreen() {
                       <Icon name={item.icon} size={20} color={active ? colors.gold300 : colors.gold600} />
                     </View>
                     <View style={{ flex: 1 }}>
-                      <Text variant="bodyStrong">{item.label}</Text>
-                      <Text variant="small">{item.text}</Text>
+                      <Text variant="bodyStrong">{t(`content.funds.${item.id}.label`)}</Text>
+                      <Text variant="small">{t(`content.funds.${item.id}.text`)}</Text>
                     </View>
                     <Icon name={active ? 'radio-button-on' : 'radio-button-off'} size={20} color={active ? colors.navy900 : colors.subtle} />
                   </Pressable>
@@ -149,7 +152,7 @@ export default function DonateScreen() {
             </View>
 
             <Text variant="caption" style={{ marginTop: space.md }}>
-              Amount (TZS)
+              {t('donate.amount')}
             </Text>
             <View style={styles.presets}>
               {givingPresets.map((value) => {
@@ -182,10 +185,10 @@ export default function DonateScreen() {
                   setErrors({});
                 }}
                 keyboardType="number-pad"
-                placeholder="Other amount"
+                placeholder={t('donate.otherAmount')}
                 placeholderTextColor={colors.subtle}
                 style={styles.customInput}
-                accessibilityLabel="Other amount"
+                accessibilityLabel={t('donate.otherAmount')}
               />
             </View>
             {errors.amount ? <ErrorBanner message={errors.amount} /> : null}
@@ -194,15 +197,15 @@ export default function DonateScreen() {
 
         {step === 'details' ? (
           <>
-            <TextField label="Full name" required value={details.fullName} onChangeText={(v) => setDetails((d) => ({ ...d, fullName: v }))} error={errors.fullName} autoComplete="name" />
-            <TextField label="Email" required icon="mail-outline" keyboardType="email-address" autoCapitalize="none" value={details.email} onChangeText={(v) => setDetails((d) => ({ ...d, email: v }))} error={errors.email} hint="We send your receipt here." />
-            <TextField label="Phone" required icon="call-outline" keyboardType="phone-pad" value={details.phone} onChangeText={(v) => setDetails((d) => ({ ...d, phone: v }))} error={errors.phone} />
+            <TextField label={t('common.fields.fullName')} required value={details.fullName} onChangeText={(v) => setDetails((d) => ({ ...d, fullName: v }))} error={errors.fullName} autoComplete="name" />
+            <TextField label={t('common.fields.email')} required icon="mail-outline" keyboardType="email-address" autoCapitalize="none" value={details.email} onChangeText={(v) => setDetails((d) => ({ ...d, email: v }))} error={errors.email} hint={t('donate.receiptHint')} />
+            <TextField label={t('common.fields.phone')} required icon="call-outline" keyboardType="phone-pad" value={details.phone} onChangeText={(v) => setDetails((d) => ({ ...d, phone: v }))} error={errors.phone} />
             <TextField
-              label="Prayer intention"
+              label={t('donate.intention')}
               multiline
               value={details.prayerIntention}
               onChangeText={(v) => setDetails((d) => ({ ...d, prayerIntention: v }))}
-              placeholder="Share an intention for the community to pray for (optional)"
+              placeholder={t('donate.intentionPlaceholder')}
               maxLength={2000}
             />
           </>
@@ -210,7 +213,7 @@ export default function DonateScreen() {
 
         {step === 'payment' ? (
           <>
-            <MockCheckout amount={amount} reference={reference} description={`Gift · ${fundLabel}`} defaultPhone={details.phone} onPaid={onPaid} busyLabel="Recording your gift…" />
+            <MockCheckout amount={amount} reference={reference} description={t('donate.gift', { fund: fundLabel })} defaultPhone={details.phone} onPaid={onPaid} busyLabel={t('donate.recording')} />
             <ErrorBanner message={saveError} />
           </>
         ) : null}

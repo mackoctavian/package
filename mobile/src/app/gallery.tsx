@@ -9,16 +9,17 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { EmptyState, OfflineNotice } from '@/components/feedback';
 import { ScreenHeader } from '@/components/headers';
 import { Chip, Icon, Img, PressableScale, ScrimGradient, Text } from '@/components/ui';
+import { useT } from '@/i18n';
 import { useGallery } from '@/lib/api';
 import { mediaUrl } from '@/lib/config';
 import type { GalleryMedia } from '@/lib/types';
 import { colors, radius, space } from '@/theme';
 
 const tabs = [
-  { id: 'photos', label: 'Photos', icon: 'images-outline' },
-  { id: 'videos', label: 'Videos', icon: 'play-circle-outline' },
-  { id: 'audio', label: 'Audio', icon: 'musical-notes-outline' },
-  { id: 'cds', label: 'CDs', icon: 'disc-outline' },
+  { id: 'photos', icon: 'images-outline' },
+  { id: 'videos', icon: 'play-circle-outline' },
+  { id: 'audio', icon: 'musical-notes-outline' },
+  { id: 'cds', icon: 'disc-outline' },
 ] as const;
 
 type TabId = (typeof tabs)[number]['id'];
@@ -31,6 +32,7 @@ const openMedia = (item: GalleryMedia) => {
 function Viewer({ items, index, onClose }: { items: GalleryMedia[]; index: number | null; onClose: () => void }) {
   const { width, height } = useWindowDimensions();
   const insets = useSafeAreaInsets();
+  const t = useT();
   const [current, setCurrent] = useState(index ?? 0);
   if (index === null) return null;
   const item = items[current];
@@ -57,7 +59,7 @@ function Viewer({ items, index, onClose }: { items: GalleryMedia[]; index: numbe
           <Text variant="smallStrong" color={colors.white}>
             {current + 1} / {items.length}
           </Text>
-          <Pressable onPress={onClose} hitSlop={12} style={styles.close} accessibilityLabel="Close">
+          <Pressable onPress={onClose} hitSlop={12} style={styles.close} accessibilityLabel={t('common.close')}>
             <Icon name="close" size={22} color={colors.white} />
           </Pressable>
         </View>
@@ -85,6 +87,7 @@ function Viewer({ items, index, onClose }: { items: GalleryMedia[]; index: numbe
 
 export default function GalleryScreen() {
   const { width } = useWindowDimensions();
+  const t = useT();
   const { data } = useGallery();
   const [tab, setTab] = useState<TabId>('photos');
   const [viewer, setViewer] = useState<number | null>(null);
@@ -110,17 +113,17 @@ export default function GalleryScreen() {
 
   return (
     <View style={{ flex: 1, backgroundColor: colors.ivory }}>
-      <ScreenHeader title="Gallery" subtitle="Photos, videos and audio" />
+      <ScreenHeader title={t('gallery.title')} subtitle={t('gallery.subtitle')} />
       <View>
         <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ paddingHorizontal: space.xl, gap: space.sm, paddingBottom: space.md }}>
           {tabs.map((item) => (
-            <Chip key={item.id} label={`${item.label}${gallery ? ` · ${gallery[item.id].length}` : ''}`} icon={item.icon} active={tab === item.id} onPress={() => setTab(item.id)} />
+            <Chip key={item.id} label={`${t(`gallery.tabs.${item.id}`)}${gallery ? ` · ${gallery[item.id].length}` : ''}`} icon={item.icon} active={tab === item.id} onPress={() => setTab(item.id)} />
           ))}
         </ScrollView>
       </View>
       <ScrollView contentContainerStyle={{ paddingHorizontal: space.xl, paddingBottom: 60, gap: space.md }}>
         <OfflineNotice visible={data?.offline} />
-        {!items.length ? <EmptyState icon="images-outline" title="Nothing here yet" body="New media is added after retreats and events." /> : null}
+        {!items.length ? <EmptyState icon="images-outline" title={t('gallery.emptyTitle')} body={t('gallery.emptyText')} /> : null}
 
         {tab === 'photos' ? (
           <View style={{ flexDirection: 'row', gap: space.md }}>
@@ -132,7 +135,7 @@ export default function GalleryScreen() {
         {tab === 'videos'
           ? items.map((item, i) => (
               <Animated.View key={item.id} entering={FadeInDown.delay(i * 60).springify()}>
-                <PressableScale onPress={() => openMedia(item)} style={styles.video} accessibilityLabel={`Play ${item.title}`}>
+                <PressableScale onPress={() => openMedia(item)} style={styles.video} accessibilityLabel={t('gallery.play', { title: item.title })}>
                   <Img uri={item.poster ?? item.src} style={StyleSheet.absoluteFill} />
                   <ScrimGradient />
                   <View style={styles.play}>
@@ -174,14 +177,14 @@ export default function GalleryScreen() {
                     </View>
                     {tab === 'cds' ? (
                       <Text variant="smallStrong" color={colors.gold600}>
-                        Shop
+                        {t('gallery.shop')}
                       </Text>
                     ) : available ? (
                       <View style={styles.playSmall}>
                         <Icon name="play" size={16} color={colors.white} />
                       </View>
                     ) : (
-                      <Text variant="small">Coming soon</Text>
+                      <Text variant="small">{t('common.comingSoon')}</Text>
                     )}
                   </PressableScale>
                 </Animated.View>

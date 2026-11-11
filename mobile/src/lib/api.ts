@@ -1,6 +1,7 @@
 import { useQuery } from '@tanstack/react-query';
 
 import snapshot from '@/data/snapshot.json';
+import { getLocale, getT, type MobileLocale, useLocale } from '@/i18n';
 import { API_URL } from './config';
 import type { Article, Booking, Catalogue, Gallery, Home, Ministry, Retreat } from './types';
 
@@ -38,17 +39,18 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
     const response = await fetch(`${API_URL}${path}`, {
       ...init,
       signal: controller.signal,
-      headers: { Accept: 'application/json', 'Content-Type': 'application/json', ...(init?.headers ?? {}) },
+      // The site answers in the app's language (content, and form errors where translated).
+      headers: { Accept: 'application/json', 'Content-Type': 'application/json', 'x-dmrc-locale': getLocale(), ...(init?.headers ?? {}) },
     });
     const body = await response.json().catch(() => ({}));
     if (!response.ok) {
-      const error = typeof body?.error === 'string' ? body.error : 'Something went wrong. Please try again.';
+      const error = typeof body?.error === 'string' ? body.error : getT()('common.errors.generic');
       throw new ApiError(error, response.status);
     }
     return body as T;
   } catch (error) {
     if (error instanceof ApiError) throw error;
-    throw new ApiError('We could not reach DMRC. Check your connection and try again.');
+    throw new ApiError(getT()('common.errors.network'));
   } finally {
     clearTimeout(timer);
   }
@@ -56,22 +58,25 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
 
 export type Loaded<T> = { data: T; offline: boolean };
 
-async function readWithFallback<K extends keyof Snapshot>(key: K): Promise<Loaded<Snapshot[K]>> {
+async function readWithFallback<K extends keyof Snapshot>(key: K, locale: MobileLocale): Promise<Loaded<Snapshot[K]>> {
   try {
-    const body = await request<{ data: Snapshot[K] }>(`/api/mobile/${key}`);
+    const body = await request<{ data: Snapshot[K] }>(`/api/mobile/${key}?locale=${locale}`);
     return { data: body.data, offline: false };
   } catch {
     return { data: bundled[key], offline: true };
   }
 }
 
-const useRead = <K extends keyof Snapshot>(key: K) =>
-  useQuery({
-    queryKey: ['mobile', key],
-    queryFn: () => readWithFallback(key),
-    placeholderData: { data: bundled[key], offline: true },
+/** Reads in the app's language; switching language refetches while the previous text stays on screen. */
+const useRead = <K extends keyof Snapshot>(key: K) => {
+  const locale = useLocale();
+  return useQuery({
+    queryKey: ['mobile', key, locale],
+    queryFn: () => readWithFallback(key, locale),
+    placeholderData: (previous: Loaded<Snapshot[K]> | undefined) => previous ?? { data: bundled[key], offline: true },
     staleTime: 5 * 60_000,
   });
+};
 
 export const useHome = () => useRead('home');
 export const useRetreats = () => useRead('retreats');

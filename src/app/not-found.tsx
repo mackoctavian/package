@@ -1,45 +1,27 @@
 import type { Metadata } from 'next'
-import Link from 'next/link'
-import { Compass } from 'lucide-react'
 
+import NotFoundContent from '@/app/components/site/NotFoundContent'
 import SiteFooter from '@/app/components/site/SiteFooter'
 import SiteHeader from '@/app/components/site/SiteHeader'
-import { Button } from '@/app/components/ui/button'
+import { I18nProvider } from '@/i18n/client'
+import { DEFAULT_LOCALE } from '@/i18n/config'
+import { getMessages, setRequestLocale } from '@/i18n/server'
 
 export const metadata: Metadata = { title: 'Page not found', robots: { index: false } }
 
-const suggestions = [
-  { label: 'Upcoming retreats', href: '/retreats' },
-  { label: 'Manage my booking', href: '/retreats/check-booking' },
-  { label: 'Request a Mass intention', href: '/mass-intentions' },
-  { label: 'Give online', href: '/donation' },
-]
-
-export default function NotFoundPage() {
+/** 404 for paths outside the language-prefixed site (e.g. a mistyped /admin link). */
+export default async function NotFoundPage() {
+  setRequestLocale(DEFAULT_LOCALE)
+  const messages = await getMessages(DEFAULT_LOCALE)
   return (
-    <div className='flex min-h-screen flex-col bg-ivory text-navy-900'>
-      <SiteHeader />
-      <main id='main-content' className='flex flex-1 items-center'>
-        <div className='container max-w-2xl py-24 text-center'>
-          <span className='mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-parchment text-gold-700'>
-            <Compass className='h-8 w-8' />
-          </span>
-          <p className='eyebrow mt-6 justify-center'>Error 404</p>
-          <h1 className='mt-3 text-5xl sm:text-6xl'>This page could not be found</h1>
-          <p className='mt-4 text-lg text-muted-foreground'>The link may be out of date, or the page may have moved. These might help you find your way.</p>
-          <div className='mt-8 flex flex-wrap justify-center gap-3'>
-            {suggestions.map((item) => (
-              <Button key={item.href} asChild variant='outline' size='pill'>
-                <Link href={item.href}>{item.label}</Link>
-              </Button>
-            ))}
-          </div>
-          <Button asChild size='pill' className='mt-6'>
-            <Link href='/'>Back to home</Link>
-          </Button>
+    <I18nProvider locale={DEFAULT_LOCALE} messages={messages}>
+      <div className='flex min-h-screen flex-col bg-ivory text-navy-900'>
+        <SiteHeader />
+        <div id='main-content' className='flex flex-1'>
+          <NotFoundContent />
         </div>
-      </main>
-      <SiteFooter />
-    </div>
+        <SiteFooter />
+      </div>
+    </I18nProvider>
   )
 }

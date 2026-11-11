@@ -13,15 +13,26 @@ export const monthDay = (iso?: string | null) => {
   return { month: date.toLocaleDateString('en-GB', { month: 'short' }).toUpperCase(), day: String(date.getDate()) };
 };
 
+/** Part of the day, for `home.greeting.*`. */
 export const greeting = (now = new Date()) => {
   const hour = now.getHours();
-  if (hour < 12) return 'Good morning';
-  if (hour < 17) return 'Good afternoon';
-  return 'Good evening';
+  if (hour < 12) return 'morning' as const;
+  if (hour < 17) return 'afternoon' as const;
+  return 'evening' as const;
 };
 
-export const retreatContribution = (retreat: { isPaid?: boolean; price?: number }) =>
-  retreat.isPaid === false || !retreat.price ? 'Free-will offering' : formatTZS(retreat.price);
+export const retreatContribution = (
+  retreat: { isPaid?: boolean; price?: number },
+  t: (key: 'retreats.freeWill') => string,
+  money: (value: number) => string = formatTZS,
+) => (retreat.isPaid === false || !retreat.price ? t('retreats.freeWill') : money(retreat.price));
+
+/** "5 min read" from the API, in the current language when it is a plain minute count. */
+export const readingTimeLabel = (value: string | undefined, t: (key: 'news.minutes', values: { minutes: string }) => string) => {
+  if (!value) return '';
+  const minutes = value.match(/^(\d+)\s*min/i)?.[1];
+  return minutes ? t('news.minutes', { minutes }) : value;
+};
 
 export const makeReference = (prefix: string) => `${prefix}-${Math.random().toString(36).slice(2, 8).toUpperCase()}`;
 

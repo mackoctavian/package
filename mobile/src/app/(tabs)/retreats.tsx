@@ -10,18 +10,20 @@ import { RoundButton } from '@/components/headers';
 import { SearchBar } from '@/components/SearchBar';
 import { TabHeader } from '@/components/TabHeader';
 import { Chip, Icon, PressableScale, Text } from '@/components/ui';
+import { useT } from '@/i18n';
 import { useRetreats } from '@/lib/api';
 import { useAppStore } from '@/lib/store';
 import { colors, radius, space, TAB_BAR_SPACE } from '@/theme';
 
-const segments = ['Upcoming', 'Past'] as const;
+const segments = ['upcoming', 'past'] as const;
 
 export default function RetreatsScreen() {
+  const t = useT();
   const { data, isPending, refetch, isRefetching } = useRetreats();
   const tickets = useAppStore((s) => s.tickets.length);
   const [query, setQuery] = useState('');
   const [category, setCategory] = useState('all');
-  const [segment, setSegment] = useState<(typeof segments)[number]>('Upcoming');
+  const [segment, setSegment] = useState<(typeof segments)[number]>('upcoming');
   const retreats = useMemo(() => data?.data ?? [], [data]);
 
   const categories = useMemo(() => {
@@ -33,7 +35,7 @@ export default function RetreatsScreen() {
   const filtered = useMemo(() => {
     const term = query.trim().toLowerCase();
     return retreats.filter((retreat) => {
-      if ((segment === 'Upcoming') === retreat.ended) return false;
+      if ((segment === 'upcoming') === retreat.ended) return false;
       if (category !== 'all' && retreat.category !== category) return false;
       if (!term) return true;
       return [retreat.title, retreat.speaker, retreat.location, retreat.categoryLabel].some((value) => value?.toLowerCase().includes(term));
@@ -51,14 +53,14 @@ export default function RetreatsScreen() {
         ListHeaderComponent={
           <View style={{ gap: space.lg }}>
             <TabHeader
-              eyebrow="Come away and rest awhile"
-              title="Retreats"
-              right={<RoundButton icon="ticket-outline" tone="solid" label="My tickets" badge={tickets} onPress={() => router.push('/tickets')} />}>
-              <SearchBar value={query} onChange={setQuery} placeholder="Search retreats, speakers, places" />
-              <Segmented options={segments} value={segment} onChange={setSegment} />
+              eyebrow={t('retreats.eyebrow')}
+              title={t('retreats.title')}
+              right={<RoundButton icon="ticket-outline" tone="solid" label={t('tickets.title')} badge={tickets} onPress={() => router.push('/tickets')} />}>
+              <SearchBar value={query} onChange={setQuery} placeholder={t('retreats.search')} />
+              <Segmented options={segments} value={segment} onChange={setSegment} labelFor={(option) => t(`retreats.${option}`)} />
             </TabHeader>
             <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ paddingHorizontal: space.xl, gap: space.sm }}>
-              <Chip label="All" active={category === 'all'} onPress={() => setCategory('all')} />
+              <Chip label={t('retreats.all')} active={category === 'all'} onPress={() => setCategory('all')} />
               {categories.map(([value, label]) => (
                 <Chip key={value} label={label} active={category === value} onPress={() => setCategory(value)} />
               ))}
@@ -80,10 +82,10 @@ export default function RetreatsScreen() {
           ) : (
             <EmptyState
               icon="calendar-outline"
-              title={segment === 'Upcoming' ? 'No upcoming retreats yet' : 'No past retreats'}
-              body={segment === 'Upcoming' ? 'New dates are published regularly. Pull to refresh or check back soon.' : 'Try another category or search.'}
-              action={segment === 'Upcoming' ? 'See past retreats' : undefined}
-              onAction={() => setSegment('Past')}
+              title={segment === 'upcoming' ? t('retreats.emptyUpcoming') : t('retreats.emptyPast')}
+              body={segment === 'upcoming' ? t('retreats.emptyUpcomingText') : t('retreats.emptyPastText')}
+              action={segment === 'upcoming' ? t('retreats.seePast') : undefined}
+              onAction={() => setSegment('past')}
             />
           )
         }
@@ -95,10 +97,10 @@ export default function RetreatsScreen() {
               </View>
               <View style={{ flex: 1 }}>
                 <Text variant="bodyStrong" color={colors.white}>
-                  Manage a booking
+                  {t('retreats.manage')}
                 </Text>
                 <Text variant="small" color={colors.navy200}>
-                  Find your ticket, cancel or move to another retreat
+                  {t('retreats.manageText')}
                 </Text>
               </View>
               <Icon name="chevron-forward" size={18} color={colors.navy200} />

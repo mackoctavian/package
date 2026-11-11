@@ -3,6 +3,7 @@ import { KeyboardAvoidingView, Platform, ScrollView, type ScrollViewInstance, St
 import Animated, { useAnimatedStyle, withSpring } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { useT } from '@/i18n';
 import { colors, space } from '@/theme';
 import { RoundButton } from './headers';
 import { Text } from './ui';
@@ -30,6 +31,7 @@ export function FlowLayout({
   scrollRef?: React.RefObject<ScrollViewInstance | null>;
 }) {
   const insets = useSafeAreaInsets();
+  const t = useT();
   const progress = steps ? ((step ?? 0) + 1) / steps : 0;
   const bar = useAnimatedStyle(() => ({ width: withSpring(`${progress * 100}%`, { damping: 20, stiffness: 140 }) }));
 
@@ -37,7 +39,7 @@ export function FlowLayout({
     <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={{ flex: 1, backgroundColor: colors.ivory }}>
       <View style={[styles.header, { paddingTop: Platform.OS === 'ios' ? space.lg : insets.top + space.sm }]}>
         <View style={styles.row}>
-          {onBack ? <RoundButton icon="chevron-back" tone="solid" label="Back" onPress={onBack} /> : <View style={{ width: 40 }} />}
+          {onBack ? <RoundButton icon="chevron-back" tone="solid" label={t('common.back')} onPress={onBack} /> : <View style={{ width: 40 }} />}
           <View style={{ flex: 1, alignItems: 'center' }}>
             <Text variant="subtitle" numberOfLines={1}>
               {title}
@@ -48,7 +50,7 @@ export function FlowLayout({
               </Text>
             ) : null}
           </View>
-          <RoundButton icon="close" tone="solid" label="Close" onPress={onClose} />
+          <RoundButton icon="close" tone="solid" label={t('common.close')} onPress={onClose} />
         </View>
         {steps ? (
           <View style={styles.track}>

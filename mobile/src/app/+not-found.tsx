@@ -3,13 +3,15 @@ import { View } from 'react-native';
 
 import { EmptyState } from '@/components/feedback';
 import { ScreenHeader } from '@/components/headers';
+import { useT } from '@/i18n';
 import { colors } from '@/theme';
 
 export default function NotFound() {
+  const t = useT();
   return (
     <View style={{ flex: 1, backgroundColor: colors.ivory }}>
-      <ScreenHeader title="Not found" />
-      <EmptyState icon="compass-outline" title="This page does not exist" action="Go home" onAction={() => router.replace('/')} />
+      <ScreenHeader title={t('notFound.title')} />
+      <EmptyState icon="compass-outline" title={t('notFound.text')} action={t('notFound.home')} onAction={() => router.replace('/')} />
     </View>
   );
 }

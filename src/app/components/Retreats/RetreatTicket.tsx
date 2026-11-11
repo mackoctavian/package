@@ -5,6 +5,7 @@ import { QRCodeSVG } from 'qrcode.react'
 import { CalendarDays, MapPin, User, Mail, Phone, Download, Ticket, CheckCircle2 } from 'lucide-react'
 import { Button } from '@/app/components/ui/button'
 import { useBranding } from '@/app/hooks/useBranding'
+import { useT } from '@/i18n/client'
 
 const palette = {
   slate50: '#f8fafc',
@@ -43,6 +44,7 @@ interface RetreatTicketProps {
 export default function RetreatTicket({ booking, retreat, ticketUrl }: RetreatTicketProps) {
   const ticketRef = useRef<HTMLDivElement>(null)
   const { logoUrl } = useBranding()
+  const t = useT()
 
   const handleDownload = async () => {
     if (!ticketRef.current) return
@@ -82,7 +84,7 @@ export default function RetreatTicket({ booking, retreat, ticketUrl }: RetreatTi
           />
           <div className='relative flex items-center gap-2 mb-2'>
             <Ticket className='h-5 w-5' />
-            <span className='text-sm font-medium opacity-90'>Retreat Ticket</span>
+            <span className='text-sm font-medium opacity-90'>{t('retreats.ticket.label')}</span>
           </div>
           <div className='relative'>
             <h2 className='text-2xl font-bold'>{retreat.title}</h2>
@@ -109,7 +111,7 @@ export default function RetreatTicket({ booking, retreat, ticketUrl }: RetreatTi
             {booking.ticketCode}
           </p>
           <p className='text-sm mt-1' style={{ color: palette.slate500 }}>
-            Scan to check in
+            {t('retreats.ticket.scan')}
           </p>
         </div>
 
@@ -165,7 +167,7 @@ export default function RetreatTicket({ booking, retreat, ticketUrl }: RetreatTi
             className='flex items-center justify-center gap-2 py-3 rounded-xl'
             style={{ backgroundColor: palette.emerald50, color: palette.emerald600 }}>
             <CheckCircle2 className='h-5 w-5' />
-            <span className='font-semibold'>{['approved', 'confirmed', 'checked-in'].includes(booking.status) ? 'Booking confirmed' : 'Registration received'}</span>
+            <span className='font-semibold'>{['approved', 'confirmed', 'checked-in'].includes(booking.status) ? t('retreats.ticket.confirmed') : t('retreats.ticket.received')}</span>
           </div>
         </div>
 
@@ -174,7 +176,7 @@ export default function RetreatTicket({ booking, retreat, ticketUrl }: RetreatTi
           className='px-6 py-4 text-center border-t'
           style={{ backgroundColor: palette.slate50, borderColor: palette.slate100, color: palette.slate500 }}>
           <p className='text-xs font-semibold'>Divine Mercy Retreat Center</p>
-          <p className='text-xs mt-1'>Please present this ticket at check-in</p>
+          <p className='text-xs mt-1'>{t('retreats.ticket.present')}</p>
         </div>
       </div>
 
@@ -182,7 +184,7 @@ export default function RetreatTicket({ booking, retreat, ticketUrl }: RetreatTi
       <div className='flex justify-center'>
         <Button onClick={handleDownload} className='gap-2' style={{ backgroundColor: palette.slate900, color: '#ffffff' }}>
           <Download className='h-4 w-4' />
-          Download Ticket
+          {t('retreats.ticket.download')}
         </Button>
       </div>
     </div>

@@ -5,14 +5,16 @@ import Animated, { FadeInDown } from 'react-native-reanimated';
 import { OfflineNotice } from '@/components/feedback';
 import { ScreenHeader } from '@/components/headers';
 import { Icon, Img, PressableScale, Text } from '@/components/ui';
+import { useT } from '@/i18n';
 import { useMinistries } from '@/lib/api';
 import { colors, radius, shadow, space } from '@/theme';
 
 export default function MinistriesScreen() {
   const { data } = useMinistries();
+  const t = useT();
   return (
     <View style={{ flex: 1, backgroundColor: colors.ivory }}>
-      <ScreenHeader title="Ministries" subtitle="Every way we serve the Church" />
+      <ScreenHeader title={t('ministries.title')} subtitle={t('ministries.subtitle')} />
       <FlatList
         data={data?.data ?? []}
         keyExtractor={(item) => item.id}

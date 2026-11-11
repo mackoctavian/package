@@ -15,6 +15,8 @@ import { Building2, CheckCircle2, CreditCard, Info, Loader2, Lock, Smartphone } 
 import { Button } from '@/app/components/ui/button'
 import { Field, inputClass } from '@/app/components/site/FormFields'
 import { cn } from '@/lib/utils'
+import { useLocale, useT } from '@/i18n/client'
+import { formatMoney } from '@/i18n/format'
 
 type Method = 'mobile' | 'card' | 'bank'
 
@@ -49,17 +51,19 @@ export default function MockCheckout({
   const [card, setCard] = useState({ name: '', number: '', expiry: '', cvc: '' })
   const [stage, setStage] = useState<'form' | 'processing'>('form')
   const [error, setError] = useState<string | null>(null)
+  const t = useT()
+  const locale = useLocale()
 
-  const formatted = `${currency} ${amount.toLocaleString('en-US')}`
+  const formatted = formatMoney(amount, locale, currency)
 
   const pay = async () => {
     setError(null)
     if (method === 'mobile' && !/^[0-9+\s-]{9,16}$/.test(phone)) {
-      setError('Enter the mobile money number to charge.')
+      setError(t('giving.checkout.errors.mobile'))
       return
     }
     if (method === 'card' && (card.number.replace(/\D/g, '').length < 12 || !card.expiry || card.cvc.length < 3)) {
-      setError('Enter the card details to continue.')
+      setError(t('giving.checkout.errors.card'))
       return
     }
     setStage('processing')
@@ -70,9 +74,9 @@ export default function MockCheckout({
   }
 
   const tabs: { id: Method; label: string; icon: typeof Smartphone }[] = [
-    { id: 'mobile', label: 'Mobile money', icon: Smartphone },
-    { id: 'card', label: 'Card', icon: CreditCard },
-    { id: 'bank', label: 'Bank transfer', icon: Building2 },
+    { id: 'mobile', label: t('giving.checkout.methods.mobile'), icon: Smartphone },
+    { id: 'card', label: t('giving.checkout.methods.card'), icon: CreditCard },
+    { id: 'bank', label: t('giving.checkout.methods.bank'), icon: Building2 },
   ]
 
   if (stage === 'processing') {
@@ -80,12 +84,12 @@ export default function MockCheckout({
       <div className='flex flex-col items-center py-14 text-center' role='status'>
         <Loader2 className='h-10 w-10 animate-spin text-gold-500' />
         <p className='mt-5 font-display text-3xl text-navy-900'>
-          {method === 'mobile' ? 'Check your phone' : method === 'card' ? 'Authorising payment' : 'Recording your transfer'}
+          {t(`giving.checkout.processing.${method}`)}
         </p>
         <p className='mt-2 max-w-sm text-muted-foreground'>
           {method === 'mobile'
-            ? `Approve the ${formatted} request on ${phone} with your PIN.`
-            : 'This only takes a moment. Please don’t close this page.'}
+            ? t('giving.checkout.processing.mobileText', { amount: formatted, phone })
+            : t('giving.checkout.processing.wait')}
         </p>
       </div>
     )
@@ -96,20 +100,19 @@ export default function MockCheckout({
       <div className='flex items-start gap-3 rounded-2xl border border-dashed border-gold-300 bg-gold-50 px-4 py-3 text-sm text-gold-800'>
         <Info className='mt-0.5 h-4 w-4 shrink-0' />
         <p>
-          <strong>Demo checkout.</strong> Online payments are not live yet, so no money will be charged and nothing you type here is sent
-          or saved.
+          <strong>{t('giving.checkout.demoTitle')}</strong> {t('giving.checkout.demoText')}
         </p>
       </div>
 
       <div className='flex items-center justify-between rounded-2xl bg-navy-900 px-5 py-4 text-white'>
         <div>
           <p className='text-xs uppercase tracking-wider text-navy-200'>{description}</p>
-          <p className='mt-0.5 font-mono text-xs text-navy-300'>Ref {reference}</p>
+          <p className='mt-0.5 font-mono text-xs text-navy-300'>{t('giving.checkout.ref', { reference })}</p>
         </div>
         <p className='font-display text-3xl font-semibold'>{formatted}</p>
       </div>
 
-      <div role='tablist' aria-label='Payment method' className='grid grid-cols-3 gap-2'>
+      <div role='tablist' aria-label={t('giving.checkout.method')} className='grid grid-cols-3 gap-2'>
         {tabs.map((tab) => (
           <button
             key={tab.id}
@@ -133,14 +136,14 @@ export default function MockCheckout({
 
       {method === 'mobile' && (
         <div className='grid gap-5 sm:grid-cols-2'>
-          <Field label='Network' htmlFor='mc-network'>
+          <Field label={t('giving.checkout.network')} htmlFor='mc-network'>
             <select id='mc-network' className={inputClass} value={network} onChange={(e) => setNetwork(e.target.value)}>
               {networks.map((n) => (
                 <option key={n}>{n}</option>
               ))}
             </select>
           </Field>
-          <Field label='Mobile number' htmlFor='mc-phone' hint='You will get a prompt to enter your PIN.'>
+          <Field label={t('giving.checkout.mobileNumber')} htmlFor='mc-phone' hint={t('giving.checkout.mobileHint')}>
             <input
               id='mc-phone'
               type='tel'
@@ -156,10 +159,10 @@ export default function MockCheckout({
 
       {method === 'card' && (
         <div className='grid gap-5 sm:grid-cols-2'>
-          <Field label='Name on card' htmlFor='mc-name' className='sm:col-span-2'>
+          <Field label={t('giving.checkout.cardName')} htmlFor='mc-name' className='sm:col-span-2'>
             <input id='mc-name' autoComplete='off' className={inputClass} value={card.name} onChange={(e) => setCard({ ...card, name: e.target.value })} />
           </Field>
-          <Field label='Card number' htmlFor='mc-number' className='sm:col-span-2'>
+          <Field label={t('giving.checkout.cardNumber')} htmlFor='mc-number' className='sm:col-span-2'>
             <input
               id='mc-number'
               inputMode='numeric'
@@ -179,7 +182,7 @@ export default function MockCheckout({
               }
             />
           </Field>
-          <Field label='Expiry' htmlFor='mc-expiry'>
+          <Field label={t('giving.checkout.expiry')} htmlFor='mc-expiry'>
             <input
               id='mc-expiry'
               autoComplete='off'
@@ -192,7 +195,7 @@ export default function MockCheckout({
               }}
             />
           </Field>
-          <Field label='CVC' htmlFor='mc-cvc'>
+          <Field label={t('giving.checkout.cvc')} htmlFor='mc-cvc'>
             <input
               id='mc-cvc'
               type='password'
@@ -209,14 +212,14 @@ export default function MockCheckout({
       {method === 'bank' && (
         <dl className='divide-y divide-border rounded-2xl border border-border text-sm'>
           {[
-            ['Bank', 'To be confirmed'],
-            ['Account name', 'Divine Mercy Retreat Center'],
-            ['Account number', 'Shared after launch'],
-            ['Reference', reference],
-          ].map(([label, value]) => (
+            [t('giving.checkout.bank'), t('giving.checkout.bankValue')],
+            [t('giving.checkout.accountName'), 'Divine Mercy Retreat Center'],
+            [t('giving.checkout.accountNumber'), t('giving.checkout.accountNumberValue')],
+            [t('giving.checkout.reference'), reference],
+          ].map(([label, value], index, rows) => (
             <div key={label} className='flex justify-between gap-4 px-5 py-3'>
               <dt className='text-muted-foreground'>{label}</dt>
-              <dd className={cn('text-right font-medium text-navy-900', label === 'Reference' && 'font-mono')}>{value}</dd>
+              <dd className={cn('text-right font-medium text-navy-900', index === rows.length - 1 && 'font-mono')}>{value}</dd>
             </div>
           ))}
         </dl>
@@ -231,19 +234,19 @@ export default function MockCheckout({
       <div className='flex flex-col-reverse gap-3 sm:flex-row sm:items-center sm:justify-between'>
         {onBack ? (
           <Button type='button' variant='ghost' onClick={onBack}>
-            Back
+            {t('common.actions.back')}
           </Button>
         ) : (
           <span />
         )}
         <Button type='button' size='xl' onClick={pay}>
           <Lock className='mr-2 h-4 w-4' />
-          {method === 'bank' ? 'I have made the transfer' : `Pay ${formatted}`}
+          {method === 'bank' ? t('giving.checkout.transferDone') : t('giving.checkout.pay', { amount: formatted })}
         </Button>
       </div>
 
       <p className='flex items-center justify-center gap-1.5 text-xs text-muted-foreground'>
-        <CheckCircle2 className='h-3.5 w-3.5' /> Secured checkout will be provided by a licensed payment partner.
+        <CheckCircle2 className='h-3.5 w-3.5' /> {t('giving.checkout.secured')}
       </p>
     </div>
   )

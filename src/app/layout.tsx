@@ -3,6 +3,7 @@ import './globals.css'
 import Providers from '@/app/providers'
 import type { Metadata, Viewport } from 'next'
 import { siteConfig } from '@/app/data/site'
+import LocaleHtml from '@/app/components/i18n/LocaleHtml'
 
 const inter = Inter({ subsets: ['latin'], variable: '--font-inter', display: 'swap' })
 const cormorant = Cormorant_Garamond({
@@ -45,10 +46,10 @@ export default function RootLayout({
   children: React.ReactNode
 }>) {
   return (
-    <html lang='en' suppressHydrationWarning className={`${inter.variable} ${cormorant.variable}`}>
+    <LocaleHtml className={`${inter.variable} ${cormorant.variable}`}>
       <body className='font-sans antialiased'>
         <Providers>{children}</Providers>
       </body>
-    </html>
+    </LocaleHtml>
   )
 }

@@ -1,9 +1,11 @@
 import { Pressable, StyleSheet, TextInput, View } from 'react-native';
 
 import { colors, fonts, radius } from '@/theme';
+import { useT } from '@/i18n';
 import { Icon } from './ui';
 
 export function SearchBar({ value, onChange, placeholder }: { value: string; onChange: (value: string) => void; placeholder: string }) {
+  const t = useT();
   return (
     <View style={styles.wrap}>
       <Icon name="search" size={18} color={colors.subtle} />
@@ -18,7 +20,7 @@ export function SearchBar({ value, onChange, placeholder }: { value: string; onC
         accessibilityLabel={placeholder}
       />
       {value ? (
-        <Pressable onPress={() => onChange('')} hitSlop={10} accessibilityLabel="Clear search">
+        <Pressable onPress={() => onChange('')} hitSlop={10} accessibilityLabel={t('common.clearSearch')}>
           <Icon name="close-circle" size={18} color={colors.subtle} />
         </Pressable>
       ) : null}

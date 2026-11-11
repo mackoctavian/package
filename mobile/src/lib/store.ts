@@ -29,6 +29,8 @@ export type Receipt = {
 
 export type Profile = { fullName: string; email: string; phone: string };
 
+export type AppLanguage = 'en' | 'sw';
+
 export type AppState = {
   hydrated: boolean;
   onboarded: boolean;
@@ -36,6 +38,10 @@ export type AppState = {
   cart: CartItem[];
   receipts: Receipt[];
   profile: Profile;
+  /** The language the user picked; `null` follows the phone's language. */
+  language: AppLanguage | null;
+  /** Interface text the admin changed on the website, per language (cached for offline use). */
+  uiOverrides: Partial<Record<AppLanguage, Record<string, string>>>;
 };
 
 const KEY = 'dmrc.app.v1';
@@ -47,6 +53,8 @@ let state: AppState = {
   cart: [],
   receipts: [],
   profile: { fullName: '', email: '', phone: '' },
+  language: null,
+  uiOverrides: {},
 };
 
 const listeners = new Set<() => void>();
@@ -87,6 +95,9 @@ export const getAppState = () => state;
 
 export const actions = {
   completeOnboarding: () => setState({ onboarded: true }),
+  setLanguage: (language: AppLanguage | null) => setState({ language }),
+  setUiOverrides: (language: AppLanguage, messages: Record<string, string>) =>
+    setState((current) => ({ uiOverrides: { ...current.uiOverrides, [language]: messages } })),
   resetOnboarding: () => setState({ onboarded: false }),
 
   saveProfile: (profile: Partial<Profile>) =>

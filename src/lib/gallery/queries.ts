@@ -6,6 +6,8 @@ import prisma from '@/lib/prisma'
 import { galleryAudio, galleryCDs, galleryCollections, galleryHighlights, galleryVideos } from '@/app/data/gallery'
 import type { GalleryMedia } from '@/app/types/gallery'
 import { mapResponseToBuckets, type GalleryBuckets } from './mapping'
+import { localizeRecords } from '@/lib/i18n/content'
+import { DEFAULT_LOCALE, type Locale } from '@/i18n/config'
 
 /** A local /public file that is missing is treated as "coming soon" rather than a broken player. */
 const playable = (item: GalleryMedia): GalleryMedia => {
@@ -24,12 +26,16 @@ const staticBuckets = (): GalleryBuckets => ({
   cds: galleryCDs.map((item) => ({ ...item, src: '/publications?category=CDs' })),
 })
 
-export const getGallery = cache(async (): Promise<GalleryBuckets> => {
+export const getGallery = cache(async (locale: Locale = DEFAULT_LOCALE): Promise<GalleryBuckets> => {
   try {
-    const records = await prisma.contentItem.findMany({
-      where: { type: 'gallery', status: 'published' },
-      orderBy: [{ publishDate: 'desc' }, { createdAt: 'desc' }],
-    })
+    const records = await localizeRecords(
+      'content',
+      await prisma.contentItem.findMany({
+        where: { type: 'gallery', status: 'published' },
+        orderBy: [{ publishDate: 'desc' }, { createdAt: 'desc' }],
+      }),
+      locale,
+    )
     if (records.length) {
       return mapResponseToBuckets(
         records.map((record) => ({
