@@ -1,4 +1,4 @@
-import { API_URL } from './config';
+import { apiUrl, hostOf } from './config';
 import { session } from './session';
 
 export class ApiError extends Error {
@@ -14,6 +14,8 @@ export class ApiError extends Error {
 type Options = { method?: 'GET' | 'POST' | 'PATCH' | 'PUT' | 'DELETE'; body?: unknown; signal?: AbortSignal; auth?: boolean };
 
 const messageFrom = (body: unknown, status: number) => {
+  // Not JSON at all: the address is some other website, not the DMRC site.
+  if (body === null && status !== 401 && status !== 403 && status < 500) return `Couldn’t find the DMRC website at ${hostOf(apiUrl())}. Check the website address.`;
   if (body && typeof body === 'object') {
     const error = (body as { error?: unknown }).error;
     if (typeof error === 'string') return error;
@@ -33,7 +35,7 @@ export async function api<T>(path: string, { method = 'GET', body, signal, auth 
   const token = session.get().token;
   let response: Response;
   try {
-    response = await fetch(`${API_URL}${path}`, {
+    response = await fetch(`${apiUrl()}${path}`, {
       method,
       signal,
       headers: {
@@ -45,7 +47,7 @@ export async function api<T>(path: string, { method = 'GET', body, signal, auth 
     });
   } catch (error) {
     if ((error as Error)?.name === 'AbortError') throw error;
-    throw new ApiError('No connection. Check your internet and try again.', 0);
+    throw new ApiError(`Couldn’t reach ${hostOf(apiUrl())}. Check your internet and the website address.`, 0);
   }
 
   const text = await response.text();
@@ -72,7 +74,7 @@ export async function uploadImage(file: { uri: string; name?: string | null; mim
   form.append('file', { uri: file.uri, name, type: file.mimeType || 'image/jpeg' } as unknown as Blob);
   form.append('folder', folder);
   const token = session.get().token;
-  const response = await fetch(`${API_URL}/api/uploads`, {
+  const response = await fetch(`${apiUrl()}/api/uploads`, {
     method: 'POST',
     headers: { Accept: 'application/json', ...(token ? { Authorization: `Bearer ${token}` } : null) },
     body: form,

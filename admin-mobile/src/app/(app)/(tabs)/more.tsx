@@ -8,7 +8,7 @@ import { ScrollView, StyleSheet, View } from 'react-native';
 import { Avatar, confirm, Group, ListRow, RowDivider, Sheet, StatusPill, TabHeader } from '@/components/admin';
 import { Card, Icon, type IconName, PressableScale, Text } from '@/components/ui';
 import { api } from '@/lib/api';
-import { API_URL } from '@/lib/config';
+import { apiUrl, hostOf } from '@/lib/config';
 import { can, session, useSession } from '@/lib/session';
 import type { ModuleId } from '@/lib/types';
 import { colors, radius, space, TAB_BAR_SPACE } from '@/theme';
@@ -132,7 +132,7 @@ export default function More() {
                 <Icon name="desktop-outline" size={18} color={colors.navy700} />
               </View>
             }
-            onPress={() => WebBrowser.openBrowserAsync(`${API_URL}/admin`).catch(() => undefined)}
+            onPress={() => WebBrowser.openBrowserAsync(`${apiUrl()}/admin`).catch(() => undefined)}
           />
           <RowDivider />
           <ListRow
@@ -158,7 +158,7 @@ export default function More() {
         </Group>
 
         <Text variant="small" center style={{ fontSize: 12 }}>
-          DMRC Admin {Constants.expoConfig?.version ?? ''} · {API_URL.replace(/^https?:\/\//, '')}
+          DMRC Admin {Constants.expoConfig?.version ?? ''} · {hostOf(apiUrl())}
         </Text>
       </View>
 

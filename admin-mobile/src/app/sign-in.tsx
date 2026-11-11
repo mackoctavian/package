@@ -5,10 +5,12 @@ import Animated, { FadeInDown, FadeInUp } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Constants from 'expo-constants';
 
+import { Sheet } from '@/components/admin';
 import { ErrorBanner } from '@/components/feedback';
 import { TextField } from '@/components/form';
 import { Button, Icon, NavyGradient, Text } from '@/components/ui';
 import { api, errorMessage } from '@/lib/api';
+import { DEFAULT_API_URL, hostOf, normalizeServer, server, useApiUrl } from '@/lib/config';
 import { haptic } from '@/lib/haptics';
 import { session } from '@/lib/session';
 import type { AdminProfile } from '@/lib/types';
@@ -21,6 +23,42 @@ export default function SignIn() {
   const [reveal, setReveal] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const current = useApiUrl();
+  const [serverOpen, setServerOpen] = useState(false);
+  const [serverDraft, setServerDraft] = useState('');
+  const [serverError, setServerError] = useState<string | null>(null);
+  const [checking, setChecking] = useState(false);
+
+  const openServer = () => {
+    setServerDraft(hostOf(current));
+    setServerError(null);
+    setServerOpen(true);
+  };
+
+  /** Checks that the address is a DMRC site (its admin API answers in JSON) before saving it. */
+  const saveServer = async () => {
+    const url = normalizeServer(serverDraft);
+    if (!url) {
+      setServerError('Enter a web address, like www.example.org');
+      return;
+    }
+    setChecking(true);
+    setServerError(null);
+    try {
+      const response = await fetch(`${url}/api/mobile/admin/session`, { headers: { Accept: 'application/json' } });
+      const body = (await response.json().catch(() => null)) as { data?: unknown; error?: unknown } | null;
+      if (!body || !('data' in body || 'error' in body)) throw new Error(`${hostOf(url)} doesn’t look like the DMRC website. Use the address you sign in to the web dashboard on.`);
+      await server.set(url);
+      setError(null);
+      setServerOpen(false);
+      haptic.success();
+    } catch (err) {
+      haptic.error();
+      setServerError(err instanceof TypeError ? `Couldn’t reach ${hostOf(url)}. Check the address and your internet.` : errorMessage(err));
+    } finally {
+      setChecking(false);
+    }
+  };
 
   const submit = async () => {
     if (!email.trim() || !password) {
@@ -102,6 +140,15 @@ export default function SignIn() {
             </Pressable>
           </View>
           <Button label="Sign in" iconRight="arrow-forward" onPress={submit} loading={busy} style={{ marginTop: space.sm }} />
+          <Pressable onPress={openServer} style={styles.server} accessibilityRole="button" accessibilityLabel="Change website address">
+            <Icon name="globe-outline" size={16} color={colors.navy600} />
+            <Text variant="small" style={{ flex: 1 }} numberOfLines={1}>
+              Website: <Text variant="smallStrong">{hostOf(current)}</Text>
+            </Text>
+            <Text variant="smallStrong" color={colors.gold700}>
+              Change
+            </Text>
+          </Pressable>
           <View style={styles.note}>
             <Icon name="shield-checkmark-outline" size={16} color={colors.navy600} />
             <Text variant="small" style={{ flex: 1 }}>
@@ -110,6 +157,36 @@ export default function SignIn() {
           </View>
         </Animated.View>
       </ScrollView>
+
+      <Sheet visible={serverOpen} onClose={() => setServerOpen(false)} title="Website address">
+        <View style={{ gap: space.lg }}>
+          <Text variant="small">The DMRC website this app signs in to. Use the address you open the web dashboard on.</Text>
+          <ErrorBanner message={serverError} />
+          <TextField
+            label="Website"
+            icon="globe-outline"
+            value={serverDraft}
+            onChangeText={setServerDraft}
+            autoCapitalize="none"
+            autoCorrect={false}
+            keyboardType="url"
+            placeholder="www.example.org"
+            returnKeyType="done"
+            onSubmitEditing={saveServer}
+          />
+          <Button label="Check and save" icon="checkmark" onPress={saveServer} loading={checking} />
+          {current !== DEFAULT_API_URL ? (
+            <Button
+              label={`Reset to ${hostOf(DEFAULT_API_URL)}`}
+              variant="ghost"
+              onPress={async () => {
+                await server.set(null);
+                setServerOpen(false);
+              }}
+            />
+          ) : null}
+        </View>
+      </Sheet>
     </KeyboardAvoidingView>
   );
 }
@@ -138,6 +215,16 @@ const styles = StyleSheet.create({
     gap: space.lg,
   },
   reveal: { position: 'absolute', right: 14, bottom: 15 },
+  server: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: space.sm,
+    paddingVertical: space.sm,
+    paddingHorizontal: space.md,
+    borderRadius: radius.md,
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: colors.border,
+  },
   note: {
     flexDirection: 'row',
     gap: space.sm,
