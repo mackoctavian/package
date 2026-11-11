@@ -33,7 +33,7 @@ npx expo start          # scan the QR code with Expo Go
 
 Everything it uses (camera, secure store, image picker) is available in Expo Go, so no custom build is needed to try it.
 
-Point it at another server with `EXPO_PUBLIC_API_URL` (see `.env.example`) or `extra.apiUrl` in `app.json`. The default `https://dmrc.vercel.app` is a placeholder until the production domain is confirmed.
+Point it at another server with `EXPO_PUBLIC_API_URL` (see `.env.example`) or `extra.apiUrl` in `app.json`. The default `https://dmrc-ten.vercel.app` is a placeholder until the production domain is confirmed.
 
 ## Build for the stores
 

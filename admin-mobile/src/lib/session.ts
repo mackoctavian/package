@@ -1,7 +1,7 @@
-import * as SecureStore from 'expo-secure-store';
-import { Platform } from 'react-native';
 import { useSyncExternalStore } from 'react';
 
+import { server } from './config';
+import { storage } from './storage';
 import type { AccessLevel, AdminProfile, ModuleId } from './types';
 
 /**
@@ -26,20 +26,6 @@ const emit = (next: Partial<SessionState>) => {
   listeners.forEach((listener) => listener());
 };
 
-const storage = {
-  get: async (key: string) => {
-    if (Platform.OS === 'web') return globalThis.localStorage?.getItem(key) ?? null;
-    return SecureStore.getItemAsync(key);
-  },
-  set: async (key: string, value: string) => {
-    if (Platform.OS === 'web') return globalThis.localStorage?.setItem(key, value);
-    return SecureStore.setItemAsync(key, value, { keychainAccessible: SecureStore.AFTER_FIRST_UNLOCK_THIS_DEVICE_ONLY });
-  },
-  remove: async (key: string) => {
-    if (Platform.OS === 'web') return globalThis.localStorage?.removeItem(key);
-    return SecureStore.deleteItemAsync(key);
-  },
-};
 
 export const session = {
   get: () => state,
@@ -49,7 +35,7 @@ export const session = {
   },
   async hydrate() {
     try {
-      const [token, profile] = await Promise.all([storage.get(TOKEN_KEY), storage.get(PROFILE_KEY)]);
+      const [token, profile] = await Promise.all([storage.get(TOKEN_KEY), storage.get(PROFILE_KEY), server.load()]);
       emit({ hydrated: true, token, user: token && profile ? (JSON.parse(profile) as AdminProfile) : null });
     } catch {
       emit({ hydrated: true, token: null, user: null });
