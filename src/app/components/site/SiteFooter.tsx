@@ -1,7 +1,8 @@
 import { Link } from '@/i18n/link'
 import { getT } from '@/i18n/server'
 import LanguageSwitcher from '@/app/components/i18n/LanguageSwitcher'
-import { ArrowRight, Facebook, Instagram, Mail, MapPin, Phone, Youtube } from 'lucide-react'
+import NextLink from 'next/link'
+import { ArrowRight, Facebook, Instagram, LockKeyhole, Mail, MapPin, Phone, Youtube } from 'lucide-react'
 
 import Logo from '@/app/components/Layout/Header/Logo'
 import { footerNavigation, siteConfig } from '@/app/data/site'
@@ -114,7 +115,13 @@ export default async function SiteFooter() {
       <div className='border-t border-white/10'>
         <div className='container flex flex-col gap-2 py-6 text-sm text-navy-300 sm:flex-row sm:items-center sm:justify-between'>
           <p>{t('nav.footer.rights', { year: String(year), name: siteConfig.name })}</p>
-          <p className='font-display text-base italic text-navy-300'>{t('common.motto')}</p>
+          <div className='flex flex-wrap items-center gap-x-6 gap-y-2'>
+            <p className='font-display text-base italic text-navy-300'>{t('common.motto')}</p>
+            {/* Plain link: the sign-in page has no language prefix. */}
+            <NextLink href='/login' className='inline-flex items-center gap-1.5 text-navy-300 transition hover:text-gold-200'>
+              <LockKeyhole className='h-3.5 w-3.5' /> {t('nav.footer.staffSignIn')}
+            </NextLink>
+          </div>
         </div>
       </div>
     </footer>

@@ -37,6 +37,7 @@ export default defineMessages({
       ctaSupport: 'Support our mission',
       about: '{name} accompanies families, clergy, religious and parishes in prayer, healing and mission.',
       rights: '© {year} {name}, Vikindu. All rights reserved.',
+      staffSignIn: 'Staff sign in',
     },
   },
   sw: {
@@ -75,6 +76,7 @@ export default defineMessages({
       ctaSupport: 'Saidia utume wetu',
       about: '{name} kinasindikiza familia, mapadre, watawa na parokia katika sala, uponyaji na utume.',
       rights: '© {year} {name}, Vikindu. Haki zote zimehifadhiwa.',
+      staffSignIn: 'Ingia kwa watumishi',
     },
   },
 })
