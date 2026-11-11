@@ -63,7 +63,10 @@
       "reactCompiler": true
     },
     "extra": {
-      "apiUrl": "https://dmrc.vercel.app"
+      "apiUrl": "https://dmrc.vercel.app",
+      "eas": {
+        "projectId": "135f46a0-3d41-4a58-8dd2-7f8870f638b6"
+      }
     }
   }
 }
