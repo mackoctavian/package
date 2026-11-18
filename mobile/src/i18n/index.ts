@@ -1,6 +1,7 @@
 import { useEffect, useMemo } from 'react';
 
-import { API_URL } from '@/lib/config';
+import { API_URL, hasSupabase } from '@/lib/config';
+import { loadUiOverrides } from '@/lib/content-source';
 import { actions, type AppLanguage, getAppState, useAppStore } from '@/lib/store';
 import { MOBILE_LOCALES, type MobileLocale, type MobileMessages, mobileMessages } from './messages';
 import { createTranslator, flattenMessages, type MessageKey, type Translator } from './translate';
@@ -116,10 +117,22 @@ export function useFormat() {
 /* --------------------------------------------------------------- syncing */
 
 const fetchOverrides = async (locale: MobileLocale) => {
+  if (hasSupabase) {
+    try {
+      actions.setUiOverrides(locale, await loadUiOverrides(locale));
+      return;
+    } catch {
+      // fall back to the website below
+    }
+  }
   const response = await fetch(`${API_URL}/api/mobile/i18n?locale=${locale}`, { headers: { Accept: 'application/json' } });
   if (!response.ok) return;
-  const body = (await response.json()) as { data?: { messages?: Record<string, string> } };
-  if (body?.data?.messages && typeof body.data.messages === 'object') actions.setUiOverrides(locale, body.data.messages);
+  const body = (await response.json().catch(() => null)) as { data?: { messages?: unknown } } | null;
+  const messages = body?.data?.messages;
+  if (messages && typeof messages === 'object' && !Array.isArray(messages)) {
+    const clean = Object.fromEntries(Object.entries(messages).filter((entry): entry is [string, string] => typeof entry[1] === 'string'));
+    actions.setUiOverrides(locale, clean);
+  }
 };
 
 /** Downloads the admin's text changes for the current language (and English, the fallback). Silent when offline. */

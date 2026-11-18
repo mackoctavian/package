@@ -21,10 +21,16 @@ It uses the same backend as the website in the repository root.
 
 ## Backend
 
-The app reads from read-only routes added to the website under `/api/mobile/*`: `home`, `retreats`, `publications`, `news`, `gallery` and `ministries`. They reuse the site's own loaders, so admin changes show up in the app.
-Forms post to the existing public endpoints. If the API cannot be reached, screens fall back to a bundled snapshot (`src/data/snapshot.json`) and show an "offline" notice.
+Content (retreats, news, publications, gallery, ministries, the home screen and the admin's interface-text changes) is read **straight from Supabase** through its Data API, using the public anon / publishable key (`src/lib/supabase.ts`, `src/lib/content-source.ts`). Row level security decides what that key can read: run `prisma/sql/005_mobile_public_read.sql` once in the Supabase SQL editor. It allows reading only what the public website shows (published content, active ministries/slides/testimonials) and nothing else. **Never put the service role key in the app.**
 
-Set the API base URL in `app.json` → `expo.extra.apiUrl`, or with `EXPO_PUBLIC_API_URL` (see `.env.example`).
+If Supabase isn't configured in a build, the app reads the website's read-only `/api/mobile/*` routes instead. If neither answers, screens fall back to a bundled snapshot (`src/data/snapshot.json`) and show an "offline" notice. Forms (bookings, donations, Mass intentions) still post to the website's public endpoints, which validate them and send confirmations.
+
+Configure in `app.json` → `expo.extra`:
+
+- `supabaseUrl` and `supabaseAnonKey`: from Supabase → Project Settings → API (the anon or publishable key), or `EXPO_PUBLIC_SUPABASE_URL` / `EXPO_PUBLIC_SUPABASE_ANON_KEY`.
+- `apiUrl`: the website, or `EXPO_PUBLIC_API_URL` (see `.env.example`).
+
+If a screen ever throws while rendering, the root layout's error boundary shows a "Try again" screen instead of the app closing.
 
 ## Run it
 
@@ -55,7 +61,7 @@ Bundle ids are `org.dmrc.app` (change them in `app.json` before the first store 
 ```
 src/app/            screens (Expo Router): (tabs)/, retreat/, book/, ticket/, tickets/, publication/, article/, ministry/, …
 src/components/     UI kit (ui.tsx, form.tsx, feedback.tsx, headers.tsx, cards.tsx), TabBar, TicketCard, MockCheckout, FlowLayout
-src/lib/            api.ts (queries and submissions), store.ts (persisted state), config.ts, format.ts, types.ts
+src/lib/            api.ts (queries and submissions), supabase.ts + content-source.ts (Supabase reads), store.ts (persisted state), config.ts, format.ts, types.ts
 src/theme/          brand tokens: navy / gold / ivory, Cormorant Garamond + Inter
 src/data/           bundled content and the offline snapshot
 ```

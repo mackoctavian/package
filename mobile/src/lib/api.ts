@@ -2,15 +2,20 @@ import { useQuery } from '@tanstack/react-query';
 
 import snapshot from '@/data/snapshot.json';
 import { getLocale, getT, type MobileLocale, useLocale } from '@/i18n';
-import { API_URL } from './config';
+import { API_URL, hasSupabase } from './config';
+import { loadCatalogue, loadGallery, loadHome, loadMinistries, loadNews, loadRetreats } from './content-source';
 import type { Article, Booking, Catalogue, Gallery, Home, Ministry, Retreat } from './types';
 
 /**
- * Data access for the DMRC website API.
+ * Data access.
  *
- * Read endpoints live under `/api/mobile/*`. If the network is unavailable the
- * app falls back to a bundled snapshot so screens never render empty; the
- * `offline` flag lets screens say so. Form submissions always go to the live API.
+ * Reads (retreats, news, publications, gallery, ministries, home) come
+ * straight from Supabase's Data API with the public anon key; see
+ * `./content-source`. If Supabase isn't configured in this build, the app
+ * reads the website's `/api/mobile/*` instead. If neither answers, it falls
+ * back to a bundled snapshot so screens never render empty; the `offline`
+ * flag lets screens say so. Form submissions always go to the website API,
+ * which validates them and sends the confirmation emails.
  */
 
 type Snapshot = {
@@ -58,13 +63,56 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
 
 export type Loaded<T> = { data: T; offline: boolean };
 
-async function readWithFallback<K extends keyof Snapshot>(key: K, locale: MobileLocale): Promise<Loaded<Snapshot[K]>> {
-  try {
-    const body = await request<{ data: Snapshot[K] }>(`/api/mobile/${key}?locale=${locale}`);
-    return { data: body.data, offline: false };
-  } catch {
-    return { data: bundled[key], offline: true };
+/** Reads one dataset from Supabase; `null` means "nothing published yet, use the bundled copy". */
+const fromSupabase: { [K in keyof Snapshot]: (locale: MobileLocale) => Promise<Snapshot[K] | null> } = {
+  home: (locale) => loadHome(locale, bundled.home, bundled.publications),
+  retreats: (locale) => loadRetreats(locale),
+  publications: (locale) => loadCatalogue(locale, bundled.publications),
+  news: (locale) => loadNews(locale),
+  gallery: (locale) => loadGallery(locale),
+  ministries: (locale) => loadMinistries(locale, bundled.ministries),
+};
+
+/** A response is only used if it has the shape the screens expect; anything else counts as offline. */
+const isShape = <K extends keyof Snapshot>(key: K, value: unknown): value is Snapshot[K] => {
+  if (!value || typeof value !== 'object') return false;
+  const record = value as Record<string, unknown>;
+  switch (key) {
+    case 'retreats':
+    case 'news':
+    case 'ministries':
+      return Array.isArray(value);
+    case 'publications':
+      return Array.isArray(record.items);
+    case 'gallery':
+      return ['photos', 'videos', 'audio', 'cds'].every((bucket) => Array.isArray(record[bucket]));
+    case 'home':
+      return (
+        Boolean(record.site && typeof record.site === 'object') &&
+        ['heroSlides', 'retreats', 'news', 'publications', 'gallery', 'testimonials'].every((field) => Array.isArray(record[field]))
+      );
+    default:
+      return false;
   }
+};
+
+async function readWithFallback<K extends keyof Snapshot>(key: K, locale: MobileLocale): Promise<Loaded<Snapshot[K]>> {
+  if (hasSupabase) {
+    try {
+      const data = await fromSupabase[key](locale);
+      // `null`: nothing readable yet (e.g. the read policies haven't been added); try the website next.
+      if (data !== null && isShape(key, data)) return { data, offline: false };
+    } catch (error) {
+      if (__DEV__) console.warn(`[data] Supabase read of ${key} failed`, error);
+    }
+  }
+  try {
+    const body = await request<{ data?: unknown }>(`/api/mobile/${key}?locale=${locale}`);
+    if (isShape(key, body?.data)) return { data: body.data, offline: false };
+  } catch {
+    // fall through to the bundled copy
+  }
+  return { data: bundled[key], offline: true };
 }
 
 /** Reads in the app's language; switching language refetches while the previous text stays on screen. */
