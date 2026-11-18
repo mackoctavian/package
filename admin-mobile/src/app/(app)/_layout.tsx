@@ -1,4 +1,8 @@
-import { Stack } from 'expo-router';
+import { type ErrorBoundaryProps, Stack } from 'expo-router';
+import { View } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+
+import { ErrorState } from '@/components/admin';
 
 import { colors } from '@/theme';
 
@@ -12,5 +16,18 @@ export default function AppLayout() {
       <Stack.Screen name="member/edit" options={{ presentation: 'modal', animation: 'slide_from_bottom' }} />
       <Stack.Screen name="leave-request" options={{ presentation: 'modal', animation: 'slide_from_bottom' }} />
     </Stack>
+  );
+}
+
+/**
+ * If a screen throws while rendering, show a retry screen instead of
+ * letting the whole app close.
+ */
+export function ErrorBoundary({ error, retry }: ErrorBoundaryProps) {
+  const insets = useSafeAreaInsets();
+  return (
+    <View style={{ flex: 1, backgroundColor: colors.ivory, paddingTop: insets.top + 40, justifyContent: 'center' }}>
+      <ErrorState message={`Something on this screen didn’t work (${error.message}). Please try again.`} onRetry={() => void retry()} />
+    </View>
   );
 }

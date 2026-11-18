@@ -22,10 +22,16 @@ export const formatTime = (iso?: string | null) => {
 
 export const formatDateTime = (iso?: string | null) => (iso ? `${formatDate(iso)} · ${formatTime(iso)}` : '');
 
+/**
+ * "5 minutes ago", "yesterday", "in 3 days". Written by hand because Hermes
+ * (the JavaScript engine in Android and iOS builds) has no Intl.RelativeTimeFormat.
+ */
 export const relativeTime = (iso?: string | null) => {
   if (!iso) return '';
-  const seconds = Math.round((new Date(iso).getTime() - Date.now()) / 1000);
-  const units: [Intl.RelativeTimeFormatUnit, number][] = [
+  const time = new Date(iso).getTime();
+  if (Number.isNaN(time)) return '';
+  const seconds = Math.round((time - Date.now()) / 1000);
+  const units: [string, number][] = [
     ['year', 31536000],
     ['month', 2592000],
     ['week', 604800],
@@ -33,9 +39,12 @@ export const relativeTime = (iso?: string | null) => {
     ['hour', 3600],
     ['minute', 60],
   ];
-  const formatter = new Intl.RelativeTimeFormat('en', { numeric: 'auto' });
   for (const [unit, size] of units) {
-    if (Math.abs(seconds) >= size) return formatter.format(Math.round(seconds / size), unit);
+    if (Math.abs(seconds) < size) continue;
+    const count = Math.round(Math.abs(seconds) / size);
+    if (unit === 'day' && count === 1) return seconds < 0 ? 'yesterday' : 'tomorrow';
+    const label = `${count} ${unit}${count === 1 ? '' : 's'}`;
+    return seconds < 0 ? `${label} ago` : `in ${label}`;
   }
   return 'just now';
 };
