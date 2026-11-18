@@ -7,13 +7,17 @@ import { Inter_600SemiBold } from '@expo-google-fonts/inter/600SemiBold';
 import { Inter_700Bold } from '@expo-google-fonts/inter/700Bold';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { useFonts } from 'expo-font';
-import { DefaultTheme, Stack, ThemeProvider } from 'expo-router';
+import { DefaultTheme, type ErrorBoundaryProps, router, Stack, ThemeProvider } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
 import { StatusBar } from 'expo-status-bar';
 import { useEffect } from 'react';
+import { View } from 'react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 
-import { useSyncTranslations } from '@/i18n';
+import { EmptyState } from '@/components/feedback';
+import { Button } from '@/components/ui';
+
+import { useSyncTranslations, useT } from '@/i18n';
 import { hydrateStore, useAppStore } from '@/lib/store';
 import { colors } from '@/theme';
 
@@ -72,5 +76,31 @@ export default function RootLayout() {
         </ThemeProvider>
       </QueryClientProvider>
     </GestureHandlerRootView>
+  );
+}
+
+/**
+ * If any screen throws while rendering, show a "Try again" screen instead of
+ * the app closing. Expo Router uses this for every route under this layout.
+ */
+export function ErrorBoundary({ error, retry }: ErrorBoundaryProps) {
+  const t = useT();
+  if (__DEV__) console.error('[screen error]', error);
+  return (
+    <View style={{ flex: 1, backgroundColor: colors.ivory, justifyContent: 'center', padding: 24 }}>
+      <EmptyState icon="refresh-outline" title={t('common.crash.title')} body={t('common.crash.text')} action={t('common.crash.retry')} onAction={() => void retry()} />
+      <Button
+        label={t('common.crash.home')}
+        variant="ghost"
+        size="md"
+        onPress={() => {
+          try {
+            router.replace('/');
+          } catch {
+            void retry();
+          }
+        }}
+      />
+    </View>
   );
 }

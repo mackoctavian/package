@@ -47,6 +47,8 @@
     },
     "extra": {
       "apiUrl": "https://dmrc-ten.vercel.app",
+      "supabaseUrl": "",
+      "supabaseAnonKey": "",
       "eas": {
         "projectId": "4640f7c5-4991-48fb-be6d-2a87bf12dbf1"
       }
